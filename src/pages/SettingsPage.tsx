@@ -1,4 +1,4 @@
-import { MapPin, Search } from 'lucide-react'
+import { Layers, MapPin, Search } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
@@ -8,8 +8,53 @@ import {
   type WeatherLocation,
 } from '../lib/weather'
 
+type SettingsTab =
+  | 'general'
+  | 'modules'
+  | 'categories'
+  | 'templates'
+  | 'users'
+  | 'permissions'
+  | 'layers'
+  | 'weather'
+
+const settingsTabs: Array<{ id: SettingsTab; label: string }> = [
+  { id: 'general', label: 'General' },
+  { id: 'modules', label: 'Modules' },
+  { id: 'categories', label: 'Categories' },
+  { id: 'templates', label: 'Templates' },
+  { id: 'users', label: 'Users' },
+  { id: 'permissions', label: 'Permissions' },
+  { id: 'layers', label: 'Layers' },
+  { id: 'weather', label: 'Weather' },
+]
+
+const placeholderCopy: Partial<Record<SettingsTab, { title: string; body: string }>> = {
+  categories: {
+    title: 'Categories',
+    body: 'Shared category management will live here and can later be used by individual modules.',
+  },
+  templates: {
+    title: 'Templates',
+    body: 'Reusable household and module templates will be managed here.',
+  },
+  users: {
+    title: 'Users',
+    body: 'Household members, invitations and family profiles will be managed here.',
+  },
+  permissions: {
+    title: 'Permissions',
+    body: 'Owner and admin controls for module and data permissions will be managed here.',
+  },
+  layers: {
+    title: 'Layers',
+    body: 'The settings layer structure is reserved here so it can be connected cleanly as Famioo grows.',
+  },
+}
+
 export function SettingsPage() {
   const { household, modules, user } = useHousehold()
+  const [activeTab, setActiveTab] = useState<SettingsTab>('general')
   const [weatherQuery, setWeatherQuery] = useState('')
   const [weatherResults, setWeatherResults] = useState<WeatherLocation[]>([])
   const [selectedWeather, setSelectedWeather] = useState<WeatherLocation | null>(null)
@@ -93,123 +138,167 @@ export function SettingsPage() {
     window.dispatchEvent(new Event('famioo-weather-preferences-updated'))
   }
 
+  const placeholder = placeholderCopy[activeTab]
+
   return (
-    <div className="page">
-      <section className="page-heading">
+    <div className="page settings-page">
+      <section className="page-heading settings-heading">
         <div>
           <span className="eyebrow">SETTINGS</span>
-          <h1>{household.name}</h1>
-          <p>Core household settings stay separate from individual paid modules.</p>
+          <h1>Settings</h1>
+          <p>Household configuration is divided into clear sections so every Famioo module can connect to the same foundation.</p>
         </div>
       </section>
 
-      <section className="settings-grid">
-        <article className="settings-card">
-          <span className="eyebrow">HOUSEHOLD</span>
-          <h2>General</h2>
-          <dl>
-            <div><dt>Name</dt><dd>{household.name}</dd></div>
-            <div><dt>Timezone</dt><dd>{household.timezone}</dd></div>
-            <div><dt>Your role</dt><dd>{household.role}</dd></div>
-          </dl>
-        </article>
+      <nav className="settings-tabs" aria-label="Settings sections">
+        {settingsTabs.map((tab) => (
+          <button
+            type="button"
+            className={activeTab === tab.id ? 'active' : ''}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
 
-        <article className="settings-card">
-          <span className="eyebrow">MODULES</span>
-          <h2>Availability</h2>
-          <div className="settings-module-list">
-            {modules.map((module) => (
-              <div key={module.code}>
-                <span><strong>{module.name}</strong><small>{module.description}</small></span>
-                <em className={module.enabled ? 'enabled' : ''}>{module.enabled ? 'Enabled' : 'Locked'}</em>
-              </div>
-            ))}
-          </div>
-        </article>
+      <section className="settings-tab-content">
+        {activeTab === 'general' && (
+          <article className="settings-card settings-single-card">
+            <span className="eyebrow">HOUSEHOLD</span>
+            <h2>General</h2>
+            <dl>
+              <div><dt>Name</dt><dd>{household.name}</dd></div>
+              <div><dt>Timezone</dt><dd>{household.timezone}</dd></div>
+              <div><dt>Your role</dt><dd>{household.role}</dd></div>
+            </dl>
+          </article>
+        )}
 
-        <article className="settings-card settings-weather-card">
-          <div className="settings-card-heading">
-            <div>
-              <span className="eyebrow">WEATHER</span>
-              <h2>Footer weather</h2>
-              <p>Choose the city or town you want to see in the desktop footer.</p>
-            </div>
-            <MapPin size={22} />
-          </div>
-
-          <form className="weather-search-form" onSubmit={searchWeather}>
-            <label>
-              City or town
-              <span className="weather-search-input">
-                <input
-                  value={weatherQuery}
-                  onChange={(event) => {
-                    setWeatherQuery(event.target.value)
-                    setSelectedWeather(null)
-                  }}
-                  placeholder="Norderstedt, Hamburg, Belgrade…"
-                />
-                <button className="secondary-button compact" disabled={weatherBusy || weatherQuery.trim().length < 2}>
-                  <Search size={15} />
-                  Search
-                </button>
-              </span>
-            </label>
-
-            <label>
-              Temperature
-              <select
-                value={temperatureUnit}
-                onChange={(event) => setTemperatureUnit(event.target.value as TemperatureUnit)}
-              >
-                <option value="celsius">Celsius (°C)</option>
-                <option value="fahrenheit">Fahrenheit (°F)</option>
-              </select>
-            </label>
-          </form>
-
-          {weatherResults.length > 0 && (
-            <div className="weather-location-results">
-              {weatherResults.map((location) => (
-                <button
-                  type="button"
-                  className={
-                    selectedWeather?.latitude === location.latitude
-                    && selectedWeather?.longitude === location.longitude
-                      ? 'selected'
-                      : ''
-                  }
-                  key={location.label + location.latitude + location.longitude}
-                  onClick={() => {
-                    setSelectedWeather(location)
-                    setWeatherQuery(location.label)
-                    setWeatherMessage('')
-                  }}
-                >
-                  <MapPin size={15} />
+        {activeTab === 'modules' && (
+          <article className="settings-card settings-single-card">
+            <span className="eyebrow">MODULES</span>
+            <h2>Availability</h2>
+            <p className="settings-section-intro">
+              Calendar, Tasks and Checklists are Famioo core modules. Every additional module uses the same availability system.
+            </p>
+            <div className="settings-module-list">
+              {modules.map((module) => (
+                <div key={module.code}>
                   <span>
-                    <strong>{location.label}</strong>
-                    <small>{location.latitude.toFixed(2)}, {location.longitude.toFixed(2)}</small>
+                    <strong>{module.name}</strong>
+                    <small>{module.description}</small>
                   </span>
-                </button>
+                  <em className={module.enabled ? 'enabled' : ''}>{module.enabled ? 'Enabled' : 'Locked'}</em>
+                </div>
               ))}
             </div>
-          )}
+          </article>
+        )}
 
-          <div className="weather-settings-actions">
-            <span>{selectedWeather ? 'Selected: ' + selectedWeather.label : 'Search and select a location.'}</span>
-            <button
-              type="button"
-              className="primary-button compact"
-              disabled={weatherBusy || !selectedWeather}
-              onClick={() => void saveWeather()}
-            >
-              {weatherBusy ? 'Saving…' : 'Save weather'}
-            </button>
-          </div>
+        {placeholder && (
+          <article className="settings-card settings-placeholder-card">
+            <div className="settings-placeholder-icon">
+              <Layers size={21} />
+            </div>
+            <div>
+              <span className="eyebrow">SETTINGS SECTION</span>
+              <h2>{placeholder.title}</h2>
+              <p>{placeholder.body}</p>
+              <small>This tab is reserved now so its data and permissions can be added without redesigning Settings later.</small>
+            </div>
+          </article>
+        )}
 
-          {weatherMessage && <div className="form-message">{weatherMessage}</div>}
-        </article>
+        {activeTab === 'weather' && (
+          <article className="settings-card settings-weather-card settings-single-card">
+            <div className="settings-card-heading">
+              <div>
+                <span className="eyebrow">WEATHER</span>
+                <h2>Footer weather</h2>
+                <p>Choose the city or town you want to see in the desktop footer.</p>
+              </div>
+              <MapPin size={22} />
+            </div>
+
+            <form className="weather-search-form" onSubmit={searchWeather}>
+              <label>
+                City or town
+                <span className="weather-search-input">
+                  <input
+                    value={weatherQuery}
+                    onChange={(event) => {
+                      setWeatherQuery(event.target.value)
+                      setSelectedWeather(null)
+                    }}
+                    placeholder="Norderstedt, Hamburg, Belgrade…"
+                  />
+                  <button
+                    className="secondary-button compact"
+                    disabled={weatherBusy || weatherQuery.trim().length < 2}
+                  >
+                    <Search size={15} />
+                    Search
+                  </button>
+                </span>
+              </label>
+
+              <label>
+                Temperature
+                <select
+                  value={temperatureUnit}
+                  onChange={(event) => setTemperatureUnit(event.target.value as TemperatureUnit)}
+                >
+                  <option value="celsius">Celsius (°C)</option>
+                  <option value="fahrenheit">Fahrenheit (°F)</option>
+                </select>
+              </label>
+            </form>
+
+            {weatherResults.length > 0 && (
+              <div className="weather-location-results">
+                {weatherResults.map((location) => (
+                  <button
+                    type="button"
+                    className={
+                      selectedWeather?.latitude === location.latitude
+                      && selectedWeather?.longitude === location.longitude
+                        ? 'selected'
+                        : ''
+                    }
+                    key={location.label + location.latitude + location.longitude}
+                    onClick={() => {
+                      setSelectedWeather(location)
+                      setWeatherQuery(location.label)
+                      setWeatherMessage('')
+                    }}
+                  >
+                    <MapPin size={15} />
+                    <span>
+                      <strong>{location.label}</strong>
+                      <small>{location.latitude.toFixed(2)}, {location.longitude.toFixed(2)}</small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="weather-settings-actions">
+              <span>{selectedWeather ? 'Selected: ' + selectedWeather.label : 'Search and select a location.'}</span>
+              <button
+                type="button"
+                className="primary-button compact"
+                disabled={weatherBusy || !selectedWeather}
+                onClick={() => void saveWeather()}
+              >
+                {weatherBusy ? 'Saving…' : 'Save weather'}
+              </button>
+            </div>
+
+            {weatherMessage && <div className="form-message">{weatherMessage}</div>}
+          </article>
+        )}
       </section>
     </div>
   )
