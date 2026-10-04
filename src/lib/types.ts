@@ -1,9 +1,14 @@
-export type HouseholdRole = 'owner' | 'admin' | 'adult' | 'member'
+export type HouseholdRole = 'owner' | 'admin' | 'user'
+export type ModulePermission = 'full' | 'read' | 'restricted'
 
 export type Household = {
   id: string
   name: string
   timezone: string
+  default_language: 'en' | 'de' | 'sr'
+  week_starts_on: 0 | 1
+  date_format: 'DD.MM.YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD'
+  time_format: '24h' | '12h'
   role: HouseholdRole
 }
 
@@ -38,7 +43,10 @@ export type ModuleAccess = {
   description: string
   icon_key: string
   is_core: boolean
+  entitled: boolean
   enabled: boolean
+  access_level: ModulePermission
+  can_write: boolean
 }
 
 export type CalendarOccurrence = {
