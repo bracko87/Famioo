@@ -4,6 +4,8 @@ import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
 import { supabase } from '../lib/supabase'
 import type { CalendarOccurrence, CalendarRow, EventCategory } from '../lib/types'
+import { Select } from '../components/ui/Select'
+import { TimePicker } from '../components/ui/TimePicker'
 
 type CalendarView = 'day' | 'week' | 'month' | 'upcoming'
 
@@ -173,6 +175,16 @@ export function CalendarPage() {
     : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
   const selectedCategory = categoriesById.get(categoryId)
+  const dayEvents = eventsByDay.get(dateKey(anchor)) ?? []
+  const allDayEvents = dayEvents.filter((item) => item.all_day)
+  const timedEventsByHour = new Map<number, CalendarOccurrence[]>()
+
+  for (const item of dayEvents.filter((event) => !event.all_day && event.occurrence_start_at)) {
+    const hour = new Date(item.occurrence_start_at!).getHours()
+    timedEventsByHour.set(hour, [...(timedEventsByHour.get(hour) ?? []), item])
+  }
+
+  const dayHours = Array.from({ length: 24 }, (_, hour) => hour)
 
   function openComposer(day: string) {
     if (!canWrite) return
@@ -380,12 +392,48 @@ export function CalendarPage() {
               <span>{anchor.toLocaleDateString(undefined, { weekday: 'long' })}</span>
               <strong>{anchor.getDate()}</strong>
             </div>
-            {canWrite && <button className="secondary-button compact" onClick={() => openComposer(dateKey(anchor))}><Plus size={15} />Add event</button>}
+            {canWrite && (
+              <button className="primary-button compact" onClick={() => openComposer(dateKey(anchor))}>
+                <Plus size={15} />
+                Add event
+              </button>
+            )}
           </header>
-          <div className="day-event-list">
-            {(eventsByDay.get(dateKey(anchor)) ?? []).length
-              ? (eventsByDay.get(dateKey(anchor)) ?? []).map((item) => <EventPill item={item} detailed key={item.occurrence_key} />)
-              : <div className="empty-state"><strong>No events.</strong><span>Nothing is planned for this day.</span></div>}
+
+          {allDayEvents.length > 0 && (
+            <div className="day-all-day-row">
+              <span>All day</span>
+              <div>
+                {allDayEvents.map((item) => <EventPill item={item} detailed key={item.occurrence_key} />)}
+              </div>
+            </div>
+          )}
+
+          <div className="day-hour-grid">
+            {dayHours.map((hour) => {
+              const hourEvents = timedEventsByHour.get(hour) ?? []
+              const label = String(hour).padStart(2, '0') + ':00'
+
+              return (
+                <div className="day-hour-row" key={hour}>
+                  <button
+                    type="button"
+                    className="day-hour-label"
+                    disabled={!canWrite}
+                    onClick={() => {
+                      setStartTime(label)
+                      setAllDay(false)
+                      openComposer(dateKey(anchor))
+                    }}
+                  >
+                    {label}
+                  </button>
+                  <div className="day-hour-content">
+                    {hourEvents.map((item) => <EventPill item={item} detailed key={item.occurrence_key} />)}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </section>
       )}
@@ -444,14 +492,16 @@ export function CalendarPage() {
             <div className="form-row">
               <label>
                 Category
-                <span className="category-select-wrap">
-                  <span className="category-select-dot" style={{ backgroundColor: categoryColor(selectedCategory?.color_key ?? 'slate') }} />
-                  <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
-                    {categories.map((item) => (
-                      <option key={item.id} value={item.id}>{item.name}</option>
-                    ))}
-                  </select>
-                </span>
+                <Select
+                  value={categoryId}
+                  onChange={setCategoryId}
+                  options={categories.map((item) => ({
+                    value: item.id,
+                    label: item.name,
+                    dotColor: categoryColor(item.color_key),
+                  }))}
+                  ariaLabel="Choose event category"
+                />
               </label>
 
               <label className="toggle-label">
@@ -463,7 +513,7 @@ export function CalendarPage() {
             {!allDay && (
               <label>
                 Start time
-                <input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} required />
+                <TimePicker value={startTime} onChange={setStartTime} />
               </label>
             )}
 
