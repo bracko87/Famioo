@@ -7,16 +7,11 @@ export function ModulePlaceholderPage() {
 
   return (
     <div className="page">
-      <section className="page-heading">
-        <div>
-          <span className="eyebrow">FAMIOO MODULE</span>
-          <h1>{label}</h1>
-          <p>This route exists, but the module will only be built after the core milestone is stable.</p>
-        </div>
-      </section>
-      <div className="list-card empty-state">
-        <strong>Clean foundation ready.</strong>
-        <span>No legacy Dayora implementation is copied into this module.</span>
+      <div className="page-label">{label.toUpperCase()}</div>
+
+      <div className="list-card empty-state module-placeholder-card">
+        <strong>{label}</strong>
+        <span>This Famioo module is reserved in the product structure and will be connected here when implemented.</span>
       </div>
     </div>
   )
