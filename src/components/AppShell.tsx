@@ -62,6 +62,7 @@ export function AppShell() {
   const [mobileMenu, setMobileMenu] = useState(false)
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [notifications, setNotifications] = useState<HeaderNotification[]>([])
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState('')
   const enabledPaid = modules.filter((module) => module.enabled && !module.is_core)
 
   const currentProfile = profiles.find((profile) => profile.linked_user_id === user.id)
@@ -88,6 +89,19 @@ export function AppShell() {
   useEffect(() => {
     void loadNotifications()
   }, [household.id, user.id])
+
+  useEffect(() => {
+    setProfileAvatarUrl('')
+
+    if (!currentProfile?.avatar_path) return
+
+    void supabase.storage
+      .from('profile-avatars')
+      .createSignedUrl(currentProfile.avatar_path, 3600)
+      .then(({ data }) => {
+        setProfileAvatarUrl(data?.signedUrl ?? '')
+      })
+  }, [currentProfile?.avatar_path])
 
   async function openNotifications() {
     const nextOpen = !notificationOpen
@@ -200,7 +214,9 @@ export function AppShell() {
           </div>
 
           <div className="header-profile" title={profileName}>
-            <span>{profileMark}</span>
+            {profileAvatarUrl
+              ? <img className="header-profile-image" src={profileAvatarUrl} alt="" />
+              : <span>{profileMark}</span>}
             <strong>{profileName}</strong>
           </div>
         </div>
