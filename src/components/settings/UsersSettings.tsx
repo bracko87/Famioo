@@ -270,14 +270,16 @@ export function UsersSettings() {
                   {member.role === 'owner' || !isOwner ? (
                     <em className={'role-badge ' + member.role}>{member.role}</em>
                   ) : (
-                    <select
+                    <Select
                       className="compact-select"
                       value={member.role}
-                      onChange={(event) => void changeRole(member.user_id, event.target.value as 'admin' | 'user')}
-                    >
-                      <option value="admin">Admin</option>
-                      <option value="user">User</option>
-                    </select>
+                      onChange={(value) => void changeRole(member.user_id, value as 'admin' | 'user')}
+                      options={[
+                        { value: 'admin', label: 'Admin' },
+                        { value: 'user', label: 'User' },
+                      ]}
+                      ariaLabel={'Role for ' + member.display_name}
+                    />
                   )}
                 </span>
 
