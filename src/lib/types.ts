@@ -1,0 +1,72 @@
+export type HouseholdRole = 'owner' | 'admin' | 'adult' | 'member'
+
+export type Household = {
+  id: string
+  name: string
+  timezone: string
+  role: HouseholdRole
+}
+
+export type FamilyProfile = {
+  id: string
+  household_id: string
+  linked_user_id: string | null
+  display_name: string
+  profile_type: 'adult' | 'child' | 'profile_only'
+  color_key: string
+  avatar_emoji: string | null
+  avatar_path: string | null
+}
+
+export type ModuleCode =
+  | 'calendar'
+  | 'tasks'
+  | 'checklists'
+  | 'shopping'
+  | 'costs'
+  | 'school'
+  | 'home_care'
+  | 'life_admin'
+  | 'projects'
+  | 'meals'
+  | 'files'
+  | 'assistant'
+
+export type ModuleAccess = {
+  code: ModuleCode
+  name: string
+  description: string
+  icon_key: string
+  is_core: boolean
+  enabled: boolean
+}
+
+export type CalendarOccurrence = {
+  event_id: string
+  occurrence_key: string
+  household_id: string
+  calendar_id: string
+  category_id: string | null
+  title: string
+  description: string | null
+  all_day: boolean
+  occurrence_start_at: string | null
+  occurrence_end_at: string | null
+  occurrence_start_date: string | null
+  occurrence_end_date: string | null
+  event_timezone: string
+  location_text: string | null
+}
+
+export type EventCategory = {
+  id: string
+  name: string
+  color_key: string
+}
+
+export type CalendarRow = {
+  id: string
+  name: string
+  color_key: string
+  is_default: boolean
+}
