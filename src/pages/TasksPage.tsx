@@ -12,7 +12,9 @@ type Task = {
 }
 
 export function TasksPage() {
-  const { household } = useHousehold()
+  const { household, modules } = useHousehold()
+  const canWrite = Boolean(modules.find((module) => module.code === 'tasks')?.can_write)
+
   const [tasks, setTasks] = useState<Task[]>([])
   const [title, setTitle] = useState('')
   const [error, setError] = useState('')
@@ -33,11 +35,13 @@ export function TasksPage() {
 
   async function add(event: FormEvent) {
     event.preventDefault()
-    if (!title.trim()) return
+    if (!canWrite || !title.trim()) return
+
     const result = await supabase.from('tasks').insert({
       household_id: household.id,
       title: title.trim(),
     })
+
     if (result.error) setError(result.error.message)
     else {
       setTitle('')
@@ -46,6 +50,8 @@ export function TasksPage() {
   }
 
   async function toggle(task: Task) {
+    if (!canWrite) return
+
     const done = task.status !== 'done'
     const result = await supabase.from('tasks').update({
       status: done ? 'done' : 'open',
@@ -59,27 +65,30 @@ export function TasksPage() {
 
   return (
     <div className="page">
-      <section className="page-heading">
-        <div>
-          <span className="eyebrow">TASKS</span>
-          <h1>Things to do</h1>
-          <p>Shared household tasks, including a true no-date option.</p>
-        </div>
-      </section>
+      <div className="page-label">TASKS</div>
 
-      <form className="quick-create" onSubmit={add}>
-        <Plus size={18} />
-        <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Add a household task…" />
-        <button>Add</button>
-      </form>
+      {canWrite ? (
+        <form className="quick-create" onSubmit={add}>
+          <Plus size={18} />
+          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Add a household task…" />
+          <button>Add</button>
+        </form>
+      ) : (
+        <div className="module-access-note">Read-only access</div>
+      )}
 
       {error && <div className="notice error">{error}</div>}
 
       <section className="list-card">
         {tasks.length === 0 ? (
-          <div className="empty-state"><strong>No tasks yet.</strong><span>Add the first household task above.</span></div>
+          <div className="empty-state"><strong>No tasks yet.</strong><span>{canWrite ? 'Add the first household task above.' : 'There are no household tasks to show.'}</span></div>
         ) : tasks.map((task) => (
-          <button className={task.status === 'done' ? 'task-row done' : 'task-row'} key={task.id} onClick={() => void toggle(task)}>
+          <button
+            className={task.status === 'done' ? 'task-row done' : 'task-row'}
+            key={task.id}
+            onClick={() => void toggle(task)}
+            disabled={!canWrite}
+          >
             <span className="task-check">{task.status === 'done' ? '✓' : ''}</span>
             <span><strong>{task.title}</strong><small>{task.due_date ?? 'No date'} · {task.priority}</small></span>
           </button>
