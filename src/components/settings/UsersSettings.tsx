@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from '
 import { useHousehold } from '../../context/HouseholdContext'
 import { supabase } from '../../lib/supabase'
 import type { HouseholdRole } from '../../lib/types'
+import { Select } from '../ui/Select'
 
 type HouseholdUser = {
   user_id: string
@@ -92,7 +93,19 @@ export function UsersSettings() {
     setBusy(false)
 
     if (result.error) {
-      setMessage(result.error.message)
+      let detail = result.error.message
+      const context = (result.error as { context?: Response }).context
+
+      if (context) {
+        try {
+          const payload = await context.clone().json() as { error?: string }
+          if (payload.error) detail = payload.error
+        } catch {
+          // Keep the Supabase client error when the response body is not JSON.
+        }
+      }
+
+      setMessage(detail)
       return
     }
 
@@ -326,10 +339,15 @@ export function UsersSettings() {
 
             <label>
               Role
-              <select value={role} onChange={(event) => setRole(event.target.value as 'admin' | 'user')}>
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </select>
+              <Select
+                value={role}
+                onChange={(value) => setRole(value as 'admin' | 'user')}
+                options={[
+                  { value: 'user', label: 'User' },
+                  { value: 'admin', label: 'Admin' },
+                ]}
+                ariaLabel="Choose user role"
+              />
             </label>
 
             {mode === 'create' && (
