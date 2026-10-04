@@ -1,5 +1,6 @@
 import { Layers } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { CategoriesSettings } from '../components/settings/CategoriesSettings'
 import { GeneralSettings } from '../components/settings/GeneralSettings'
 import { ModulesSettings } from '../components/settings/ModulesSettings'
@@ -40,8 +41,16 @@ const placeholderCopy: Partial<Record<SettingsTab, { title: string; body: string
 }
 
 export function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('general')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = useMemo<SettingsTab>(() => {
+    const requested = searchParams.get('tab') as SettingsTab | null
+    return settingsTabs.some((tab) => tab.id === requested) ? requested! : 'general'
+  }, [searchParams])
   const placeholder = placeholderCopy[activeTab]
+
+  function setActiveTab(tab: SettingsTab) {
+    setSearchParams(tab === 'general' ? {} : { tab })
+  }
 
   return (
     <div className="page settings-page">
