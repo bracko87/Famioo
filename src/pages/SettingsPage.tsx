@@ -1,5 +1,6 @@
 import { Layers } from 'lucide-react'
 import { useState } from 'react'
+import { CategoriesSettings } from '../components/settings/CategoriesSettings'
 import { GeneralSettings } from '../components/settings/GeneralSettings'
 import { ModulesSettings } from '../components/settings/ModulesSettings'
 import { PermissionsSettings } from '../components/settings/PermissionsSettings'
@@ -28,10 +29,6 @@ const settingsTabs: Array<{ id: SettingsTab; label: string }> = [
 ]
 
 const placeholderCopy: Partial<Record<SettingsTab, { title: string; body: string }>> = {
-  categories: {
-    title: 'Categories',
-    body: 'Shared category management will live here and can later be connected to individual modules.',
-  },
   templates: {
     title: 'Templates',
     body: 'Reusable household and module templates will be managed here.',
@@ -65,6 +62,7 @@ export function SettingsPage() {
 
       <section className="settings-tab-content">
         {activeTab === 'general' && <GeneralSettings />}
+        {activeTab === 'categories' && <CategoriesSettings />}
         {activeTab === 'modules' && <ModulesSettings />}
         {activeTab === 'users' && <UsersSettings />}
         {activeTab === 'permissions' && <PermissionsSettings />}
