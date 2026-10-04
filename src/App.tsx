@@ -1,0 +1,166 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { Session, User } from '@supabase/supabase-js'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { supabase } from './lib/supabase'
+import { loadHouseholds, loadModules, loadProfiles } from './lib/data'
+import type { FamilyProfile, Household, ModuleAccess } from './lib/types'
+import { HouseholdContext } from './context/HouseholdContext'
+import { AppShell } from './components/AppShell'
+import { AuthPage } from './pages/AuthPage'
+import { OnboardingPage } from './pages/OnboardingPage'
+import { HomePage } from './pages/HomePage'
+import { CalendarPage } from './pages/CalendarPage'
+import { TasksPage } from './pages/TasksPage'
+import { ChecklistsPage } from './pages/ChecklistsPage'
+import { SettingsPage } from './pages/SettingsPage'
+import { ModulePlaceholderPage } from './pages/ModulePlaceholderPage'
+
+function LoadingScreen() {
+  return (
+    <main className="loading-screen">
+      <div className="loading-mark" />
+      <strong>Opening Famioo…</strong>
+    </main>
+  )
+}
+
+function AuthenticatedApp({ user }: { user: User }) {
+  const [households, setHouseholds] = useState<Household[]>([])
+  const [householdId, setHouseholdId] = useState('')
+  const [profiles, setProfiles] = useState<FamilyProfile[]>([])
+  const [modules, setModules] = useState<ModuleAccess[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const loadContext = useCallback(async (preferredHouseholdId?: string) => {
+    setLoading(true)
+    setError('')
+
+    try {
+      const nextHouseholds = await loadHouseholds(user)
+      setHouseholds(nextHouseholds)
+
+      if (!nextHouseholds.length) {
+        setHouseholdId('')
+        setProfiles([])
+        setModules([])
+        return
+      }
+
+      const saved = localStorage.getItem('famioo-household-id')
+      const chosen = nextHouseholds.find((item) => item.id === preferredHouseholdId)
+        ?? nextHouseholds.find((item) => item.id === saved)
+        ?? nextHouseholds[0]
+
+      setHouseholdId(chosen.id)
+      localStorage.setItem('famioo-household-id', chosen.id)
+
+      const [nextProfiles, nextModules] = await Promise.all([
+        loadProfiles(chosen.id),
+        loadModules(chosen.id),
+      ])
+
+      setProfiles(nextProfiles)
+      setModules(nextModules)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Could not open Famioo.')
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
+  useEffect(() => {
+    void loadContext()
+  }, [loadContext])
+
+  async function switchHousehold(nextId: string) {
+    await loadContext(nextId)
+  }
+
+  if (loading) return <LoadingScreen />
+
+  if (error) {
+    return (
+      <main className="fatal-state">
+        <strong>Famioo could not open.</strong>
+        <span>{error}</span>
+        <button onClick={() => void loadContext(householdId || undefined)}>Try again</button>
+      </main>
+    )
+  }
+
+  if (!households.length) {
+    return <OnboardingPage user={user} onCreated={() => loadContext()} />
+  }
+
+  const household = households.find((item) => item.id === householdId) ?? households[0]
+
+  return (
+    <HouseholdContext.Provider
+      value={{
+        user,
+        households,
+        household,
+        profiles,
+        modules,
+        switchHousehold,
+        refresh: () => loadContext(household.id),
+      }}
+    >
+      <Routes>
+        <Route path="/app" element={<AppShell />}>
+          <Route index element={<HomePage />} />
+          <Route path="calendar" element={<CalendarPage />} />
+          <Route path="tasks" element={<TasksPage />} />
+          <Route path="checklists" element={<ChecklistsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+
+          <Route path="shopping" element={<ModulePlaceholderPage />} />
+          <Route path="costs" element={<ModulePlaceholderPage />} />
+          <Route path="school" element={<ModulePlaceholderPage />} />
+          <Route path="home-care" element={<ModulePlaceholderPage />} />
+          <Route path="life-admin" element={<ModulePlaceholderPage />} />
+          <Route path="projects" element={<ModulePlaceholderPage />} />
+          <Route path="meals" element={<ModulePlaceholderPage />} />
+          <Route path="files" element={<ModulePlaceholderPage />} />
+          <Route path="assistant" element={<ModulePlaceholderPage />} />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/app" replace />} />
+      </Routes>
+    </HouseholdContext.Provider>
+  )
+}
+
+export function App() {
+  const [session, setSession] = useState<Session | null>(null)
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    void supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+      setReady(true)
+    })
+
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession)
+      setReady(true)
+    })
+
+    return () => data.subscription.unsubscribe()
+  }, [])
+
+  const user = useMemo(() => session?.user ?? null, [session])
+
+  if (!ready) return <LoadingScreen />
+
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="*" element={<AuthPage />} />
+      </Routes>
+    )
+  }
+
+  return <AuthenticatedApp user={user} />
+}
