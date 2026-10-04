@@ -24,6 +24,7 @@ import { supabase } from '../lib/supabase'
 import type { ModuleCode } from '../lib/types'
 import { Brand } from './Brand'
 import { FooterWeather } from './FooterWeather'
+import { Select } from './ui/Select'
 
 const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>> = {
   shopping: ShoppingBag,
@@ -169,9 +170,13 @@ export function AppShell() {
         <div className="header-household">
           <span>Household</span>
           {households.length > 1 ? (
-            <select value={household.id} onChange={(event) => void switchHousehold(event.target.value)}>
-              {households.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-            </select>
+            <Select
+              className="header-household-select"
+              value={household.id}
+              onChange={(value) => void switchHousehold(value)}
+              options={households.map((item) => ({ value: item.id, label: item.name }))}
+              ariaLabel="Choose household"
+            />
           ) : <strong>{household.name}</strong>}
         </div>
 
