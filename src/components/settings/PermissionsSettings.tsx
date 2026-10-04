@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useHousehold } from '../../context/HouseholdContext'
 import { supabase } from '../../lib/supabase'
 import type { ModulePermission } from '../../lib/types'
+import { Select } from '../ui/Select'
 
 type PermissionRow = {
   module_code: string
@@ -118,16 +119,18 @@ export function PermissionsSettings() {
                 const key = module.code + ':' + role
                 return (
                   <span key={role}>
-                    <select
+                    <Select
                       className="permission-select"
                       value={valueFor(module.code, role)}
                       disabled={!isOwner || savingKey === key}
-                      onChange={(event) => void setPermission(module.code, role, event.target.value as ModulePermission)}
-                    >
-                      <option value="full">{labels.full}</option>
-                      <option value="read">{labels.read}</option>
-                      <option value="restricted">{labels.restricted}</option>
-                    </select>
+                      onChange={(value) => void setPermission(module.code, role, value as ModulePermission)}
+                      options={[
+                        { value: 'full', label: labels.full },
+                        { value: 'read', label: labels.read },
+                        { value: 'restricted', label: labels.restricted },
+                      ]}
+                      ariaLabel={module.name + ' permission for ' + role}
+                    />
                   </span>
                 )
               })}
