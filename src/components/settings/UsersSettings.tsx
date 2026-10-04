@@ -77,7 +77,20 @@ export function UsersSettings() {
     setBusy(true)
     setMessage('')
 
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session) {
+      setBusy(false)
+      setMessage('Your session expired. Please sign in again.')
+      return
+    }
+
     const result = await supabase.functions.invoke('manage-household-user', {
+      headers: {
+        Authorization: 'Bearer ' + session.access_token,
+      },
       body: {
         action: mode,
         household_id: household.id,
