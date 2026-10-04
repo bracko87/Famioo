@@ -7,6 +7,7 @@ import {
   type TemperatureUnit,
   type WeatherLocation,
 } from '../../lib/weather'
+import { Select } from '../ui/Select'
 
 export function WeatherSettings() {
   const { household, user } = useHousehold()
@@ -129,13 +130,15 @@ export function WeatherSettings() {
 
         <label>
           Temperature
-          <select
+          <Select
             value={temperatureUnit}
-            onChange={(event) => setTemperatureUnit(event.target.value as TemperatureUnit)}
-          >
-            <option value="celsius">Celsius (°C)</option>
-            <option value="fahrenheit">Fahrenheit (°F)</option>
-          </select>
+            onChange={(value) => setTemperatureUnit(value as TemperatureUnit)}
+            options={[
+              { value: 'celsius', label: 'Celsius (°C)' },
+              { value: 'fahrenheit', label: 'Fahrenheit (°F)' },
+            ]}
+            ariaLabel="Temperature unit"
+          />
         </label>
       </form>
 
