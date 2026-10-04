@@ -847,3 +847,135 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
     height: 30px;
   }
 }
+
+
+/* =========================================================
+   Home module column and tabbed Settings foundation
+   ========================================================= */
+
+.home-module-area {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.module-stack {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.home-future-area {
+  min-height: 100%;
+}
+
+.settings-heading {
+  margin-bottom: 18px;
+}
+
+.settings-tabs {
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.settings-tabs button {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255,255,255,.72);
+  color: #796d81;
+  font-size: 10px;
+  font-weight: 620;
+}
+
+.settings-tabs button:hover {
+  border-color: #c8b5d2;
+  color: #644875;
+  background: #fff;
+}
+
+.settings-tabs button.active {
+  border-color: #b799c6;
+  color: #74439a;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(83,56,96,.07);
+}
+
+.settings-tab-content {
+  width: 100%;
+}
+
+.settings-single-card {
+  width: 100%;
+}
+
+.settings-section-intro {
+  margin: -6px 0 12px;
+  max-width: 760px;
+  font-size: 10px;
+}
+
+.settings-placeholder-card {
+  min-height: 280px;
+  padding: 28px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.settings-placeholder-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: #f3edf7;
+  color: #8c5da2;
+}
+
+.settings-placeholder-card h2 {
+  margin: 5px 0 7px;
+}
+
+.settings-placeholder-card p {
+  max-width: 680px;
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+
+.settings-placeholder-card small {
+  color: #a093a7;
+  font-size: 9px;
+}
+
+@media (max-width: 900px) {
+  .home-module-area {
+    grid-template-columns: 1fr;
+  }
+
+  .home-future-area {
+    display: none;
+  }
+
+  .settings-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .settings-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .settings-tabs button {
+    flex: 0 0 auto;
+  }
+}
