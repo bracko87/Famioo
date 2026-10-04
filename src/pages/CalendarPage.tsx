@@ -125,8 +125,11 @@ export function CalendarPage() {
     if (categoryRows.error) {
       setError((current) => current || categoryRows.error.message)
     } else {
-      setCategories((categoryRows.data ?? []) as EventCategory[])
-      setCategoryId((current) => current || categoryRows.data?.[0]?.id || '')
+      const activeCategories = (categoryRows.data ?? []) as EventCategory[]
+      setCategories(activeCategories)
+      setCategoryId((current) => activeCategories.some((item) => item.id === current)
+        ? current
+        : activeCategories[0]?.id ?? '')
     }
   }
 
