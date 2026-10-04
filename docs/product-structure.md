@@ -41,7 +41,47 @@ Optional modules currently reserved in the system:
 - Files
 - Assistant
 
-Every enabled module is represented consistently in household navigation and on the Home dashboard. The Home dashboard reserves its right column for future non-module dashboard content.
+Every enabled module is represented consistently in household navigation and on the Home dashboard. The Home dashboard keeps module banners in the left column and reserves the right column for future dashboard content.
+
+The Home promotion carousel can advertise both implemented and future modules. Promotions rotate automatically every seven seconds.
+
+## Roles
+
+Famioo has exactly three household roles:
+
+### Owner
+
+- The user who creates the household starts as Owner.
+- Owner can invite users by email.
+- Owner can create users directly.
+- Owner can assign Admin or User roles.
+- Owner can edit the module permission matrix.
+- Owner always has Full access to every available module.
+
+### Admin
+
+- Admin is assigned by the Owner.
+- Admin cannot assign roles.
+- Admin cannot edit the permission matrix.
+- Admin access to each module is controlled by the permission matrix.
+
+### User
+
+- User is the standard household role.
+- User access to each module is controlled by the permission matrix.
+- A User can have Full, Read only, or Restricted access depending on the module.
+
+## Module permissions
+
+Each module has an access level for Admin and User roles:
+
+- Full — view and update
+- Read only — view without changes
+- Restricted — no module access
+
+Owner is always Full.
+
+Permissions are stored per household and per module. Core module database policies enforce the matrix.
 
 ## Settings sections
 
@@ -58,10 +98,18 @@ Current Settings tabs:
 - Layers
 - Weather
 
-The Modules tab owns module availability and entitlement information. Module controls should not be mixed into the General tab.
+The Modules tab owns module availability and entitlement information. Module controls are not mixed into General.
 
-Categories, Templates, Users, Permissions and Layers are reserved as independent configuration areas so future features can connect to them without redesigning the Settings page.
+General settings include household name, timezone, language, week start, date format and time format.
 
-## Naming rule
+Users contains household members and role management.
 
-The household name belongs in the application header and in fields where the household itself is being configured. It should not be repeated as the main title on every page.
+Permissions contains the module-by-role access matrix.
+
+Categories, Templates and Layers remain independent configuration areas so future features can connect to them without redesigning Settings.
+
+## Page heading rule
+
+The household name belongs in the application header and in fields where the household itself is being configured.
+
+Module pages use only one small uppercase page label at the top. Large repeated page titles and descriptions are not used before the main module content.
