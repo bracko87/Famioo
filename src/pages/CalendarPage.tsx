@@ -174,7 +174,6 @@ export function CalendarPage() {
     ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-  const selectedCategory = categoriesById.get(categoryId)
   const dayEvents = eventsByDay.get(dateKey(anchor)) ?? []
   const allDayEvents = dayEvents.filter((item) => item.all_day)
   const timedEventsByHour = new Map<number, CalendarOccurrence[]>()
