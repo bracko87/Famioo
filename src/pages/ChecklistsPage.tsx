@@ -89,7 +89,7 @@ export function ChecklistsPage() {
         <form className="quick-create" onSubmit={createList}>
           <Plus size={18} />
           <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Create a checklist…" />
-          <button>Create</button>
+          <button className="primary-button compact"><Plus size={16} />Create checklist</button>
         </form>
       ) : (
         <div className="module-access-note">Read-only access</div>
