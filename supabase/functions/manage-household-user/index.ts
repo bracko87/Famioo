@@ -8,11 +8,14 @@ const corsHeaders = {
 }
 
 type Action = "invite" | "create"
+type IdentityType = "email" | "phone"
 
 type RequestBody = {
   action: Action
   household_id: string
-  email: string
+  email?: string
+  phone?: string
+  identity_type?: IdentityType
   display_name?: string
   role: "admin" | "user"
   password?: string
@@ -51,22 +54,12 @@ Deno.serve(async (req: Request) => {
   }
 
   const userClient = createClient(supabaseUrl, anonKey, {
-    global: {
-      headers: {
-        Authorization: authorization,
-      },
-    },
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
+    global: { headers: { Authorization: authorization } },
+    auth: { persistSession: false, autoRefreshToken: false },
   })
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
+    auth: { persistSession: false, autoRefreshToken: false },
   })
 
   const {
@@ -88,24 +81,47 @@ Deno.serve(async (req: Request) => {
 
   const action = body.action
   const householdId = body.household_id?.trim()
-  const email = body.email?.trim().toLowerCase()
-  const displayName = body.display_name?.trim() || email?.split("@")[0] || "Member"
+  const email = body.email?.trim().toLowerCase() || undefined
+  const phone = body.phone?.trim() || undefined
+  const identityType: IdentityType = action === "invite"
+    ? "email"
+    : body.identity_type === "phone"
+      ? "phone"
+      : "email"
   const role = body.role
+  const displayName = body.display_name?.trim()
+    || email?.split("@")[0]
+    || phone
+    || "Member"
 
   if (!["invite", "create"].includes(action)) {
     return json({ error: "Invalid action." }, 400)
   }
 
-  if (!householdId || !email || !email.includes("@")) {
-    return json({ error: "A valid household and email are required." }, 400)
+  if (!householdId) {
+    return json({ error: "A household is required." }, 400)
   }
 
   if (!["admin", "user"].includes(role)) {
     return json({ error: "Role must be Admin or User." }, 400)
   }
 
-  if (action === "create" && (!body.password || body.password.length < 8)) {
-    return json({ error: "A temporary password of at least 8 characters is required." }, 400)
+  if (action === "invite") {
+    if (!email || !email.includes("@")) {
+      return json({ error: "A valid email address is required for invitations." }, 400)
+    }
+  } else {
+    if (!body.password || body.password.length < 8) {
+      return json({ error: "A temporary password of at least 8 characters is required." }, 400)
+    }
+
+    if (identityType === "email" && (!email || !email.includes("@"))) {
+      return json({ error: "A valid email address is required." }, 400)
+    }
+
+    if (identityType === "phone" && (!phone || !phone.startsWith("+") || phone.length < 8)) {
+      return json({ error: "Use a full international phone number, for example +491701234567." }, 400)
+    }
   }
 
   const { data: membership, error: membershipError } = await adminClient
@@ -138,19 +154,22 @@ Deno.serve(async (req: Request) => {
 
   try {
     const authResult = action === "invite"
-      ? await adminClient.auth.admin.inviteUserByEmail(email, {
-          data: {
-            display_name: displayName,
-          },
+      ? await adminClient.auth.admin.inviteUserByEmail(email!, {
+          data: { display_name: displayName },
         })
-      : await adminClient.auth.admin.createUser({
-          email,
-          password: body.password!,
-          email_confirm: true,
-          user_metadata: {
-            display_name: displayName,
-          },
-        })
+      : identityType === "phone"
+        ? await adminClient.auth.admin.createUser({
+            phone: phone!,
+            password: body.password!,
+            phone_confirm: true,
+            user_metadata: { display_name: displayName },
+          })
+        : await adminClient.auth.admin.createUser({
+            email: email!,
+            password: body.password!,
+            email_confirm: true,
+            user_metadata: { display_name: displayName },
+          })
 
     if (authResult.error || !authResult.data.user) {
       return json({ error: authResult.error?.message ?? "Could not create the user." }, 400)
@@ -184,9 +203,7 @@ Deno.serve(async (req: Request) => {
           status: "active",
           updated_at: new Date().toISOString(),
         },
-        {
-          onConflict: "household_id,user_id",
-        },
+        { onConflict: "household_id,user_id" },
       )
 
     if (memberError) throw memberError
@@ -235,7 +252,8 @@ Deno.serve(async (req: Request) => {
       ok: true,
       action,
       user_id: createdUserId,
-      email,
+      email: authResult.data.user.email ?? null,
+      phone: authResult.data.user.phone ?? null,
       role,
     })
   } catch (error) {
@@ -244,9 +262,7 @@ Deno.serve(async (req: Request) => {
     }
 
     return json(
-      {
-        error: error instanceof Error ? error.message : "Could not add the user.",
-      },
+      { error: error instanceof Error ? error.message : "Could not add the user." },
       400,
     )
   }
