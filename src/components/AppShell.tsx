@@ -1,4 +1,5 @@
 import {
+  Bell,
   CalendarDays,
   CheckSquare,
   ClipboardList,
@@ -16,12 +17,13 @@ import {
   Utensils,
   X,
 } from 'lucide-react'
-import { useState, type ComponentType } from 'react'
+import { useEffect, useState, type ComponentType } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
 import type { ModuleCode } from '../lib/types'
 import { Brand } from './Brand'
+import { FooterWeather } from './FooterWeather'
 
 const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>> = {
   shopping: ShoppingBag,
@@ -47,10 +49,69 @@ const routeByModule: Partial<Record<ModuleCode, string>> = {
   assistant: '/app/assistant',
 }
 
+type HeaderNotification = {
+  id: string
+  title: string
+  body: string
+  status: 'pending' | 'sent' | 'read' | 'failed' | 'cancelled'
+  created_at: string
+}
+
 export function AppShell() {
-  const { household, households, modules, switchHousehold } = useHousehold()
+  const { household, households, modules, profiles, user, switchHousehold } = useHousehold()
   const [mobileMenu, setMobileMenu] = useState(false)
+  const [notificationOpen, setNotificationOpen] = useState(false)
+  const [notifications, setNotifications] = useState<HeaderNotification[]>([])
   const enabledPaid = modules.filter((module) => module.enabled && !module.is_core)
+
+  const currentProfile = profiles.find((profile) => profile.linked_user_id === user.id)
+  const profileName = currentProfile?.display_name
+    ?? (user.user_metadata?.display_name as string | undefined)
+    ?? user.email?.split('@')[0]
+    ?? 'Profile'
+  const profileMark = currentProfile?.avatar_emoji ?? profileName.slice(0, 1).toUpperCase()
+  const unreadCount = notifications.filter((item) => item.status === 'sent').length
+
+  async function loadNotifications() {
+    const result = await supabase
+      .from('notifications')
+      .select('id,title,body,status,created_at')
+      .eq('household_id', household.id)
+      .eq('recipient_user_id', user.id)
+      .in('status', ['sent', 'read'])
+      .order('created_at', { ascending: false })
+      .limit(6)
+
+    if (!result.error) setNotifications((result.data ?? []) as HeaderNotification[])
+  }
+
+  useEffect(() => {
+    void loadNotifications()
+  }, [household.id, user.id])
+
+  async function openNotifications() {
+    const nextOpen = !notificationOpen
+    setNotificationOpen(nextOpen)
+
+    if (!nextOpen) return
+
+    const unreadIds = notifications
+      .filter((item) => item.status === 'sent')
+      .map((item) => item.id)
+
+    if (unreadIds.length) {
+      const result = await supabase
+        .from('notifications')
+        .update({ status: 'read', read_at: new Date().toISOString() })
+        .in('id', unreadIds)
+
+      if (!result.error) {
+        setNotifications((current) => current.map((item) => (
+          unreadIds.includes(item.id) ? { ...item, status: 'read' } : item
+        )))
+      }
+    }
+  }
 
   return (
     <div className="app-layout">
@@ -90,6 +151,7 @@ export function AppShell() {
         <button className="icon-button mobile-menu-button" onClick={() => setMobileMenu(true)} aria-label="Open menu">
           <Menu size={20} />
         </button>
+
         <div className="header-household">
           <span>Household</span>
           {households.length > 1 ? (
@@ -98,13 +160,56 @@ export function AppShell() {
             </select>
           ) : <strong>{household.name}</strong>}
         </div>
-        <div className="header-status">Famioo</div>
+
+        <div className="header-actions">
+          <div className="notification-control">
+            <button
+              className="header-notification-button"
+              type="button"
+              aria-label="Notifications"
+              aria-expanded={notificationOpen}
+              onClick={() => void openNotifications()}
+            >
+              <Bell size={17} />
+              <span>Notifications</span>
+              {unreadCount > 0 && <b>{unreadCount > 9 ? '9+' : unreadCount}</b>}
+            </button>
+
+            {notificationOpen && (
+              <div className="notification-popover">
+                <div className="notification-popover-head">
+                  <strong>Notifications</strong>
+                  <small>{notifications.length ? 'Latest household updates' : 'Nothing new'}</small>
+                </div>
+                <div className="notification-popover-list">
+                  {notifications.length === 0 ? (
+                    <div className="notification-empty">No notifications yet.</div>
+                  ) : notifications.map((item) => (
+                    <div className="notification-item" key={item.id}>
+                      <span className={item.status === 'read' ? 'read' : ''} />
+                      <div>
+                        <strong>{item.title}</strong>
+                        <p>{item.body}</p>
+                        <small>{new Date(item.created_at).toLocaleString()}</small>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="header-profile" title={profileName}>
+            <span>{profileMark}</span>
+            <strong>{profileName}</strong>
+          </div>
+        </div>
       </header>
 
       <main className="app-content"><Outlet /></main>
 
       <footer className="app-footer">
-        <Brand compact />
+        <FooterWeather />
         <span>One household space. Everything organized.</span>
       </footer>
 
