@@ -19,7 +19,10 @@ function monthRange(anchor: Date) {
 }
 
 export function CalendarPage() {
-  const { household, profiles } = useHousehold()
+  const { household, profiles, modules } = useHousehold()
+  const calendarAccess = modules.find((module) => module.code === 'calendar')
+  const canWrite = Boolean(calendarAccess?.can_write)
+
   const [anchor, setAnchor] = useState(() => new Date())
   const [events, setEvents] = useState<CalendarOccurrence[]>([])
   const [calendars, setCalendars] = useState<CalendarRow[]>([])
@@ -37,6 +40,7 @@ export function CalendarPage() {
 
   async function load() {
     setError('')
+
     const [occurrences, calendarRows, categoryRows] = await Promise.all([
       supabase.rpc('calendar_occurrences_v1', {
         p_household_id: household.id,
@@ -77,7 +81,10 @@ export function CalendarPage() {
 
   const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
   const gridStart = new Date(first)
-  gridStart.setDate(first.getDate() - ((first.getDay() + 6) % 7))
+  const offset = household.week_starts_on === 1
+    ? (first.getDay() + 6) % 7
+    : first.getDay()
+  gridStart.setDate(first.getDate() - offset)
 
   const days = Array.from({ length: 42 }, (_, index) => {
     const day = new Date(gridStart)
@@ -85,8 +92,13 @@ export function CalendarPage() {
     return day
   })
 
+  const weekdayNames = household.week_starts_on === 1
+    ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarOccurrence[]>()
+
     for (const event of events) {
       const key = event.all_day
         ? event.occurrence_start_date
@@ -95,10 +107,12 @@ export function CalendarPage() {
       if (!key) continue
       map.set(key, [...(map.get(key) ?? []), event])
     }
+
     return map
   }, [events])
 
   function openComposer(day: string) {
+    if (!canWrite) return
     setComposerDate(day)
     setTitle('')
     setParticipantIds([])
@@ -107,7 +121,7 @@ export function CalendarPage() {
 
   async function save(event: FormEvent) {
     event.preventDefault()
-    if (!composerDate || !title.trim() || !calendars.length) return
+    if (!canWrite || !composerDate || !title.trim() || !calendars.length) return
 
     setSaving(true)
     setError('')
@@ -153,16 +167,7 @@ export function CalendarPage() {
 
   return (
     <div className="page calendar-page">
-      <section className="page-heading calendar-heading">
-        <div>
-          <span className="eyebrow">CALENDAR</span>
-          <h1>Calendar</h1>\n          <p>One shared household calendar.</p>
-        </div>
-        <button className="primary-button compact" onClick={() => openComposer(dateKey(new Date()))}>
-          <Plus size={17} />
-          Event
-        </button>
-      </section>
+      <div className="page-label">CALENDAR</div>
 
       <section className="calendar-toolbar">
         <button
@@ -172,7 +177,9 @@ export function CalendarPage() {
         >
           <ChevronLeft size={18} />
         </button>
+
         <h2>{anchor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h2>
+
         <button
           className="icon-button"
           aria-label="Next month"
@@ -180,15 +187,25 @@ export function CalendarPage() {
         >
           <ChevronRight size={18} />
         </button>
+
         <button className="secondary-button compact" onClick={() => setAnchor(new Date())}>
           Today
         </button>
+
+        {canWrite ? (
+          <button className="primary-button compact" onClick={() => openComposer(dateKey(new Date()))}>
+            <Plus size={17} />
+            Event
+          </button>
+        ) : (
+          <span className="read-only-chip">Read only</span>
+        )}
       </section>
 
       {error && <div className="notice error">{error}</div>}
 
       <section className="month-calendar">
-        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((name) => (
+        {weekdayNames.map((name) => (
           <div className="calendar-weekday" key={name}>{name}</div>
         ))}
 
@@ -200,7 +217,7 @@ export function CalendarPage() {
 
           return (
             <button
-              className={'calendar-day ' + (inMonth ? '' : 'outside ') + (today ? 'today' : '')}
+              className={'calendar-day ' + (inMonth ? '' : 'outside ') + (today ? 'today ' : '') + (!canWrite ? 'read-only' : '')}
               key={key}
               onClick={() => openComposer(key)}
             >
@@ -218,7 +235,7 @@ export function CalendarPage() {
         })}
       </section>
 
-      {composerDate && (
+      {composerDate && canWrite && (
         <div
           className="modal-backdrop"
           role="presentation"
