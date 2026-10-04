@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 export function AuthPage() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [displayName, setDisplayName] = useState('')
-  const [email, setEmail] = useState('')
+  const [identity, setIdentity] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -15,17 +15,25 @@ export function AuthPage() {
     setBusy(true)
     setMessage('')
 
+    const trimmedIdentity = identity.trim()
+    const isEmail = trimmedIdentity.includes('@')
+
     const result = mode === 'signin'
-      ? await supabase.auth.signInWithPassword({ email, password })
+      ? await supabase.auth.signInWithPassword(
+          isEmail
+            ? { email: trimmedIdentity, password }
+            : { phone: trimmedIdentity, password },
+        )
       : await supabase.auth.signUp({
-          email,
+          email: trimmedIdentity,
           password,
           options: {
-            data: { display_name: displayName.trim() || email.split('@')[0] },
+            data: { display_name: displayName.trim() || trimmedIdentity.split('@')[0] },
           },
         })
 
     setBusy(false)
+
     if (result.error) {
       setMessage(result.error.message)
       return
@@ -56,12 +64,34 @@ export function AuthPage() {
           {mode === 'signup' && (
             <label>Display name<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="name" /></label>
           )}
-          <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required /></label>
+
+          <label>
+            {mode === 'signin' ? 'Email or phone number' : 'Email'}
+            <input
+              type={mode === 'signup' ? 'email' : 'text'}
+              value={identity}
+              onChange={(event) => setIdentity(event.target.value)}
+              autoComplete={mode === 'signin' ? 'username' : 'email'}
+              placeholder={mode === 'signin' ? 'name@example.com or +491701234567' : ''}
+              required
+            />
+          </label>
+
           <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} minLength={8} required /></label>
 
           {message && <div className="form-message">{message}</div>}
           <button className="primary-button" disabled={busy}>{busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}</button>
-          <button type="button" className="text-button" onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setMessage('') }}>
+
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => {
+              setMode(mode === 'signin' ? 'signup' : 'signin')
+              setMessage('')
+              setIdentity('')
+              setPassword('')
+            }}
+          >
             {mode === 'signin' ? 'New to Famioo? Create an account' : 'Already have an account? Sign in'}
           </button>
         </form>
