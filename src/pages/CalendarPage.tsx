@@ -1,8 +1,11 @@
 import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useHousehold } from '../context/HouseholdContext'
+import { categoryColor } from '../lib/categoryColors'
 import { supabase } from '../lib/supabase'
 import type { CalendarOccurrence, CalendarRow, EventCategory } from '../lib/types'
+
+type CalendarView = 'day' | 'week' | 'month' | 'upcoming'
 
 function dateKey(date: Date) {
   const year = date.getFullYear()
@@ -11,18 +14,65 @@ function dateKey(date: Date) {
   return year + '-' + month + '-' + day
 }
 
-function monthRange(anchor: Date) {
+function addDays(date: Date, days: number) {
+  const next = new Date(date)
+  next.setDate(next.getDate() + days)
+  return next
+}
+
+function startOfWeek(date: Date, mondayFirst: boolean) {
+  const next = new Date(date)
+  const offset = mondayFirst
+    ? (next.getDay() + 6) % 7
+    : next.getDay()
+  next.setDate(next.getDate() - offset)
+  next.setHours(12, 0, 0, 0)
+  return next
+}
+
+function rangeFor(view: CalendarView, anchor: Date, mondayFirst: boolean) {
+  if (view === 'day') {
+    const key = dateKey(anchor)
+    return { start: key, end: key }
+  }
+
+  if (view === 'week') {
+    const start = startOfWeek(anchor, mondayFirst)
+    return { start: dateKey(start), end: dateKey(addDays(start, 6)) }
+  }
+
+  if (view === 'upcoming') {
+    return { start: dateKey(anchor), end: dateKey(addDays(anchor, 59)) }
+  }
+
   return {
     start: dateKey(new Date(anchor.getFullYear(), anchor.getMonth(), 1)),
     end: dateKey(new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0)),
   }
 }
 
+function occurrenceDayKey(event: CalendarOccurrence) {
+  if (event.all_day) return event.occurrence_start_date
+  if (!event.occurrence_start_at) return null
+  return dateKey(new Date(event.occurrence_start_at))
+}
+
+function eventTime(event: CalendarOccurrence, timeFormat: '24h' | '12h') {
+  if (event.all_day || !event.occurrence_start_at) return 'All day'
+  return new Date(event.occurrence_start_at).toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: timeFormat === '12h',
+  })
+}
+
 export function CalendarPage() {
   const { household, profiles, modules } = useHousehold()
   const calendarAccess = modules.find((module) => module.code === 'calendar')
   const canWrite = Boolean(calendarAccess?.can_write)
+  const mondayFirst = household.week_starts_on === 1
 
+  const [view, setView] = useState<CalendarView>('month')
   const [anchor, setAnchor] = useState(() => new Date())
   const [events, setEvents] = useState<CalendarOccurrence[]>([])
   const [calendars, setCalendars] = useState<CalendarRow[]>([])
@@ -36,7 +86,10 @@ export function CalendarPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  const range = useMemo(() => monthRange(anchor), [anchor])
+  const range = useMemo(
+    () => rangeFor(view, anchor, mondayFirst),
+    [view, anchor, mondayFirst],
+  )
 
   async function load() {
     setError('')
@@ -79,37 +132,47 @@ export function CalendarPage() {
     void load()
   }, [household.id, range.start, range.end])
 
-  const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
-  const gridStart = new Date(first)
-  const offset = household.week_starts_on === 1
-    ? (first.getDay() + 6) % 7
-    : first.getDay()
-  gridStart.setDate(first.getDate() - offset)
-
-  const days = Array.from({ length: 42 }, (_, index) => {
-    const day = new Date(gridStart)
-    day.setDate(gridStart.getDate() + index)
-    return day
-  })
-
-  const weekdayNames = household.week_starts_on === 1
-    ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const categoriesById = useMemo(
+    () => new Map(categories.map((category) => [category.id, category])),
+    [categories],
+  )
 
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarOccurrence[]>()
 
     for (const event of events) {
-      const key = event.all_day
-        ? event.occurrence_start_date
-        : event.occurrence_start_at?.slice(0, 10)
-
+      const key = occurrenceDayKey(event)
       if (!key) continue
       map.set(key, [...(map.get(key) ?? []), event])
     }
 
+    for (const [, dayEvents] of map) {
+      dayEvents.sort((a, b) => {
+        if (a.all_day !== b.all_day) return a.all_day ? -1 : 1
+        return (a.occurrence_start_at ?? '').localeCompare(b.occurrence_start_at ?? '')
+      })
+    }
+
     return map
   }, [events])
+
+  const monthGrid = useMemo(() => {
+    const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
+    const gridStart = startOfWeek(first, mondayFirst)
+
+    return Array.from({ length: 42 }, (_, index) => addDays(gridStart, index))
+  }, [anchor, mondayFirst])
+
+  const weekDays = useMemo(() => {
+    const start = startOfWeek(anchor, mondayFirst)
+    return Array.from({ length: 7 }, (_, index) => addDays(start, index))
+  }, [anchor, mondayFirst])
+
+  const weekdayNames = mondayFirst
+    ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+  const selectedCategory = categoriesById.get(categoryId)
 
   function openComposer(day: string) {
     if (!canWrite) return
@@ -117,6 +180,36 @@ export function CalendarPage() {
     setTitle('')
     setParticipantIds([])
     setError('')
+  }
+
+  function navigate(direction: -1 | 1) {
+    if (view === 'day') setAnchor(addDays(anchor, direction))
+    else if (view === 'week') setAnchor(addDays(anchor, 7 * direction))
+    else if (view === 'upcoming') setAnchor(addDays(anchor, 30 * direction))
+    else setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() + direction, 1))
+  }
+
+  function toolbarTitle() {
+    if (view === 'day') {
+      return anchor.toLocaleDateString(undefined, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    }
+
+    if (view === 'week') {
+      const start = weekDays[0]
+      const end = weekDays[6]
+      return start.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+        + ' – '
+        + end.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+    }
+
+    if (view === 'upcoming') return 'Next 60 days'
+
+    return anchor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
   }
 
   async function save(event: FormEvent) {
@@ -165,26 +258,49 @@ export function CalendarPage() {
     await load()
   }
 
+  function EventPill({ item, detailed = false }: { item: CalendarOccurrence; detailed?: boolean }) {
+    const category = item.category_id ? categoriesById.get(item.category_id) : undefined
+    const color = categoryColor(category?.color_key ?? 'slate')
+
+    return (
+      <span className={detailed ? 'calendar-event-detail' : 'calendar-event-pill'} key={item.occurrence_key}>
+        <span className="calendar-event-dot" style={{ backgroundColor: color }} />
+        <span className="calendar-event-text">
+          <strong>{item.title}</strong>
+          {detailed && <small>{eventTime(item, household.time_format)}{category ? ' · ' + category.name : ''}</small>}
+        </span>
+      </span>
+    )
+  }
+
   return (
     <div className="page calendar-page">
       <div className="page-label">CALENDAR</div>
 
+      <nav className="calendar-view-tabs" aria-label="Calendar view">
+        {(['day', 'week', 'month', 'upcoming'] as CalendarView[]).map((item) => (
+          <button
+            type="button"
+            className={view === item ? 'active' : ''}
+            key={item}
+            onClick={() => {
+              setView(item)
+              if (item === 'upcoming') setAnchor(new Date())
+            }}
+          >
+            {item === 'upcoming' ? 'Upcoming' : item[0].toUpperCase() + item.slice(1)}
+          </button>
+        ))}
+      </nav>
+
       <section className="calendar-toolbar">
-        <button
-          className="icon-button"
-          aria-label="Previous month"
-          onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1))}
-        >
+        <button className="icon-button" aria-label="Previous period" onClick={() => navigate(-1)}>
           <ChevronLeft size={18} />
         </button>
 
-        <h2>{anchor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h2>
+        <h2>{toolbarTitle()}</h2>
 
-        <button
-          className="icon-button"
-          aria-label="Next month"
-          onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1))}
-        >
+        <button className="icon-button" aria-label="Next period" onClick={() => navigate(1)}>
           <ChevronRight size={18} />
         </button>
 
@@ -204,36 +320,96 @@ export function CalendarPage() {
 
       {error && <div className="notice error">{error}</div>}
 
-      <section className="month-calendar">
-        {weekdayNames.map((name) => (
-          <div className="calendar-weekday" key={name}>{name}</div>
-        ))}
+      {view === 'month' && (
+        <section className="month-calendar">
+          {weekdayNames.map((name) => (
+            <div className="calendar-weekday" key={name}>{name}</div>
+          ))}
 
-        {days.map((day) => {
-          const key = dateKey(day)
-          const inMonth = day.getMonth() === anchor.getMonth()
-          const today = key === dateKey(new Date())
-          const dayEvents = eventsByDay.get(key) ?? []
+          {monthGrid.map((day) => {
+            const key = dateKey(day)
+            const inMonth = day.getMonth() === anchor.getMonth()
+            const today = key === dateKey(new Date())
+            const dayEvents = eventsByDay.get(key) ?? []
 
-          return (
-            <button
-              className={'calendar-day ' + (inMonth ? '' : 'outside ') + (today ? 'today ' : '') + (!canWrite ? 'read-only' : '')}
-              key={key}
-              onClick={() => openComposer(key)}
-            >
-              <span className="calendar-day-number">{day.getDate()}</span>
-              <span className="calendar-day-events">
-                {dayEvents.slice(0, 3).map((item) => (
-                  <span className="calendar-event-pill" key={item.occurrence_key}>
-                    {item.title}
-                  </span>
-                ))}
-                {dayEvents.length > 3 && <small>+{dayEvents.length - 3} more</small>}
-              </span>
-            </button>
-          )
-        })}
-      </section>
+            return (
+              <button
+                className={'calendar-day ' + (inMonth ? '' : 'outside ') + (today ? 'today ' : '') + (!canWrite ? 'read-only' : '')}
+                key={key}
+                onClick={() => openComposer(key)}
+              >
+                <span className="calendar-day-number">{day.getDate()}</span>
+                <span className="calendar-day-events">
+                  {dayEvents.slice(0, 3).map((item) => <EventPill item={item} key={item.occurrence_key} />)}
+                  {dayEvents.length > 3 && <small>+{dayEvents.length - 3} more</small>}
+                </span>
+              </button>
+            )
+          })}
+        </section>
+      )}
+
+      {view === 'week' && (
+        <section className="week-calendar">
+          {weekDays.map((day) => {
+            const key = dateKey(day)
+            const dayEvents = eventsByDay.get(key) ?? []
+            const today = key === dateKey(new Date())
+
+            return (
+              <article className={today ? 'week-day today' : 'week-day'} key={key}>
+                <button type="button" className="week-day-head" onClick={() => openComposer(key)} disabled={!canWrite}>
+                  <small>{day.toLocaleDateString(undefined, { weekday: 'short' })}</small>
+                  <strong>{day.getDate()}</strong>
+                </button>
+                <div className="week-day-events">
+                  {dayEvents.length
+                    ? dayEvents.map((item) => <EventPill item={item} detailed key={item.occurrence_key} />)
+                    : <span className="calendar-empty-mini">No events</span>}
+                </div>
+              </article>
+            )
+          })}
+        </section>
+      )}
+
+      {view === 'day' && (
+        <section className="day-calendar">
+          <header>
+            <div>
+              <span>{anchor.toLocaleDateString(undefined, { weekday: 'long' })}</span>
+              <strong>{anchor.getDate()}</strong>
+            </div>
+            {canWrite && <button className="secondary-button compact" onClick={() => openComposer(dateKey(anchor))}><Plus size={15} />Add event</button>}
+          </header>
+          <div className="day-event-list">
+            {(eventsByDay.get(dateKey(anchor)) ?? []).length
+              ? (eventsByDay.get(dateKey(anchor)) ?? []).map((item) => <EventPill item={item} detailed key={item.occurrence_key} />)
+              : <div className="empty-state"><strong>No events.</strong><span>Nothing is planned for this day.</span></div>}
+          </div>
+        </section>
+      )}
+
+      {view === 'upcoming' && (
+        <section className="upcoming-calendar">
+          {events.length === 0 ? (
+            <div className="empty-state"><strong>No upcoming events.</strong><span>Nothing is planned in the next 60 days.</span></div>
+          ) : Array.from(eventsByDay.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([key, dayEvents]) => {
+            const day = new Date(key + 'T12:00:00')
+            return (
+              <article className="upcoming-day" key={key}>
+                <div className="upcoming-date">
+                  <strong>{day.getDate()}</strong>
+                  <span>{day.toLocaleDateString(undefined, { weekday: 'short', month: 'short' })}</span>
+                </div>
+                <div className="upcoming-events">
+                  {dayEvents.map((item) => <EventPill item={item} detailed key={item.occurrence_key} />)}
+                </div>
+              </article>
+            )
+          })}
+        </section>
+      )}
 
       {composerDate && canWrite && (
         <div
@@ -255,12 +431,7 @@ export function CalendarPage() {
                   })}
                 </h2>
               </div>
-              <button
-                type="button"
-                className="icon-button"
-                aria-label="Close event form"
-                onClick={() => setComposerDate(null)}
-              >
+              <button type="button" className="icon-button" aria-label="Close event form" onClick={() => setComposerDate(null)}>
                 <X size={18} />
               </button>
             </header>
@@ -273,32 +444,26 @@ export function CalendarPage() {
             <div className="form-row">
               <label>
                 Category
-                <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
-                  {categories.map((item) => (
-                    <option key={item.id} value={item.id}>{item.name}</option>
-                  ))}
-                </select>
+                <span className="category-select-wrap">
+                  <span className="category-select-dot" style={{ backgroundColor: categoryColor(selectedCategory?.color_key ?? 'slate') }} />
+                  <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+                    {categories.map((item) => (
+                      <option key={item.id} value={item.id}>{item.name}</option>
+                    ))}
+                  </select>
+                </span>
               </label>
 
               <label className="toggle-label">
                 <span>All day</span>
-                <input
-                  type="checkbox"
-                  checked={allDay}
-                  onChange={(event) => setAllDay(event.target.checked)}
-                />
+                <input type="checkbox" checked={allDay} onChange={(event) => setAllDay(event.target.checked)} />
               </label>
             </div>
 
             {!allDay && (
               <label>
                 Start time
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(event) => setStartTime(event.target.value)}
-                  required
-                />
+                <input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} required />
               </label>
             )}
 
