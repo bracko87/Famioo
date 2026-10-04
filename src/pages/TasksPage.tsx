@@ -71,7 +71,7 @@ export function TasksPage() {
         <form className="quick-create" onSubmit={add}>
           <Plus size={18} />
           <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Add a household task…" />
-          <button>Add</button>
+          <button className="primary-button compact"><Plus size={16} />Add task</button>
         </form>
       ) : (
         <div className="module-access-note">Read-only access</div>
