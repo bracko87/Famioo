@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useHousehold } from '../../context/HouseholdContext'
 import { supabase } from '../../lib/supabase'
+import { Select } from '../ui/Select'
 
 export function GeneralSettings() {
   const { household, refresh } = useHousehold()
@@ -78,36 +79,56 @@ export function GeneralSettings() {
 
         <label>
           Language
-          <select value={language} onChange={(event) => setLanguage(event.target.value as typeof language)} disabled={!canEdit}>
-            <option value="en">English</option>
-            <option value="de">Deutsch</option>
-            <option value="sr">Srpski</option>
-          </select>
+          <Select
+            value={language}
+            onChange={(value) => setLanguage(value as typeof language)}
+            disabled={!canEdit}
+            options={[
+              { value: 'en', label: 'English' },
+              { value: 'de', label: 'Deutsch' },
+              { value: 'sr', label: 'Srpski' },
+            ]}
+          />
         </label>
 
         <label>
           Week starts on
-          <select value={weekStartsOn} onChange={(event) => setWeekStartsOn(Number(event.target.value) as 0 | 1)} disabled={!canEdit}>
-            <option value={1}>Monday</option>
-            <option value={0}>Sunday</option>
-          </select>
+          <Select
+            value={String(weekStartsOn)}
+            onChange={(value) => setWeekStartsOn(Number(value) as 0 | 1)}
+            disabled={!canEdit}
+            options={[
+              { value: '1', label: 'Monday' },
+              { value: '0', label: 'Sunday' },
+            ]}
+          />
         </label>
 
         <label>
           Date format
-          <select value={dateFormat} onChange={(event) => setDateFormat(event.target.value as typeof dateFormat)} disabled={!canEdit}>
-            <option value="DD.MM.YYYY">DD.MM.YYYY</option>
-            <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-            <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-          </select>
+          <Select
+            value={dateFormat}
+            onChange={(value) => setDateFormat(value as typeof dateFormat)}
+            disabled={!canEdit}
+            options={[
+              { value: 'DD.MM.YYYY', label: 'DD.MM.YYYY' },
+              { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY' },
+              { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD' },
+            ]}
+          />
         </label>
 
         <label>
           Time format
-          <select value={timeFormat} onChange={(event) => setTimeFormat(event.target.value as typeof timeFormat)} disabled={!canEdit}>
-            <option value="24h">24-hour</option>
-            <option value="12h">12-hour</option>
-          </select>
+          <Select
+            value={timeFormat}
+            onChange={(value) => setTimeFormat(value as typeof timeFormat)}
+            disabled={!canEdit}
+            options={[
+              { value: '24h', label: '24-hour' },
+              { value: '12h', label: '12-hour' },
+            ]}
+          />
         </label>
       </div>
 
