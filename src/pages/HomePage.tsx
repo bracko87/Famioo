@@ -85,12 +85,13 @@ export function HomePage() {
     checklists: `${checklistCount} active`,
   }
 
+  const enabledModules = modules.filter((module) => module.enabled)
+
   return (
     <div className="page home-page">
-      <section className="page-heading">
+      <section className="page-heading home-heading">
         <div>
           <span className="eyebrow">HOME</span>
-          <h1>{household.name}</h1>
           <p>{profiles.length} family profile{profiles.length === 1 ? '' : 's'} · shared household overview</p>
         </div>
       </section>
@@ -104,21 +105,29 @@ export function HomePage() {
         <Link className="hero-action" to="/app/calendar">Open calendar <span>→</span></Link>
       </section>
 
-      <section className="module-grid" aria-label="Enabled modules">
-        {modules.filter((module) => module.enabled).map((module, index) => {
-          const Icon = iconByModule[module.code] ?? Sparkles
-          return (
-            <Link className={`module-banner module-tone-${(index % 8) + 1}`} to={routeByModule[module.code]} key={module.code}>
-              <span className="module-banner-icon"><Icon size={20} /></span>
-              <span className="module-banner-copy">
-                <small>{module.name.toUpperCase()}</small>
-                <strong>{metricByCode[module.code] ?? module.description}</strong>
-                <em>{module.is_core ? 'Included in Famioo core' : 'Unlocked for this household'}</em>
-              </span>
-              <b>›</b>
-            </Link>
-          )
-        })}
+      <section className="home-module-area" aria-label="Enabled modules">
+        <div className="module-stack">
+          {enabledModules.map((module, index) => {
+            const Icon = iconByModule[module.code] ?? Sparkles
+            return (
+              <Link
+                className={`module-banner module-tone-${(index % 8) + 1}`}
+                to={routeByModule[module.code]}
+                key={module.code}
+              >
+                <span className="module-banner-icon"><Icon size={20} /></span>
+                <span className="module-banner-copy">
+                  <small>{module.name.toUpperCase()}</small>
+                  <strong>{metricByCode[module.code] ?? module.description}</strong>
+                  <em>{module.is_core ? 'Included in Famioo core' : 'Unlocked for this household'}</em>
+                </span>
+                <b>›</b>
+              </Link>
+            )
+          })}
+        </div>
+
+        <div className="home-future-area" aria-hidden="true" />
       </section>
     </div>
   )
