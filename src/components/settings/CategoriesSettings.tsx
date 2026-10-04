@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useHousehold } from '../../context/HouseholdContext'
 import { categoryColor, categoryColorOptions } from '../../lib/categoryColors'
 import { supabase } from '../../lib/supabase'
+import { Select } from '../ui/Select'
 
 type CategoryRow = {
   id: string
@@ -26,6 +27,18 @@ export function CategoriesSettings() {
   const nextSortOrder = useMemo(() => {
     return (categories.reduce((max, item) => Math.max(max, item.sort_order), 0) || 0) + 10
   }, [categories])
+
+  const availableColors = useMemo(() => {
+    const used = new Set(categories.map((category) => category.color_key))
+    const unused = categoryColorOptions.filter((color) => !used.has(color.key))
+    return unused.length ? unused : categoryColorOptions
+  }, [categories])
+
+  useEffect(() => {
+    if (!availableColors.some((color) => color.key === colorKey)) {
+      setColorKey(availableColors[0]?.key ?? 'purple')
+    }
+  }, [availableColors, colorKey])
 
   async function loadCategories() {
     const result = await supabase
@@ -73,13 +86,12 @@ export function CategoriesSettings() {
     }
 
     setName('')
-    setColorKey('purple')
     setMessage('Category created.')
     await loadCategories()
   }
 
   async function removeCategory(category: CategoryRow) {
-    if (!canWrite || category.is_system) return
+    if (!canWrite) return
 
     setMessage('')
     const result = await supabase
@@ -92,6 +104,7 @@ export function CategoriesSettings() {
       return
     }
 
+    setMessage(category.name + ' removed.')
     await loadCategories()
   }
 
@@ -102,7 +115,7 @@ export function CategoriesSettings() {
           <div>
             <span className="eyebrow">CATEGORIES</span>
             <h2>Calendar categories</h2>
-            <p>These categories are used when creating calendar events.</p>
+            <p>Every active category can be used when creating calendar events, and every category can be removed.</p>
           </div>
         </div>
 
@@ -118,7 +131,7 @@ export function CategoriesSettings() {
                 <small>{category.is_system ? 'Default category' : 'Custom category'}</small>
               </span>
               <span className="category-color-label">{category.color_key}</span>
-              {canWrite && !category.is_system ? (
+              {canWrite ? (
                 <button
                   className="icon-button category-delete"
                   type="button"
@@ -138,6 +151,7 @@ export function CategoriesSettings() {
           <div>
             <span className="eyebrow">NEW CATEGORY</span>
             <h2>Create category</h2>
+            <p>Unused colors are offered first. Once every color is in use, the full palette becomes available again.</p>
           </div>
         </div>
 
@@ -150,11 +164,16 @@ export function CategoriesSettings() {
 
             <label>
               Color
-              <select value={colorKey} onChange={(event) => setColorKey(event.target.value)}>
-                {categoryColorOptions.map((color) => (
-                  <option value={color.key} key={color.key}>{color.label}</option>
-                ))}
-              </select>
+              <Select
+                value={colorKey}
+                onChange={setColorKey}
+                options={availableColors.map((color) => ({
+                  value: color.key,
+                  label: color.label,
+                  dotColor: categoryColor(color.key),
+                }))}
+                ariaLabel="Choose category color"
+              />
             </label>
 
             <div className="category-color-preview">
