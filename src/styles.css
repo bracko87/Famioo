@@ -2063,3 +2063,13 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
     min-width: 140px;
   }
 }
+
+
+.header-profile-image {
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  border-radius: 9px;
+  object-fit: cover;
+  border: 1px solid rgba(255,255,255,.18);
+}
