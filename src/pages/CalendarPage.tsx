@@ -156,8 +156,7 @@ export function CalendarPage() {
       <section className="page-heading calendar-heading">
         <div>
           <span className="eyebrow">CALENDAR</span>
-          <h1>Family calendar</h1>
-          <p>One shared calendar foundation, isolated to {household.name}.</p>
+          <h1>Calendar</h1>\n          <p>One shared household calendar.</p>
         </div>
         <button className="primary-button compact" onClick={() => openComposer(dateKey(new Date()))}>
           <Plus size={17} />
