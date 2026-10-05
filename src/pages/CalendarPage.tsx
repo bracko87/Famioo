@@ -621,16 +621,24 @@ export function CalendarPage() {
     const color = categoryColor(category?.color_key ?? 'slate')
 
     return (
-      <button
-        type="button"
+      <div
         className={detailed ? 'calendar-event-detail' : 'calendar-event-pill'}
         key={item.occurrence_key}
+        role={canWrite ? 'button' : undefined}
+        tabIndex={canWrite ? 0 : undefined}
         onClick={(event) => {
           event.stopPropagation()
-          void openEventEditor(item)
+          if (canWrite) void openEventEditor(item)
         }}
-        disabled={!canWrite}
-        aria-label={'Open event ' + item.title}
+        onKeyDown={(event) => {
+          if (!canWrite) return
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            event.stopPropagation()
+            void openEventEditor(item)
+          }
+        }}
+        aria-label={canWrite ? 'Open event ' + item.title : undefined}
       >
         <span className="calendar-event-dot" style={{ backgroundColor: color }} />
         <span className="calendar-event-text">
@@ -640,7 +648,7 @@ export function CalendarPage() {
             <GoogleMapsLink location={item.location_text} className="calendar-location-link" />
           )}
         </span>
-      </button>
+      </div>
     )
   }
 
@@ -707,16 +715,7 @@ export function CalendarPage() {
               <div
                 className={'calendar-day ' + (inMonth ? '' : 'outside ') + (today ? 'today ' : '') + (!canWrite ? 'read-only' : '')}
                 key={key}
-                role={canWrite ? 'button' : undefined}
-                tabIndex={canWrite ? 0 : -1}
                 onClick={() => openComposer(key)}
-                onKeyDown={(event) => {
-                  if (!canWrite) return
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault()
-                    openComposer(key)
-                  }
-                }}
               >
                 <span className="calendar-day-number">{day.getDate()}</span>
                 <span className="calendar-day-events" onClick={(event) => event.stopPropagation()}>
