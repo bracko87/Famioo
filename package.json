@@ -8,7 +8,6 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "preview": "vite preview",
-    "predev": "node scripts/generate-pwa-icons.mjs",
     "prebuild": "node scripts/generate-pwa-icons.mjs"
   },
   "dependencies": {
