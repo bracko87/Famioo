@@ -98,8 +98,10 @@ export function HomePage() {
       : Promise.resolve({ count: 0, error: null })
 
     const monthStart = today.slice(0, 8) + '01'
-    const monthEndDate = new Date(Number(today.slice(0, 4)), Number(today.slice(5, 7)), 0)
-    const monthEnd = monthEndDate.toISOString().slice(0, 10)
+    const currentYear = Number(today.slice(0, 4))
+    const currentMonth = Number(today.slice(5, 7))
+    const lastDay = new Date(Date.UTC(currentYear, currentMonth, 0)).getUTCDate()
+    const monthEnd = today.slice(0, 8) + String(lastDay).padStart(2, '0')
 
     const costsRequest = costsModule?.enabled
       ? supabase
