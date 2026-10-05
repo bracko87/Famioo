@@ -12,6 +12,7 @@ import { OnboardingPage } from './pages/OnboardingPage'
 import { HomePage } from './pages/HomePage'
 import { CalendarPage } from './pages/CalendarPage'
 import { TasksPage } from './pages/TasksPage'
+import { TaskArchivePage } from './pages/TaskArchivePage'
 import { ChecklistsPage } from './pages/ChecklistsPage'
 import { ChecklistArchivePage } from './pages/ChecklistArchivePage'
 import { ShoppingPage } from './pages/ShoppingPage'
@@ -136,6 +137,7 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Route index element={<HomePage />} />
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="tasks" element={<TasksPage />} />
+          <Route path="tasks/archive" element={<TaskArchivePage />} />
           <Route path="checklists" element={<ChecklistsPage />} />
           <Route path="checklists/archive" element={<ChecklistArchivePage />} />
           <Route path="settings" element={<SettingsPage />} />
