@@ -549,6 +549,7 @@ export function ShoppingPage() {
               <div>
                 <span className="eyebrow">SHOPPING ARCHIVE</span>
                 <h2>Archived shopping lists</h2>
+                <p className="archive-retention-note">Archived shopping lists are removed automatically after about 6 months.</p>
               </div>
               <button type="button" className="icon-button" aria-label="Close shopping archive" onClick={() => setArchiveOpen(false)}>
                 <X size={18} />
