@@ -208,7 +208,7 @@ create index if not exists shopping_items_list_idx on public.shopping_items(shop
 -- Shopping is the next development module. Unlock it for existing development households.
 update public.household_modules
 set enabled=true,
-    source=case when source='default' then 'development' else source end,
+    source=case when source='default' then 'admin' else source end,
     enabled_at=coalesce(enabled_at,now()),
     updated_at=now()
 where module_code='shopping';
