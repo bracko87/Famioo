@@ -339,6 +339,12 @@ export function LifeAdminPage() {
     return []
   }
 
+  function typeForBase(baseType: LifeAdminBaseType) {
+    return typeOptions.find((option) => option.baseType === baseType)?.value
+      ?? typeOptions[0]?.value
+      ?? 'document'
+  }
+
   function resetComposer() {
     setEditingId(null)
     setItemType(typeOptions[0]?.value ?? 'document')
@@ -459,8 +465,8 @@ export function LifeAdminPage() {
       return
     }
 
-    if (addToCalendar && !dueDate && !renewalDate && !expiryDate) {
-      setError('Add a due, renewal or expiry date before adding this item to Calendar.')
+    if (addToCalendar && !dueDate && !renewalDate && !expiryDate && !startDate) {
+      setError('Add a due, renewal, expiry or start date before adding this item to Calendar.')
       return
     }
 
@@ -741,11 +747,11 @@ export function LifeAdminPage() {
                 className="primary-button compact"
                 type="button"
                 onClick={() => openComposer(
-                  tab === 'documents' ? 'document' :
-                    tab === 'contracts' ? 'contract' :
-                      tab === 'insurance' ? 'insurance' :
-                        tab === 'subscriptions' ? 'subscription' :
-                          tab === 'deadlines' ? 'deadline' : undefined,
+                  tab === 'documents' ? typeForBase('document') :
+                    tab === 'contracts' ? typeForBase('contract') :
+                      tab === 'insurance' ? typeForBase('insurance') :
+                        tab === 'subscriptions' ? typeForBase('subscription') :
+                          tab === 'deadlines' ? typeForBase('deadline') : undefined,
                 )}
               >
                 <Plus size={15} />
