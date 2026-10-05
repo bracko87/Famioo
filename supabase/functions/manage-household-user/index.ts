@@ -94,50 +94,42 @@ Deno.serve(async (req: Request) => {
   }
   if (!displayName.trim()) return json({ error: "Display name is required." }, 400)
 
-  const [{ data: household, error: householdError }, { data: membership, error: membershipError }] = await Promise.all([
-    adminClient
-      .from("households")
-      .select("timezone,created_by_user_id")
-      .eq("id", householdId)
-      .maybeSingle(),
-    adminClient
-      .from("household_members")
-      .select("role,status")
-      .eq("household_id", householdId)
-      .eq("user_id", caller.id)
-      .maybeSingle(),
-  ])
+  const { data: ownerRows, error: ownerError } = await userClient.rpc(
+    "owner_household_context_v1",
+    { p_household_id: householdId },
+  )
 
-  if (householdError || !household) return json({ error: "Household not found." }, 404)
+  const ownerContext = Array.isArray(ownerRows) ? ownerRows[0] : null
 
-  const callerIsOwner = household.created_by_user_id === caller.id
-    || (!membershipError && membership?.status === "active" && membership?.role === "owner")
+  if (ownerError || !ownerContext) {
+    return json({
+      error: "Only the household owner can add or invite users.",
+      detail: ownerError?.message ?? "Owner context was not returned.",
+    }, 403)
+  }
 
-  if (!callerIsOwner) {
-    return json({ error: "Only the household owner can add or invite users." }, 403)
+  const household = {
+    timezone: String(ownerContext.timezone || "Europe/Berlin"),
   }
 
   if (profileType === "child") {
-    const { data: childProfile, error: childError } = await adminClient
-      .from("family_profiles")
-      .insert({
-        household_id: householdId,
-        linked_user_id: null,
-        display_name: displayName,
-        profile_type: "child",
-        color_key: "pink",
-      })
-      .select("id")
-      .single()
+    const { data: childProfileId, error: childError } = await userClient.rpc(
+      "create_household_profile_v1",
+      {
+        p_household_id: householdId,
+        p_display_name: displayName,
+        p_profile_type: "child",
+      },
+    )
 
-    if (childError || !childProfile) {
+    if (childError || !childProfileId) {
       return json({ error: childError?.message ?? "Could not create the child profile." }, 400)
     }
 
     return json({
       ok: true,
       action: "create_profile",
-      profile_id: childProfile.id,
+      profile_id: childProfileId,
       profile_type: "child",
       display_name: displayName,
     })
