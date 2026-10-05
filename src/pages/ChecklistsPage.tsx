@@ -1,50 +1,237 @@
-import { Plus } from 'lucide-react'
-import { useEffect, useState, type FormEvent } from 'react'
+import { CalendarDays, ClipboardList, MapPin, Plus, X } from 'lucide-react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { ProfileAvatar } from '../components/ui/ProfileAvatar'
+import { Select } from '../components/ui/Select'
 import { useHousehold } from '../context/HouseholdContext'
+import { categoryColor } from '../lib/categoryColors'
 import { supabase } from '../lib/supabase'
+import type { CalendarOccurrence, EventCategory } from '../lib/types'
 
-type Checklist = { id: string; title: string }
+type Checklist = {
+  id: string
+  title: string
+  category_id: string | null
+  due_date: string | null
+  location_text: string | null
+  linked_event_id: string | null
+  linked_task_id: string | null
+}
+
 type Item = { id: string; checklist_id: string; item_text: string; checked: boolean }
+type ChecklistParticipant = { checklist_id: string; profile_id: string }
+type TaskSource = {
+  id: string
+  title: string
+  category_id: string | null
+  due_date: string | null
+  location_text: string | null
+}
+
+type SourceType = 'standalone' | 'event' | 'task'
+
+function dateFromOccurrence(event: CalendarOccurrence) {
+  if (event.occurrence_start_date) return event.occurrence_start_date
+  if (event.occurrence_start_at) return event.occurrence_start_at.slice(0, 10)
+  return ''
+}
 
 export function ChecklistsPage() {
-  const { household, modules } = useHousehold()
+  const { household, modules, profiles } = useHousehold()
   const canWrite = Boolean(modules.find((module) => module.code === 'checklists')?.can_write)
 
   const [lists, setLists] = useState<Checklist[]>([])
   const [items, setItems] = useState<Item[]>([])
-  const [title, setTitle] = useState('')
+  const [participants, setParticipants] = useState<ChecklistParticipant[]>([])
+  const [categories, setCategories] = useState<EventCategory[]>([])
+  const [eventSources, setEventSources] = useState<CalendarOccurrence[]>([])
+  const [taskSources, setTaskSources] = useState<TaskSource[]>([])
+  const [eventParticipants, setEventParticipants] = useState<{ event_id: string; profile_id: string }[]>([])
+  const [taskParticipants, setTaskParticipants] = useState<{ task_id: string; profile_id: string }[]>([])
   const [itemDrafts, setItemDrafts] = useState<Record<string, string>>({})
+  const [composerOpen, setComposerOpen] = useState(false)
+  const [sourceType, setSourceType] = useState<SourceType>('standalone')
+  const [sourceId, setSourceId] = useState('')
+  const [title, setTitle] = useState('')
+  const [categoryId, setCategoryId] = useState('')
+  const [dueDate, setDueDate] = useState('')
+  const [locationText, setLocationText] = useState('')
+  const [participantIds, setParticipantIds] = useState<string[]>([])
+  const [addToCalendar, setAddToCalendar] = useState(false)
+  const [addToTask, setAddToTask] = useState(false)
+  const [saveTemplate, setSaveTemplate] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   async function load() {
-    const [listResult, itemResult] = await Promise.all([
-      supabase.from('checklists').select('id,title').eq('household_id', household.id).eq('status', 'active').order('created_at', { ascending: false }),
-      supabase.from('checklist_items').select('id,checklist_id,item_text,checked').eq('household_id', household.id).order('sort_order'),
+    setError('')
+
+    const today = new Date().toISOString().slice(0, 10)
+    const future = new Date()
+    future.setDate(future.getDate() + 365)
+
+    const [listResult, itemResult, participantResult, categoryResult, eventResult, taskResult, eventParticipantResult, taskParticipantResult] = await Promise.all([
+      supabase
+        .from('checklists')
+        .select('id,title,category_id,due_date,location_text,linked_event_id,linked_task_id')
+        .eq('household_id', household.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('checklist_items')
+        .select('id,checklist_id,item_text,checked')
+        .eq('household_id', household.id)
+        .order('sort_order'),
+      supabase
+        .from('checklist_participants')
+        .select('checklist_id,profile_id')
+        .eq('household_id', household.id),
+      supabase
+        .from('event_categories')
+        .select('id,name,color_key')
+        .eq('household_id', household.id)
+        .eq('active', true)
+        .order('sort_order'),
+      supabase.rpc('calendar_occurrences_v1', {
+        p_household_id: household.id,
+        p_range_start: today,
+        p_range_end: future.toISOString().slice(0, 10),
+      }),
+      supabase
+        .from('tasks')
+        .select('id,title,category_id,due_date,location_text')
+        .eq('household_id', household.id)
+        .is('archived_at', null)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('event_participants')
+        .select('event_id,profile_id')
+        .eq('household_id', household.id),
+      supabase
+        .from('task_participants')
+        .select('task_id,profile_id')
+        .eq('household_id', household.id),
     ])
 
     if (listResult.error) setError(listResult.error.message)
     else setLists((listResult.data ?? []) as Checklist[])
 
-    if (itemResult.error) setError(itemResult.error.message)
+    if (itemResult.error) setError((current) => current || itemResult.error.message)
     else setItems((itemResult.data ?? []) as Item[])
+
+    if (participantResult.error) setError((current) => current || participantResult.error.message)
+    else setParticipants((participantResult.data ?? []) as ChecklistParticipant[])
+
+    if (categoryResult.error) {
+      setError((current) => current || categoryResult.error.message)
+    } else {
+      const rows = (categoryResult.data ?? []) as EventCategory[]
+      setCategories(rows)
+      setCategoryId((current) => rows.some((item) => item.id === current) ? current : rows[0]?.id ?? '')
+    }
+
+    if (!eventResult.error) {
+      const unique = new Map<string, CalendarOccurrence>()
+      for (const event of (eventResult.data ?? []) as CalendarOccurrence[]) {
+        if (!unique.has(event.event_id)) unique.set(event.event_id, event)
+      }
+      setEventSources(Array.from(unique.values()))
+    }
+
+    if (!taskResult.error) setTaskSources((taskResult.data ?? []) as TaskSource[])
+    if (!eventParticipantResult.error) setEventParticipants(eventParticipantResult.data ?? [])
+    if (!taskParticipantResult.error) setTaskParticipants(taskParticipantResult.data ?? [])
   }
 
   useEffect(() => { void load() }, [household.id])
 
+  const categoryById = useMemo(
+    () => new Map(categories.map((category) => [category.id, category])),
+    [categories],
+  )
+
+  const profileById = useMemo(
+    () => new Map(profiles.map((profile) => [profile.id, profile])),
+    [profiles],
+  )
+
+  function openComposer() {
+    setSourceType('standalone')
+    setSourceId('')
+    setTitle('')
+    setDueDate('')
+    setLocationText('')
+    setParticipantIds([])
+    setAddToCalendar(false)
+    setAddToTask(false)
+    setSaveTemplate(false)
+    setError('')
+    setComposerOpen(true)
+  }
+
+  function applySource(nextType: SourceType, nextId: string) {
+    setSourceType(nextType)
+    setSourceId(nextId)
+    setAddToCalendar(false)
+    setAddToTask(false)
+    setSaveTemplate(false)
+
+    if (nextType === 'event') {
+      const event = eventSources.find((item) => item.event_id === nextId)
+      if (!event) return
+      setTitle(event.title)
+      setCategoryId(event.category_id ?? categories[0]?.id ?? '')
+      setDueDate(dateFromOccurrence(event))
+      setLocationText(event.location_text ?? '')
+      setParticipantIds(eventParticipants.filter((item) => item.event_id === nextId).map((item) => item.profile_id))
+      return
+    }
+
+    if (nextType === 'task') {
+      const task = taskSources.find((item) => item.id === nextId)
+      if (!task) return
+      setTitle(task.title)
+      setCategoryId(task.category_id ?? categories[0]?.id ?? '')
+      setDueDate(task.due_date ?? '')
+      setLocationText(task.location_text ?? '')
+      setParticipantIds(taskParticipants.filter((item) => item.task_id === nextId).map((item) => item.profile_id))
+    }
+  }
+
   async function createList(event: FormEvent) {
     event.preventDefault()
-    if (!canWrite || !title.trim()) return
+    if (!canWrite || !title.trim() || !categoryId) return
 
-    const result = await supabase.from('checklists').insert({
-      household_id: household.id,
-      title: title.trim(),
+    if (sourceType === 'standalone' && addToCalendar && !dueDate) {
+      setError('Choose a date before adding this checklist to Calendar.')
+      return
+    }
+
+    setSaving(true)
+    setError('')
+
+    const result = await supabase.rpc('create_checklist_v1', {
+      p_household_id: household.id,
+      p_title: title.trim(),
+      p_category_id: categoryId,
+      p_due_date: dueDate || null,
+      p_location_text: locationText.trim() || null,
+      p_participants: participantIds.map((profileId) => ({ profile_id: profileId })),
+      p_linked_event_id: sourceType === 'event' ? sourceId || null : null,
+      p_linked_task_id: sourceType === 'task' ? sourceId || null : null,
+      p_add_to_calendar: sourceType === 'standalone' ? addToCalendar : false,
+      p_add_to_task: sourceType === 'standalone' ? addToTask : false,
+      p_create_template: sourceType === 'standalone' ? saveTemplate : false,
     })
 
-    if (result.error) setError(result.error.message)
-    else {
-      setTitle('')
-      await load()
+    setSaving(false)
+
+    if (result.error) {
+      setError(result.error.message)
+      return
     }
+
+    setComposerOpen(false)
+    await load()
   }
 
   async function addItem(listId: string) {
@@ -75,6 +262,7 @@ export function ChecklistsPage() {
       checked,
       checked_at: checked ? new Date().toISOString() : null,
       checked_by_user_id: checked ? user?.id ?? null : null,
+      updated_at: new Date().toISOString(),
     }).eq('id', item.id)
 
     if (result.error) setError(result.error.message)
@@ -82,30 +270,61 @@ export function ChecklistsPage() {
   }
 
   return (
-    <div className="page">
-      <div className="page-label">CHECKLISTS</div>
+    <div className="page checklists-page">
+      <div className="page-heading-row">
+        <div>
+          <div className="page-label">CHECKLISTS</div>
+          <h1>Shared checklists</h1>
+        </div>
 
-      {canWrite ? (
-        <form className="quick-create" onSubmit={createList}>
-          <Plus size={18} />
-          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Create a checklist…" />
-          <button className="primary-button compact"><Plus size={16} />Create checklist</button>
-        </form>
-      ) : (
-        <div className="module-access-note">Read-only access</div>
-      )}
+        {canWrite && (
+          <button className="primary-button compact" onClick={openComposer}>
+            <Plus size={16} />
+            Create checklist
+          </button>
+        )}
+      </div>
 
-      {error && <div className="notice error">{error}</div>}
+      {!canWrite && <div className="module-access-note">Read-only access</div>}
+      {error && !composerOpen && <div className="notice error">{error}</div>}
 
       <section className="checklist-grid">
         {lists.length === 0 ? (
-          <div className="list-card empty-state"><strong>No checklists yet.</strong><span>{canWrite ? 'Create the first reusable list.' : 'There are no checklists to show.'}</span></div>
+          <div className="list-card empty-state">
+            <span className="empty-state-title">No checklists yet.</span>
+            <span>{canWrite ? 'Create the first shared checklist.' : 'There are no checklists to show.'}</span>
+          </div>
         ) : lists.map((list) => {
           const listItems = items.filter((item) => item.checklist_id === list.id)
+          const category = list.category_id ? categoryById.get(list.category_id) : undefined
+          const listProfiles = participants
+            .filter((item) => item.checklist_id === list.id)
+            .map((item) => profileById.get(item.profile_id))
+            .filter(Boolean)
 
           return (
             <article className="list-card checklist-card" key={list.id}>
-              <header><h2>{list.title}</h2><small>{listItems.filter((item) => item.checked).length}/{listItems.length}</small></header>
+              <header>
+                <div>
+                  <h2>{list.title}</h2>
+                  <div className="checklist-meta">
+                    {category && <span><i className="meta-dot" style={{ backgroundColor: categoryColor(category.color_key) }} />{category.name}</span>}
+                    {list.due_date && <span>{list.due_date}</span>}
+                    {list.location_text && <span><MapPin size={11} />{list.location_text}</span>}
+                    {list.linked_event_id && <span><CalendarDays size={11} />Calendar</span>}
+                    {list.linked_task_id && <span><ClipboardList size={11} />Task</span>}
+                  </div>
+                </div>
+                <small>{listItems.filter((item) => item.checked).length}/{listItems.length}</small>
+              </header>
+
+              {listProfiles.length > 0 && (
+                <div className="checklist-participants">
+                  {listProfiles.map((profile) => profile && (
+                    <ProfileAvatar key={profile.id} avatarPath={profile.avatar_path} name={profile.display_name} size="sm" />
+                  ))}
+                </div>
+              )}
 
               <div className="checklist-items">
                 {listItems.map((item) => (
@@ -133,13 +352,172 @@ export function ChecklistsPage() {
                       }
                     }}
                   />
-                  <button onClick={() => void addItem(list.id)}>Add</button>
+                  <button className="secondary-button compact" onClick={() => void addItem(list.id)}>Add item</button>
                 </div>
               )}
             </article>
           )
         })}
       </section>
+
+      {composerOpen && canWrite && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target) setComposerOpen(false)
+          }}
+        >
+          <form className="modal-card checklist-composer" onSubmit={createList}>
+            <header>
+              <div>
+                <span className="eyebrow">NEW CHECKLIST</span>
+                <h2>Create checklist</h2>
+              </div>
+              <button type="button" className="icon-button" aria-label="Close checklist form" onClick={() => setComposerOpen(false)}>
+                <X size={18} />
+              </button>
+            </header>
+
+            <div className="composer-grid-two">
+              <label>
+                Start from
+                <Select
+                  value={sourceType}
+                  onChange={(value) => {
+                    const next = value as SourceType
+                    setSourceType(next)
+                    setSourceId('')
+                    setAddToCalendar(false)
+                    setAddToTask(false)
+                    setSaveTemplate(false)
+                    if (next === 'standalone') {
+                      setTitle('')
+                      setDueDate('')
+                      setLocationText('')
+                      setParticipantIds([])
+                    }
+                  }}
+                  options={[
+                    { value: 'standalone', label: 'New standalone checklist' },
+                    { value: 'event', label: 'Existing calendar event' },
+                    { value: 'task', label: 'Existing task' },
+                  ]}
+                  ariaLabel="Checklist source"
+                />
+              </label>
+
+              {sourceType !== 'standalone' && (
+                <label>
+                  {sourceType === 'event' ? 'Calendar event' : 'Task'}
+                  <Select
+                    value={sourceId}
+                    onChange={(value) => applySource(sourceType, value)}
+                    placeholder={sourceType === 'event' ? 'Choose event…' : 'Choose task…'}
+                    options={(sourceType === 'event' ? eventSources : taskSources).map((item) => ({
+                      value: sourceType === 'event' ? (item as CalendarOccurrence).event_id : (item as TaskSource).id,
+                      label: item.title,
+                    }))}
+                    ariaLabel={sourceType === 'event' ? 'Choose calendar event' : 'Choose task'}
+                  />
+                </label>
+              )}
+            </div>
+
+            <div className="composer-grid-two">
+              <label>
+                Checklist name
+                <input value={title} onChange={(event) => setTitle(event.target.value)} required />
+              </label>
+
+              <label>
+                Category
+                <Select
+                  value={categoryId}
+                  onChange={setCategoryId}
+                  options={categories.map((item) => ({
+                    value: item.id,
+                    label: item.name,
+                    dotColor: categoryColor(item.color_key),
+                  }))}
+                  ariaLabel="Choose checklist category"
+                />
+              </label>
+            </div>
+
+            <div className="composer-grid-two">
+              <label>
+                Date
+                <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+              </label>
+
+              <label>
+                Location
+                <input value={locationText} onChange={(event) => setLocationText(event.target.value)} placeholder="Optional location" />
+              </label>
+            </div>
+
+            <fieldset>
+              <legend>Participants</legend>
+              <div className="profile-choice-grid profile-choice-grid-wide">
+                {profiles.map((profile) => (
+                  <label className="profile-choice" key={profile.id}>
+                    <input
+                      type="checkbox"
+                      checked={participantIds.includes(profile.id)}
+                      onChange={(event) => {
+                        setParticipantIds((current) => event.target.checked
+                          ? [...current, profile.id]
+                          : current.filter((id) => id !== profile.id))
+                      }}
+                    />
+                    <ProfileAvatar avatarPath={profile.avatar_path} name={profile.display_name} size="sm" />
+                    <span className="profile-choice-name">{profile.display_name}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            {sourceType === 'standalone' ? (
+              <div className="composer-option-list">
+                <label className="composer-option">
+                  <input type="checkbox" checked={addToCalendar} onChange={(event) => setAddToCalendar(event.target.checked)} />
+                  <span>
+                    <span>Add to Calendar</span>
+                    <small>Creates one all-day calendar event. A date is required.</small>
+                  </span>
+                </label>
+
+                <label className="composer-option">
+                  <input type="checkbox" checked={addToTask} onChange={(event) => setAddToTask(event.target.checked)} />
+                  <span>
+                    <span>Create a matching task</span>
+                    <small>Creates one task and links this checklist to it.</small>
+                  </span>
+                </label>
+
+                <label className="composer-option">
+                  <input type="checkbox" checked={saveTemplate} onChange={(event) => setSaveTemplate(event.target.checked)} />
+                  <span>
+                    <span>Save as checklist template</span>
+                    <small>Reuse this checklist setup later.</small>
+                  </span>
+                </label>
+              </div>
+            ) : (
+              <div className="composer-source-note">
+                This checklist is linked to an existing {sourceType === 'event' ? 'calendar event' : 'task'}, so Famioo will not create a duplicate task, event, or template.
+              </div>
+            )}
+
+            {error && <div className="form-message error">{error}</div>}
+
+            <button className="primary-button" disabled={saving || (sourceType !== 'standalone' && !sourceId)}>
+              {saving ? 'Creating…' : 'Create checklist'}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   )
 }
