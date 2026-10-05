@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import type { CalendarOccurrence, CalendarRow, EventCategory } from '../lib/types'
 import { Select } from '../components/ui/Select'
 import { TimePicker } from '../components/ui/TimePicker'
+import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 
 type CalendarView = 'day' | 'week' | 'month' | 'upcoming'
 
@@ -85,6 +86,11 @@ export function CalendarPage() {
   const [startTime, setStartTime] = useState('18:00')
   const [categoryId, setCategoryId] = useState('')
   const [participantIds, setParticipantIds] = useState<string[]>([])
+  const [locationText, setLocationText] = useState('')
+  const [repeatType, setRepeatType] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none')
+  const [repeatInterval, setRepeatInterval] = useState('1')
+  const [repeatDays, setRepeatDays] = useState<string[]>([])
+  const [repeatUntil, setRepeatUntil] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -193,6 +199,11 @@ export function CalendarPage() {
     setComposerDate(day)
     setTitle('')
     setParticipantIds([])
+    setLocationText('')
+    setRepeatType('none')
+    setRepeatInterval('1')
+    setRepeatDays([])
+    setRepeatUntil('')
     setError('')
   }
 
@@ -237,6 +248,25 @@ export function CalendarPage() {
       ? null
       : new Date(composerDate + 'T' + startTime + ':00').toISOString()
 
+    const dateObject = new Date(composerDate + 'T12:00:00')
+    const weekdayCode = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][dateObject.getDay()]
+    let rrule: string | null = null
+
+    if (repeatType !== 'none') {
+      const parts = [
+        'FREQ=' + repeatType.toUpperCase(),
+        'INTERVAL=' + repeatInterval,
+      ]
+
+      if (repeatType === 'weekly') {
+        const days = repeatDays.length ? repeatDays : [weekdayCode]
+        parts.push('BYDAY=' + days.join(','))
+      }
+
+      if (repeatUntil) parts.push('UNTIL=' + repeatUntil.replaceAll('-', ''))
+      rrule = parts.join(';')
+    }
+
     const result = await supabase.rpc('save_event_v1', {
       p_event_id: null,
       p_household_id: household.id,
@@ -249,7 +279,7 @@ export function CalendarPage() {
       p_start_date: allDay ? composerDate : null,
       p_end_date: allDay ? composerDate : null,
       p_timezone: household.timezone,
-      p_location_text: null,
+      p_location_text: locationText.trim() || null,
       p_category_id: categoryId || null,
       p_visibility: 'household',
       p_participants: participantIds.map((profileId) => ({
@@ -257,7 +287,7 @@ export function CalendarPage() {
         participant_role: 'participant',
         can_edit: false,
       })),
-      p_rrule: null,
+      p_rrule: rrule,
       p_reminders: [],
     })
 
@@ -519,6 +549,96 @@ export function CalendarPage() {
               </label>
             )}
 
+            <label>
+              Location
+              <input
+                value={locationText}
+                onChange={(event) => setLocationText(event.target.value)}
+                placeholder="Optional location"
+              />
+            </label>
+
+            <div className="composer-grid-two">
+              <label>
+                Repeat
+                <Select
+                  value={repeatType}
+                  onChange={(value) => setRepeatType(value as typeof repeatType)}
+                  options={[
+                    { value: 'none', label: 'Does not repeat' },
+                    { value: 'daily', label: 'Daily' },
+                    { value: 'weekly', label: 'Weekly' },
+                    { value: 'monthly', label: 'Monthly' },
+                  ]}
+                  ariaLabel="Repeat event"
+                />
+              </label>
+
+              {repeatType !== 'none' && (
+                <label>
+                  Repeat every
+                  <Select
+                    value={repeatInterval}
+                    onChange={setRepeatInterval}
+                    options={Array.from({ length: 12 }, (_, index) => {
+                      const value = String(index + 1)
+                      const unit = repeatType === 'daily'
+                        ? 'day'
+                        : repeatType === 'weekly'
+                          ? 'week'
+                          : 'month'
+                      return {
+                        value,
+                        label: value + ' ' + unit + (value === '1' ? '' : 's'),
+                      }
+                    })}
+                    ariaLabel="Repeat interval"
+                  />
+                </label>
+              )}
+            </div>
+
+            {repeatType === 'weekly' && (
+              <fieldset className="repeat-weekday-fieldset">
+                <legend>Repeat on</legend>
+                <div className="repeat-weekday-grid">
+                  {[
+                    ['MO', 'Mon'],
+                    ['TU', 'Tue'],
+                    ['WE', 'Wed'],
+                    ['TH', 'Thu'],
+                    ['FR', 'Fri'],
+                    ['SA', 'Sat'],
+                    ['SU', 'Sun'],
+                  ].map(([code, label]) => (
+                    <button
+                      type="button"
+                      className={repeatDays.includes(code) ? 'active' : ''}
+                      key={code}
+                      onClick={() => setRepeatDays((current) => current.includes(code)
+                        ? current.filter((item) => item !== code)
+                        : [...current, code])}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+
+            {repeatType !== 'none' && (
+              <label>
+                Repeat until
+                <input
+                  type="date"
+                  min={composerDate}
+                  value={repeatUntil}
+                  onChange={(event) => setRepeatUntil(event.target.value)}
+                />
+                <small className="field-hint">Optional. Leave blank for no end date.</small>
+              </label>
+            )}
+
             <fieldset>
               <legend>Participants</legend>
               <div className="profile-choice-grid">
@@ -533,8 +653,12 @@ export function CalendarPage() {
                           : current.filter((id) => id !== profile.id))
                       }}
                     />
-                    <span>{profile.avatar_emoji ?? profile.display_name.slice(0, 1).toUpperCase()}</span>
-                    <strong>{profile.display_name}</strong>
+                    <ProfileAvatar
+                      avatarPath={profile.avatar_path}
+                      name={profile.display_name}
+                      size="sm"
+                    />
+                    <span className="profile-choice-name">{profile.display_name}</span>
                   </label>
                 ))}
               </div>
