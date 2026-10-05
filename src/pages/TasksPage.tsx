@@ -1,10 +1,12 @@
-import { CalendarDays, MapPin, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { CalendarDays, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { DatePicker } from '../components/ui/DatePicker'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { Select } from '../components/ui/Select'
+import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
+import { firstName } from '../lib/personName'
 import { supabase } from '../lib/supabase'
 import type { EventCategory } from '../lib/types'
 
@@ -373,19 +375,21 @@ export function TasksPage() {
               <span><i className="meta-dot" style={{ backgroundColor: categoryColor(category.color_key) }} />{category.name}</span>
             )}
             <span className={overdue ? 'overdue' : ''}>{task.due_date ?? 'No date'}</span>
-            {task.location_text && <span><MapPin size={11} />{task.location_text}</span>}
+            {task.location_text && <GoogleMapsLink location={task.location_text} />}
             {task.linked_event_id && <span><CalendarDays size={11} />Calendar</span>}
           </small>
         </span>
 
         <span className="task-participant-stack">
           {taskProfiles.slice(0, 4).map((profile) => profile && (
-            <ProfileAvatar
-              key={profile.id}
-              avatarPath={profile.avatar_path}
-              name={profile.display_name}
-              size="sm"
-            />
+            <span className="participant-badge" key={profile.id}>
+              <ProfileAvatar
+                avatarPath={profile.avatar_path}
+                name={profile.display_name}
+                size="sm"
+              />
+              <span>{firstName(profile.display_name)}</span>
+            </span>
           ))}
         </span>
 
@@ -561,7 +565,9 @@ export function TasksPage() {
               <label>
                 Location
                 <input value={locationText} onChange={(event) => setLocationText(event.target.value)} placeholder="Optional location" />
-                <small className="field-hint">Optional.</small>
+                {locationText.trim()
+                  ? <GoogleMapsLink location={locationText} label="Open in Google Maps" className="field-map-link" />
+                  : <small className="field-hint">Optional.</small>}
               </label>
             </div>
 
@@ -580,7 +586,7 @@ export function TasksPage() {
                       }}
                     />
                     <ProfileAvatar avatarPath={profile.avatar_path} name={profile.display_name} size="sm" />
-                    <span className="profile-choice-name">{profile.display_name}</span>
+                    <span className="profile-choice-name">{firstName(profile.display_name)}</span>
                   </label>
                 ))}
               </div>
