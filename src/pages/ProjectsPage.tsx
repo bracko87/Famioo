@@ -211,6 +211,16 @@ export function ProjectsPage() {
   async function load() {
     setError('')
 
+    if (canWrite) {
+      const cleanupResult = await supabase.rpc('archive_expired_project_work_items_v1', {
+        p_household_id: household.id,
+      })
+
+      if (cleanupResult.error) {
+        setError(cleanupResult.error.message)
+      }
+    }
+
     const [projectResult,itemResult,pointsResult,categoryResult,availabilityResult,taskResult,templateResult] = await Promise.all([
       supabase
         .from('household_projects')
@@ -223,9 +233,8 @@ export function ProjectsPage() {
         .select('id,project_id,item_kind,title,category_id,due_date,location_text,assigned_profile_id,points,notes,sync_task,sync_calendar,linked_task_id,linked_event_id,task_link_origin,score_duration,score_effort,score_execution,score_responsibility,status,completed_at,completed_by_profile_id,created_at')
         .eq('household_id',household.id)
         .neq('status','archived')
-        .order('status')
         .order('due_date',{ ascending:true, nullsFirst:false })
-        .order('created_at',{ ascending:false }),
+        .order('created_at',{ ascending:true }),
       supabase
         .from('family_points_ledger')
         .select('id,profile_id,source_work_item_id,points,awarded_at')
@@ -343,14 +352,29 @@ export function ProjectsPage() {
     [templates,categoryById],
   )
 
+  const currentItems = useMemo(() => {
+    const today = todayKey()
+
+    return items
+      .filter((item) => !item.due_date || item.due_date >= today)
+      .sort((a,b) => {
+        if (a.due_date && b.due_date) {
+          return a.due_date.localeCompare(b.due_date) || a.created_at.localeCompare(b.created_at)
+        }
+        if (a.due_date) return -1
+        if (b.due_date) return 1
+        return a.created_at.localeCompare(b.created_at)
+      })
+  }, [items])
+
   const openProjectItems = useMemo(
-    () => items.filter((item) => item.item_kind === 'project_task'),
-    [items],
+    () => currentItems.filter((item) => item.item_kind === 'project_task'),
+    [currentItems],
   )
 
   const chores = useMemo(
-    () => items.filter((item) => item.item_kind === 'chore'),
-    [items],
+    () => currentItems.filter((item) => item.item_kind === 'chore'),
+    [currentItems],
   )
 
   const standing = useMemo(() => {
