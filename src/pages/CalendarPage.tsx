@@ -7,6 +7,7 @@ import type { CalendarOccurrence, CalendarRow, EventCategory } from '../lib/type
 import { Select } from '../components/ui/Select'
 import { TimePicker } from '../components/ui/TimePicker'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
+import { DatePicker } from '../components/ui/DatePicker'
 
 type CalendarView = 'day' | 'week' | 'month' | 'upcoming'
 
@@ -84,6 +85,7 @@ export function CalendarPage() {
   const [title, setTitle] = useState('')
   const [allDay, setAllDay] = useState(true)
   const [startTime, setStartTime] = useState('18:00')
+  const [endTime, setEndTime] = useState('19:00')
   const [categoryId, setCategoryId] = useState('')
   const [participantIds, setParticipantIds] = useState<string[]>([])
   const [locationText, setLocationText] = useState('')
@@ -247,6 +249,15 @@ export function CalendarPage() {
     const startAt = allDay
       ? null
       : new Date(composerDate + 'T' + startTime + ':00').toISOString()
+    const endAt = allDay
+      ? null
+      : new Date(composerDate + 'T' + endTime + ':00').toISOString()
+
+    if (!allDay && endAt && startAt && new Date(endAt) <= new Date(startAt)) {
+      setSaving(false)
+      setError('End time must be later than start time.')
+      return
+    }
 
     const dateObject = new Date(composerDate + 'T12:00:00')
     const weekdayCode = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][dateObject.getDay()]
@@ -275,7 +286,7 @@ export function CalendarPage() {
       p_description: null,
       p_all_day: allDay,
       p_start_at: startAt,
-      p_end_at: null,
+      p_end_at: endAt,
       p_start_date: allDay ? composerDate : null,
       p_end_date: allDay ? composerDate : null,
       p_timezone: household.timezone,
@@ -454,6 +465,8 @@ export function CalendarPage() {
                     disabled={!canWrite}
                     onClick={() => {
                       setStartTime(label)
+                      const nextHour = Math.min(hour + 1, 23)
+                      setEndTime(String(nextHour).padStart(2, '0') + ':00')
                       setAllDay(false)
                       openComposer(dateKey(anchor))
                     }}
@@ -521,7 +534,7 @@ export function CalendarPage() {
               <input value={title} onChange={(event) => setTitle(event.target.value)} autoFocus required />
             </label>
 
-            <div className="form-row">
+            <div className="category-all-day-row">
               <label>
                 Category
                 <Select
@@ -536,17 +549,24 @@ export function CalendarPage() {
                 />
               </label>
 
-              <label className="toggle-label">
-                <span>All day</span>
+              <label className="all-day-control">
                 <input type="checkbox" checked={allDay} onChange={(event) => setAllDay(event.target.checked)} />
+                <span>All day</span>
               </label>
             </div>
 
             {!allDay && (
-              <label>
-                Start time
-                <TimePicker value={startTime} onChange={setStartTime} />
-              </label>
+              <div className="composer-grid-two time-range-row">
+                <label>
+                  Start time
+                  <TimePicker value={startTime} onChange={setStartTime} />
+                </label>
+
+                <label>
+                  End time
+                  <TimePicker value={endTime} onChange={setEndTime} />
+                </label>
+              </div>
             )}
 
             <label>
@@ -629,11 +649,12 @@ export function CalendarPage() {
             {repeatType !== 'none' && (
               <label>
                 Repeat until
-                <input
-                  type="date"
-                  min={composerDate}
+                <DatePicker
                   value={repeatUntil}
-                  onChange={(event) => setRepeatUntil(event.target.value)}
+                  onChange={setRepeatUntil}
+                  min={composerDate}
+                  format={household.date_format}
+                  ariaLabel="Choose repeat end date"
                 />
                 <small className="field-hint">Optional. Leave blank for no end date.</small>
               </label>
@@ -643,7 +664,7 @@ export function CalendarPage() {
               <legend>Participants</legend>
               <div className="profile-choice-grid">
                 {profiles.map((profile) => (
-                  <label className="profile-choice" key={profile.id}>
+                  <label className="profile-choice profile-choice-plain" key={profile.id}>
                     <input
                       type="checkbox"
                       checked={participantIds.includes(profile.id)}
