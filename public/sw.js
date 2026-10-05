@@ -1,4 +1,4 @@
-const CACHE_NAME = 'famioo-shell-v1'
+const CACHE_NAME = 'famioo-shell-v2'
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/famioo-app-icon.svg']
 
 self.addEventListener('install', (event) => {
