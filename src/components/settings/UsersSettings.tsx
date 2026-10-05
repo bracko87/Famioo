@@ -1,4 +1,4 @@
-import { Camera, Mail, Phone, Plus, UserPlus } from 'lucide-react'
+import { Camera, Mail, Phone, Plus, Trash2, UserPlus } from 'lucide-react'
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useHousehold } from '../../context/HouseholdContext'
 import { supabase } from '../../lib/supabase'
@@ -36,6 +36,7 @@ export function UsersSettings() {
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [avatarBusy, setAvatarBusy] = useState('')
+  const [removingProfileId, setRemovingProfileId] = useState('')
   const [message, setMessage] = useState('')
 
   const isOwner = household.role === 'owner'
@@ -185,6 +186,35 @@ export function UsersSettings() {
     await refresh()
   }
 
+  async function removeMember(member: HouseholdUser) {
+    if (!isOwner || member.role === 'owner') return
+
+    const confirmed = window.confirm(
+      `Remove ${member.display_name} from this household? They will lose household access and current assignments, while historical completed work and points remain preserved.`,
+    )
+
+    if (!confirmed) return
+
+    setRemovingProfileId(member.profile_id)
+    setMessage('')
+
+    const result = await supabase.rpc('remove_household_member_v1', {
+      p_household_id: household.id,
+      p_profile_id: member.profile_id,
+    })
+
+    setRemovingProfileId('')
+
+    if (result.error) {
+      setMessage(result.error.message)
+      return
+    }
+
+    setMessage(member.display_name + ' was removed from the household.')
+    await loadUsers()
+    await refresh()
+  }
+
   async function changeAvatar(member: HouseholdUser, event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     event.target.value = ''
@@ -274,6 +304,7 @@ export function UsersSettings() {
             <span>Login / contact</span>
             <span>Role</span>
             <span>Status</span>
+            <span>Actions</span>
           </div>
 
           {users.map((member) => {
@@ -339,6 +370,24 @@ export function UsersSettings() {
                   <em className={member.role === 'profile' ? 'status-badge profile' : 'status-badge active'}>
                     {member.role === 'profile' ? 'Participant only' : member.status}
                   </em>
+                </span>
+
+                <span className="user-actions-cell">
+                  {isOwner && member.role !== 'owner' ? (
+                    <button
+                      type="button"
+                      className="remove-member-button"
+                      disabled={removingProfileId === member.profile_id}
+                      onClick={() => void removeMember(member)}
+                      aria-label={'Remove ' + member.display_name + ' from household'}
+                      title={'Remove ' + member.display_name}
+                    >
+                      <Trash2 size={13} />
+                      <span>{removingProfileId === member.profile_id ? 'Removing…' : 'Remove'}</span>
+                    </button>
+                  ) : (
+                    <span className="user-actions-placeholder">—</span>
+                  )}
                 </span>
               </div>
             )
