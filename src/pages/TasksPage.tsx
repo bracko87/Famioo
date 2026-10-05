@@ -23,14 +23,25 @@ type TaskParticipant = {
   profile_id: string
 }
 
+type TaskTemplate = {
+  id: string
+  name: string
+  title: string
+  category_id: string | null
+  location_text: string | null
+  default_assigned_profile_id: string | null
+}
+
 export function TasksPage() {
   const { household, modules, profiles } = useHousehold()
   const canWrite = Boolean(modules.find((module) => module.code === 'tasks')?.can_write)
 
   const [tasks, setTasks] = useState<Task[]>([])
   const [categories, setCategories] = useState<EventCategory[]>([])
+  const [templates, setTemplates] = useState<TaskTemplate[]>([])
   const [participants, setParticipants] = useState<TaskParticipant[]>([])
   const [composerOpen, setComposerOpen] = useState(false)
+  const [templateId, setTemplateId] = useState('')
   const [title, setTitle] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [dueDate, setDueDate] = useState('')
@@ -44,7 +55,7 @@ export function TasksPage() {
   async function load() {
     setError('')
 
-    const [taskResult, participantResult, categoryResult] = await Promise.all([
+    const [taskResult, participantResult, categoryResult, templateResult] = await Promise.all([
       supabase
         .from('tasks')
         .select('id,title,status,priority,due_date,category_id,location_text,linked_event_id')
@@ -61,6 +72,12 @@ export function TasksPage() {
         .eq('household_id', household.id)
         .eq('active', true)
         .order('sort_order'),
+      supabase
+        .from('task_templates')
+        .select('id,name,title,category_id,location_text,default_assigned_profile_id')
+        .eq('household_id', household.id)
+        .eq('active', true)
+        .order('name'),
     ])
 
     if (taskResult.error) setError(taskResult.error.message)
@@ -78,6 +95,9 @@ export function TasksPage() {
         ? current
         : rows[0]?.id ?? '')
     }
+
+    if (templateResult.error) setError((current) => current || templateResult.error.message)
+    else setTemplates((templateResult.data ?? []) as TaskTemplate[])
   }
 
   useEffect(() => { void load() }, [household.id])
@@ -93,6 +113,7 @@ export function TasksPage() {
   )
 
   function openComposer() {
+    setTemplateId('')
     setTitle('')
     setDueDate('')
     setLocationText('')
@@ -101,6 +122,19 @@ export function TasksPage() {
     setSaveTemplate(false)
     setError('')
     setComposerOpen(true)
+  }
+
+  function applyTemplate(nextTemplateId: string) {
+    setTemplateId(nextTemplateId)
+    if (!nextTemplateId) return
+
+    const template = templates.find((item) => item.id === nextTemplateId)
+    if (!template) return
+
+    setTitle(template.title)
+    setCategoryId(template.category_id ?? categories[0]?.id ?? '')
+    setLocationText(template.location_text ?? '')
+    setParticipantIds(template.default_assigned_profile_id ? [template.default_assigned_profile_id] : [])
   }
 
   async function createTask(event: FormEvent) {
@@ -236,6 +270,23 @@ export function TasksPage() {
                 <X size={18} />
               </button>
             </header>
+
+            <label>
+              Start from template
+              <Select
+                value={templateId}
+                onChange={applyTemplate}
+                placeholder="Blank task"
+                options={[
+                  { value: '', label: 'Blank task' },
+                  ...templates.map((template) => ({
+                    value: template.id,
+                    label: template.name,
+                  })),
+                ]}
+                ariaLabel="Choose task template"
+              />
+            </label>
 
             <div className="composer-grid-two">
               <label>
