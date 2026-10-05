@@ -191,7 +191,8 @@ export function UsersSettings() {
     setMessage('')
 
     const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-    const path = `${household.id}/${member.profile_id}/avatar-${Date.now()}.${extension}`
+    const storageOwner = member.user_id ?? member.profile_id
+    const path = `${household.id}/${storageOwner}/avatar-${Date.now()}.${extension}`
 
     const upload = await supabase.storage
       .from('profile-avatars')
