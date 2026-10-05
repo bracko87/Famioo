@@ -13,6 +13,7 @@ import { CalendarPage } from './pages/CalendarPage'
 import { TasksPage } from './pages/TasksPage'
 import { ChecklistsPage } from './pages/ChecklistsPage'
 import { ShoppingPage } from './pages/ShoppingPage'
+import { CostsPage } from './pages/CostsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { ModulePlaceholderPage } from './pages/ModulePlaceholderPage'
 
@@ -117,7 +118,7 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Route path="settings" element={<SettingsPage />} />
 
           <Route path="shopping" element={<ShoppingPage />} />
-          <Route path="costs" element={<ModulePlaceholderPage />} />
+          <Route path="costs" element={<CostsPage />} />
           <Route path="school" element={<ModulePlaceholderPage />} />
           <Route path="home-care" element={<ModulePlaceholderPage />} />
           <Route path="life-admin" element={<ModulePlaceholderPage />} />
