@@ -5024,3 +5024,764 @@ b {
     display: none;
   }
 }
+
+
+/* =========================================================
+   Home Care
+   ========================================================= */
+
+.home-care-heading {
+  margin-bottom: 12px;
+}
+
+.home-care-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-care-tabs {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.home-care-tabs button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #e4dbe7;
+  border-radius: 10px;
+  color: #766a7c;
+  background: rgba(255,255,255,.76);
+  font-size: 10px;
+}
+
+.home-care-tabs button:hover,
+.home-care-tabs button.active {
+  color: #714890;
+  border-color: #c2acd0;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(81,54,92,.05);
+}
+
+.home-care-summary-grid {
+  margin-bottom: 18px;
+  display: grid;
+  grid-template-columns: repeat(5,minmax(0,1fr));
+  gap: 10px;
+}
+
+.home-care-summary-card {
+  min-height: 100px;
+  padding: 13px;
+  display: grid;
+  grid-template-columns: 38px minmax(0,1fr);
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.home-care-summary-card:hover {
+  border-color: #d6c8dc;
+  box-shadow: 0 12px 28px rgba(80,50,92,.09);
+}
+
+.home-care-summary-card .summary-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: #6d6cab;
+  background: #efecfb;
+}
+
+.home-care-summary-card .summary-icon.warning {
+  color: #a16f31;
+  background: #fbf0df;
+}
+
+.home-care-summary-card .summary-icon.repair {
+  color: #a75a64;
+  background: #fae8ec;
+}
+
+.home-care-summary-card .summary-icon.warranty {
+  color: #448b73;
+  background: #e6f5ef;
+}
+
+.home-care-summary-card .summary-icon.cost {
+  color: #7b4f95;
+  background: #f0e8f5;
+}
+
+.home-care-summary-card > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.home-care-summary-card > div > span {
+  color: #96899b;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+
+.home-care-summary-card > div > strong {
+  overflow: hidden;
+  color: #4e4352;
+  font-size: 20px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-care-summary-card > div > small {
+  color: #a094a4;
+  font-size: 8px;
+}
+
+.home-care-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.home-care-overview-panel {
+  min-width: 0;
+}
+
+.home-care-overview-panel > header {
+  min-height: 40px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.home-care-overview-panel > header h2 {
+  margin: 3px 0 0;
+  color: #504454;
+  font-size: 15px;
+}
+
+.home-care-overview-panel .text-button {
+  font-size: 9px;
+}
+
+.home-care-mini-list,
+.home-care-warranty-mini-list,
+.home-care-list {
+  display: grid;
+  gap: 8px;
+}
+
+.home-care-mini-empty {
+  min-height: 135px;
+}
+
+.home-care-section {
+  display: grid;
+  gap: 12px;
+}
+
+.home-care-section-heading {
+  min-height: 40px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-care-section-heading h2 {
+  margin: 3px 0 0;
+  color: #504454;
+  font-size: 17px;
+}
+
+.home-care-asset-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 12px;
+}
+
+.home-care-asset-card {
+  padding: 14px;
+}
+
+.home-care-asset-card > header {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.home-care-asset-card h3 {
+  margin: 2px 0 0;
+  color: #4c414f;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.home-care-asset-type {
+  color: #9b8d9f;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.home-care-asset-meta,
+.home-care-row-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  color: #908493;
+  font-size: 8px;
+}
+
+.home-care-asset-meta > span,
+.home-care-row-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.home-care-person {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 5px !important;
+}
+
+.home-care-person .profile-avatar-sm {
+  width: 23px;
+  height: 23px;
+  font-size: 8px;
+}
+
+.home-care-asset-details {
+  margin: 12px 0 0;
+  border-top: 1px solid #eee7f0;
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+}
+
+.home-care-asset-details > div {
+  min-height: 47px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0eaf2;
+  display: grid;
+  gap: 2px;
+}
+
+.home-care-asset-details > div:nth-child(odd) {
+  padding-right: 10px;
+}
+
+.home-care-asset-details > div:nth-child(even) {
+  padding-left: 10px;
+  border-left: 1px solid #f0eaf2;
+}
+
+.home-care-asset-details dt {
+  color: #9a8e9e;
+  font-size: 8px;
+}
+
+.home-care-asset-details dd {
+  margin: 0;
+  overflow: hidden;
+  color: #5c505f;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-care-asset-card > p {
+  margin: 10px 0 0;
+  color: #766b7b;
+  font-size: 9px;
+}
+
+.home-care-maintenance-row,
+.home-care-repair-row {
+  min-height: 84px;
+  padding: 11px 12px;
+  display: grid;
+  grid-template-columns: 48px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 11px;
+}
+
+.home-care-maintenance-row.compact-row,
+.home-care-repair-row.compact-row {
+  min-height: 68px;
+  grid-template-columns: 43px minmax(0,1fr);
+}
+
+.home-care-date-box,
+.home-care-repair-icon {
+  width: 44px;
+  height: 54px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  color: #745487;
+  background: #f1eaf4;
+}
+
+.home-care-date-box strong {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.home-care-date-box small {
+  margin-top: 3px;
+  font-size: 7px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.home-care-date-box.overdue {
+  color: #a64e5e;
+  background: #fae8ec;
+}
+
+.home-care-repair-icon {
+  height: 44px;
+  color: #a15d65;
+  background: #f9e9ec;
+}
+
+.home-care-row-main {
+  min-width: 0;
+}
+
+.home-care-row-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.home-care-row-title h3 {
+  margin: 0;
+  color: #4e4352;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.home-care-row-main > p {
+  margin: 7px 0 0;
+  color: #766b7a;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.home-care-row-meta {
+  margin-top: 5px;
+}
+
+.home-care-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-chip {
+  min-height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  color: #735983;
+  background: #f1eaf4;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.status-chip.danger,
+.status-chip.warranty-expired {
+  color: #a14d5b;
+  background: #fae8eb;
+}
+
+.status-chip.warranty-soon,
+.status-chip.repair-scheduled {
+  color: #9b6a2d;
+  background: #faefdd;
+}
+
+.status-chip.warranty-active,
+.status-chip.repair-in_progress {
+  color: #3e846c;
+  background: #e5f4ed;
+}
+
+.status-chip.warranty-neutral {
+  color: #897d8d;
+  background: #f2eff3;
+}
+
+.status-chip.repair-open {
+  color: #735983;
+  background: #f1eaf4;
+}
+
+.status-chip.repair-cancelled {
+  color: #8e838f;
+  background: #f0edef;
+}
+
+.status-chip.repair-completed {
+  color: #3f836c;
+  background: #e4f4ed;
+}
+
+.home-care-attachment-list {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.home-care-attachment-list a {
+  max-width: 100%;
+  min-height: 27px;
+  padding: 0 8px;
+  border: 1px solid #e5dce8;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  color: #765388;
+  background: #fbf9fc;
+  font-size: 8px;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-care-attachment-list a:hover {
+  background: #f5eff7;
+}
+
+.warranty-mini-row {
+  width: 100%;
+  min-height: 58px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 32px minmax(0,1fr);
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.warranty-mini-row > span {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: #45886f;
+  background: #e7f5ef;
+}
+
+.warranty-mini-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.warranty-mini-row strong {
+  overflow: hidden;
+  color: #514654;
+  font-size: 10px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.warranty-mini-row small {
+  color: #978b9b;
+  font-size: 8px;
+}
+
+.home-care-warranty-table {
+  overflow: hidden;
+}
+
+.home-care-warranty-row {
+  min-height: 58px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee7f0;
+  display: grid;
+  grid-template-columns: 34px minmax(180px,1.3fr) minmax(100px,.7fr) 110px 95px 34px;
+  align-items: center;
+  gap: 10px;
+  color: #756977;
+  font-size: 9px;
+}
+
+.home-care-warranty-row:last-child {
+  border-bottom: 0;
+}
+
+.warranty-row-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: #4d8c75;
+  background: #e7f5ef;
+}
+
+.home-care-warranty-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.home-care-warranty-row > div strong {
+  overflow: hidden;
+  color: #504554;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-care-warranty-row > div small {
+  overflow: hidden;
+  color: #9a8e9e;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-care-completed-section {
+  margin-top: 16px;
+  padding-top: 15px;
+  border-top: 1px solid #e9e1ec;
+  display: grid;
+  gap: 9px;
+}
+
+.home-care-history {
+  position: relative;
+  display: grid;
+}
+
+.home-care-history::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 17px;
+  width: 1px;
+  background: #ded5e2;
+}
+
+.home-care-history-row {
+  position: relative;
+  min-height: 68px;
+  padding: 8px 0;
+  display: grid;
+  grid-template-columns: 36px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.history-marker {
+  width: 34px;
+  height: 34px;
+  z-index: 1;
+  border: 4px solid #faf8fc;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #735786;
+  background: #ece4f0;
+}
+
+.history-marker.repair {
+  color: #a15b64;
+  background: #f8e5e9;
+}
+
+.history-marker.maintenance {
+  color: #4d866f;
+  background: #e4f3ec;
+}
+
+.home-care-history-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.home-care-history-row > div strong {
+  color: #514655;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.home-care-history-row > div span,
+.home-care-history-row > div small {
+  color: #978b9a;
+  font-size: 8px;
+}
+
+.history-cost {
+  color: #66596a;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.home-care-composer {
+  width: min(820px,100%);
+  max-height: min(880px,92vh);
+  padding: 26px 28px;
+  gap: 16px;
+}
+
+.home-care-half-field {
+  width: calc(50% - 7px);
+}
+
+.home-care-upload-field {
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px dashed #d9cede;
+  border-radius: 11px;
+  display: grid !important;
+  gap: 6px !important;
+  background: #fbf9fc;
+}
+
+.home-care-upload-field > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #65586a;
+  font-size: 10px;
+  font-weight: 550;
+}
+
+.home-care-upload-field input {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 9px;
+}
+
+.home-care-upload-field small,
+.home-care-cost-note {
+  color: #998d9d;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.home-care-completion-card {
+  width: min(520px,100%);
+}
+
+@media (max-width: 1180px) {
+  .home-care-summary-grid {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+  }
+
+  .home-care-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-care-asset-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 800px) {
+  .home-care-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .home-care-heading-actions {
+    width: 100%;
+  }
+
+  .home-care-heading-actions .primary-button,
+  .home-care-heading-actions .secondary-button {
+    flex: 1;
+  }
+
+  .home-care-summary-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+
+  .home-care-maintenance-row,
+  .home-care-repair-row {
+    grid-template-columns: 44px minmax(0,1fr);
+  }
+
+  .home-care-row-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .home-care-warranty-row {
+    grid-template-columns: 32px minmax(0,1fr) auto;
+  }
+
+  .home-care-warranty-row > span:nth-of-type(2),
+  .home-care-warranty-row > span:nth-of-type(3) {
+    display: none;
+  }
+
+  .home-care-warranty-row > .status-chip {
+    justify-self: end;
+  }
+}
+
+@media (max-width: 620px) {
+  .home-care-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-care-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 3px;
+  }
+
+  .home-care-tabs button {
+    flex: 0 0 auto;
+  }
+
+  .home-care-asset-details {
+    grid-template-columns: 1fr;
+  }
+
+  .home-care-asset-details > div:nth-child(odd),
+  .home-care-asset-details > div:nth-child(even) {
+    padding-left: 0;
+    padding-right: 0;
+    border-left: 0;
+  }
+
+  .home-care-half-field {
+    width: 100%;
+  }
+}
