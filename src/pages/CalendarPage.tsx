@@ -276,7 +276,9 @@ export function CalendarPage() {
     if (!template) return
 
     setTitle(template.title)
-    setCategoryId(template.category_id ?? categories[0]?.id ?? '')
+    setCategoryId(template.category_id && categories.some((category) => category.id === template.category_id)
+      ? template.category_id
+      : categories[0]?.id ?? '')
     setAllDay(template.all_day)
     setStartTime(template.start_time?.slice(0, 5) ?? currentTimeInZone(household.timezone))
     setEndTime(template.end_time?.slice(0, 5) ?? addMinutesToTime(template.start_time?.slice(0, 5) ?? currentTimeInZone(household.timezone), 60))
