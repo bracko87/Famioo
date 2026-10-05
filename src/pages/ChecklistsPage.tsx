@@ -1,6 +1,7 @@
 import { CalendarDays, ClipboardList, MapPin, Plus, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
+import { DatePicker } from '../components/ui/DatePicker'
 import { Select } from '../components/ui/Select'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
@@ -494,23 +495,30 @@ export function ChecklistsPage() {
               </label>
             </div>
 
-            <div className="composer-grid-two">
+            <div className="composer-grid-two aligned-field-row">
               <label>
                 Date
-                <input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+                <DatePicker
+                  value={dueDate}
+                  onChange={setDueDate}
+                  format={household.date_format}
+                  ariaLabel="Choose checklist date"
+                />
+                <small className="field-hint">Optional unless this checklist is added to Calendar.</small>
               </label>
 
               <label>
                 Location
                 <input value={locationText} onChange={(event) => setLocationText(event.target.value)} placeholder="Optional location" />
+                <small className="field-hint">Optional.</small>
               </label>
             </div>
 
-            <fieldset>
+            <fieldset className="participant-fieldset">
               <legend>Participants</legend>
               <div className="profile-choice-grid profile-choice-grid-wide">
                 {profiles.map((profile) => (
-                  <label className="profile-choice" key={profile.id}>
+                  <label className="profile-choice profile-choice-plain" key={profile.id}>
                     <input
                       type="checkbox"
                       checked={participantIds.includes(profile.id)}
