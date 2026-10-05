@@ -10,11 +10,14 @@ import {
   ShoppingBag,
   Sparkles,
   Utensils,
+  Trophy,
 } from 'lucide-react'
 import { useEffect, useState, type ComponentType } from 'react'
 import { Link } from 'react-router-dom'
 import { PromoCarousel } from '../components/PromoCarousel'
+import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { useHousehold } from '../context/HouseholdContext'
+import { firstName } from '../lib/personName'
 import { supabase } from '../lib/supabase'
 import type { ModuleCode } from '../lib/types'
 
@@ -49,12 +52,13 @@ const routeByModule: Record<ModuleCode, string> = {
 }
 
 export function HomePage() {
-  const { household, modules } = useHousehold()
+  const { household, modules, profiles } = useHousehold()
   const [eventCount, setEventCount] = useState(0)
   const [taskCount, setTaskCount] = useState(0)
   const [checklistCount, setChecklistCount] = useState(0)
   const [shoppingCount, setShoppingCount] = useState(0)
   const [costMonthTotal, setCostMonthTotal] = useState(0)
+  const [familyPoints, setFamilyPoints] = useState<Record<string, number>>({})
 
   useEffect(() => {
     void supabase.rpc('purge_old_archives_v1', { p_household_id: household.id })
@@ -128,6 +132,32 @@ export function HomePage() {
     })
   }, [household.id, modules])
 
+  useEffect(() => {
+    const projectsModule = modules.find((module) => module.code === 'projects')
+    if (!projectsModule?.enabled) {
+      setFamilyPoints({})
+      return
+    }
+
+    const monthKey = new Date().toISOString().slice(0,7)
+
+    void supabase
+      .from('family_points_ledger')
+      .select('profile_id,points,awarded_at')
+      .eq('household_id',household.id)
+      .gte('awarded_at',monthKey + '-01T00:00:00')
+      .then(({ data,error }) => {
+        if (error) return
+
+        const totals: Record<string,number> = {}
+        for (const row of data ?? []) {
+          totals[row.profile_id] = (totals[row.profile_id] ?? 0) + Number(row.points ?? 0)
+        }
+        setFamilyPoints(totals)
+      })
+  }, [household.id,modules])
+
+
   const metricByCode: Partial<Record<ModuleCode, string>> = {
     calendar: `${eventCount} today`,
     tasks: `${taskCount} open`,
@@ -173,7 +203,34 @@ export function HomePage() {
           })}
         </div>
 
-        <div className="home-future-area" aria-hidden="true" />
+        <div className="home-future-area">
+          {modules.find((module) => module.code === 'projects')?.enabled && (
+            <Link className="home-family-standing list-card" to="/app/projects">
+              <header>
+                <div>
+                  <span className="eyebrow">FAMILY STANDING</span>
+                  <h2>This month</h2>
+                </div>
+                <span className="home-standing-trophy"><Trophy size={18} /></span>
+              </header>
+
+              <div className="home-family-standing-list">
+                {[...profiles]
+                  .sort((a,b) => (familyPoints[b.id] ?? 0) - (familyPoints[a.id] ?? 0) || a.display_name.localeCompare(b.display_name))
+                  .map((profile,index) => (
+                    <div className="home-family-standing-row" key={profile.id}>
+                      <span className="home-standing-rank">{index + 1}</span>
+                      <ProfileAvatar avatarPath={profile.avatar_path} name={profile.display_name} size="sm" />
+                      <span>{firstName(profile.display_name)}</span>
+                      <strong>{familyPoints[profile.id] ?? 0} pts</strong>
+                    </div>
+                  ))}
+              </div>
+
+              <footer>Open Projects & Chores →</footer>
+            </Link>
+          )}
+        </div>
       </section>
     </div>
   )
