@@ -18,6 +18,7 @@ import { CostsPage } from './pages/CostsPage'
 import { SchoolPage } from './pages/SchoolPage'
 import { HomeCarePage } from './pages/HomeCarePage'
 import { LifeAdminPage } from './pages/LifeAdminPage'
+import { ProjectsPage } from './pages/ProjectsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { ModulePlaceholderPage } from './pages/ModulePlaceholderPage'
 
@@ -127,7 +128,7 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Route path="school" element={<SchoolPage />} />
           <Route path="home-care" element={<HomeCarePage />} />
           <Route path="life-admin" element={<LifeAdminPage />} />
-          <Route path="projects" element={<ModulePlaceholderPage />} />
+          <Route path="projects" element={<ProjectsPage />} />
           <Route path="meals" element={<ModulePlaceholderPage />} />
           <Route path="files" element={<ModulePlaceholderPage />} />
           <Route path="assistant" element={<ModulePlaceholderPage />} />
