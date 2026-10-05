@@ -421,7 +421,7 @@ export function CalendarPage() {
           : '60',
     )
     setLocationText(row.location_text ?? '')
-    setRepeatType(parsed.repeatType)
+    setRepeatType(parsed.repeatType as typeof repeatType)
     setRepeatInterval(parsed.repeatInterval)
     setRepeatDays(parsed.repeatDays)
     setRepeatUntil(parsed.repeatUntil)
