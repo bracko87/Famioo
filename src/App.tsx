@@ -12,6 +12,7 @@ import { HomePage } from './pages/HomePage'
 import { CalendarPage } from './pages/CalendarPage'
 import { TasksPage } from './pages/TasksPage'
 import { ChecklistsPage } from './pages/ChecklistsPage'
+import { ChecklistArchivePage } from './pages/ChecklistArchivePage'
 import { ShoppingPage } from './pages/ShoppingPage'
 import { CostsPage } from './pages/CostsPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -115,6 +116,7 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="checklists" element={<ChecklistsPage />} />
+          <Route path="checklists/archive" element={<ChecklistArchivePage />} />
           <Route path="settings" element={<SettingsPage />} />
 
           <Route path="shopping" element={<ShoppingPage />} />
