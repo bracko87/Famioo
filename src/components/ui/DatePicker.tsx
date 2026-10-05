@@ -1,4 +1,5 @@
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { createPortal } from 'react-dom'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 type DateFormat = 'DD.MM.YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD'
@@ -80,6 +81,8 @@ export function DatePicker({
   const selected = parseIso(value)
   const [cursor, setCursor] = useState(() => monthStart(selected ?? new Date()))
   const rootRef = useRef<HTMLDivElement>(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
+  const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 })
 
   useEffect(() => {
     if (selected) setCursor(monthStart(selected))
@@ -87,7 +90,8 @@ export function DatePicker({
 
   useEffect(() => {
     function close(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+      const target = event.target as Node
+      if (!rootRef.current?.contains(target) && !popoverRef.current?.contains(target)) setOpen(false)
     }
 
     function keydown(event: KeyboardEvent) {
@@ -102,6 +106,34 @@ export function DatePicker({
       document.removeEventListener('keydown', keydown)
     }
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+
+    function positionPopover() {
+      const rect = rootRef.current?.getBoundingClientRect()
+      if (!rect) return
+
+      const width = Math.min(310, window.innerWidth - 24)
+      const estimatedHeight = 360
+      const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12))
+      const below = rect.bottom + 7
+      const top = below + estimatedHeight <= window.innerHeight - 12
+        ? below
+        : Math.max(12, rect.top - estimatedHeight - 7)
+
+      setPopoverPosition({ top, left })
+    }
+
+    positionPopover()
+    window.addEventListener('resize', positionPopover)
+    window.addEventListener('scroll', positionPopover, true)
+
+    return () => {
+      window.removeEventListener('resize', positionPopover)
+      window.removeEventListener('scroll', positionPopover, true)
+    }
+  }, [open])
 
   const days = useMemo(() => {
     const start = calendarStart(cursor)
@@ -142,8 +174,14 @@ export function DatePicker({
         <CalendarDays size={15} />
       </button>
 
-      {open && (
-        <div className="date-picker-popover" role="dialog" aria-label={ariaLabel}>
+      {open && typeof document !== 'undefined' && createPortal(
+        <div
+          className="date-picker-popover date-picker-popover-portal"
+          role="dialog"
+          aria-label={ariaLabel}
+          ref={popoverRef}
+          style={{ top: popoverPosition.top, left: popoverPosition.left }}
+        >
           <header className="date-picker-head">
             <button type="button" className="date-picker-nav" onClick={() => setCursor((current) => addMonths(current, -1))} aria-label="Previous month">
               <ChevronLeft size={15} />
@@ -204,7 +242,8 @@ export function DatePicker({
               Clear
             </button>
           </footer>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )
