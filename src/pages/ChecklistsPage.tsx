@@ -219,15 +219,15 @@ export function ChecklistsPage() {
   )
 
   const activeLists = useMemo(
-    () => lists.filter((list) => list.status === 'active'),
-    [lists],
+    () => lists.filter((list) => list.status === 'active' && (!list.category_id || !shoppingCategoryIds.has(list.category_id))),
+    [lists, shoppingCategoryIds],
   )
 
   const archivedLists = useMemo(
     () => lists
-      .filter((list) => list.status === 'archived')
+      .filter((list) => list.status === 'archived' && (!list.category_id || !shoppingCategoryIds.has(list.category_id)))
       .sort((a, b) => (b.archived_at ?? b.created_at).localeCompare(a.archived_at ?? a.created_at)),
-    [lists],
+    [lists, shoppingCategoryIds],
   )
 
   function resetComposer() {
