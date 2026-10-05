@@ -7,6 +7,7 @@ import { PermissionsSettings } from '../components/settings/PermissionsSettings'
 import { UsersSettings } from '../components/settings/UsersSettings'
 import { WeatherSettings } from '../components/settings/WeatherSettings'
 import { TemplatesSettings } from '../components/settings/TemplatesSettings'
+import { TypesSettings } from '../components/settings/TypesSettings'
 import { CategoryAvailabilitySettings } from '../components/settings/CategoryAvailabilitySettings'
 
 type SettingsTab =
@@ -14,6 +15,7 @@ type SettingsTab =
   | 'modules'
   | 'categories'
   | 'templates'
+  | 'types'
   | 'users'
   | 'permissions'
   | 'category-availability'
@@ -24,6 +26,7 @@ const settingsTabs: Array<{ id: SettingsTab; label: string }> = [
   { id: 'modules', label: 'Modules' },
   { id: 'categories', label: 'Categories' },
   { id: 'templates', label: 'Templates' },
+  { id: 'types', label: 'Types' },
   { id: 'users', label: 'Users' },
   { id: 'permissions', label: 'Permissions' },
   { id: 'category-availability', label: 'Category availability' },
@@ -65,6 +68,7 @@ export function SettingsPage() {
         {activeTab === 'users' && <UsersSettings />}
         {activeTab === 'permissions' && <PermissionsSettings />}
         {activeTab === 'templates' && <TemplatesSettings />}
+        {activeTab === 'types' && <TypesSettings />}
         {activeTab === 'category-availability' && <CategoryAvailabilitySettings />}
         {activeTab === 'weather' && <WeatherSettings />}
       </section>
