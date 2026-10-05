@@ -15,9 +15,10 @@ type HouseholdCost = {
   currency: string
   cost_date: string
   cost_kind: 'regular' | 'additional'
-  source_type: 'manual' | 'shopping' | 'task'
+  source_type: 'manual' | 'shopping' | 'task' | 'home_care'
   source_shopping_list_id: string | null
   source_task_id: string | null
+  source_home_care_activity_id: string | null
   schedule_type: ScheduleType
   schedule_day: number | null
   notes: string | null
@@ -106,7 +107,7 @@ export function CostsPage() {
     const [costResult, financeResult] = await Promise.all([
       supabase
         .from('household_costs')
-        .select('id,title,amount,currency,cost_date,cost_kind,source_type,source_shopping_list_id,source_task_id,schedule_type,schedule_day,notes,created_at')
+        .select('id,title,amount,currency,cost_date,cost_kind,source_type,source_shopping_list_id,source_task_id,source_home_care_activity_id,schedule_type,schedule_day,notes,created_at')
         .eq('household_id', household.id)
         .order('cost_date', { ascending: false })
         .order('created_at', { ascending: false }),
@@ -302,6 +303,7 @@ export function CostsPage() {
       ['manual', 0],
       ['shopping', 0],
       ['task', 0],
+      ['home_care', 0],
     ])
 
     for (const occurrence of occurrences) {
@@ -310,7 +312,13 @@ export function CostsPage() {
 
     return Array.from(totals.entries()).map(([key, value]) => ({
       key,
-      label: key === 'shopping' ? 'Shopping' : key === 'task' ? 'Tasks' : 'Other costs',
+      label: key === 'shopping'
+        ? 'Shopping'
+        : key === 'task'
+          ? 'Tasks'
+          : key === 'home_care'
+            ? 'Home Care'
+            : 'Other costs',
       value,
     }))
   }, [occurrences])
