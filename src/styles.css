@@ -7222,3 +7222,340 @@ b {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* =========================================================
+   PWA / mobile-app experience
+   ========================================================= */
+
+.desktop-loading-mark {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+}
+
+.mobile-launch-screen {
+  display: none;
+}
+
+.mobile-app-settings {
+  display: grid;
+  gap: 14px;
+}
+
+.mobile-app-install-card,
+.mobile-app-test-card {
+  padding: 18px;
+}
+
+.mobile-app-install-hero {
+  display: grid;
+  grid-template-columns: 76px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 16px;
+}
+
+.mobile-app-icon-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(82,46,101,.16);
+}
+
+.mobile-app-icon-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.mobile-app-install-hero h2,
+.mobile-app-test-card h2 {
+  margin: 4px 0 6px;
+  color: #504454;
+  font-size: 18px;
+}
+
+.mobile-app-install-hero p,
+.mobile-app-test-card p {
+  margin: 0;
+  color: #8f8393;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.install-status {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #755786;
+  background: #f0e8f3;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.install-status.installed {
+  color: #3e846c;
+  background: #e5f4ed;
+}
+
+.mobile-app-install-steps {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #eee7f0;
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 10px;
+}
+
+.mobile-app-install-steps > div {
+  min-height: 78px;
+  padding: 10px;
+  border: 1px solid #ece3ef;
+  border-radius: 11px;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  background: #fcfafc;
+}
+
+.mobile-app-install-steps strong {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg,#7644d7,#a44ec1 54%,#d75a9c);
+  font-size: 9px;
+}
+
+.mobile-app-install-steps span {
+  color: #6f6374;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.mobile-app-install-actions {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mobile-app-install-note {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  display: grid;
+  gap: 3px;
+  color: #776b7b;
+  background: #f6f1f8;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.mobile-app-test-grid {
+  margin: 12px 0;
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 8px;
+}
+
+.mobile-app-test-grid span {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid #ece3ef;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  color: #6f6374;
+  background: #fcfafc;
+  font-size: 9px;
+}
+
+@media (max-width: 900px) {
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
+
+  body {
+    min-height: 100dvh;
+  }
+
+  .desktop-loading-mark {
+    display: none;
+  }
+
+  .loading-screen {
+    min-height: 100dvh;
+    padding: 0;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 18% 16%, rgba(255,255,255,.16), transparent 26%),
+      radial-gradient(circle at 82% 78%, rgba(82,179,151,.20), transparent 28%),
+      linear-gradient(155deg,#4c205f,#74337d 48%,#ad4c8d);
+  }
+
+  .mobile-launch-screen {
+    position: relative;
+    width: 100%;
+    min-height: 100dvh;
+    padding:
+      calc(42px + env(safe-area-inset-top))
+      24px
+      calc(32px + env(safe-area-inset-bottom));
+    display: grid;
+    place-items: center;
+    align-content: center;
+    color: #fff;
+    text-align: center;
+  }
+
+  .launch-app-icon {
+    width: 112px;
+    height: 112px;
+    border-radius: 27px;
+    box-shadow: 0 18px 42px rgba(35,16,44,.25);
+  }
+
+  .mobile-launch-screen > strong {
+    margin-top: 18px;
+    font-size: 28px;
+    font-weight: 650;
+    letter-spacing: -.02em;
+  }
+
+  .mobile-launch-screen > span:not(.launch-orbit) {
+    margin-top: 3px;
+    color: rgba(255,255,255,.74);
+    font-size: 11px;
+  }
+
+  .launch-loader {
+    width: 42px;
+    height: 4px;
+    margin-top: 26px;
+    border-radius: 99px;
+    position: relative;
+    overflow: hidden;
+    background: rgba(255,255,255,.18);
+  }
+
+  .launch-loader::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 45%;
+    border-radius: inherit;
+    background: #fff;
+    animation: famioo-launch-progress 1.15s ease-in-out infinite;
+  }
+
+  .launch-orbit {
+    position: absolute;
+    width: 42px;
+    height: 42px;
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 13px;
+    display: grid;
+    place-items: center;
+    color: rgba(255,255,255,.88);
+    background: rgba(255,255,255,.10);
+    box-shadow: 0 8px 20px rgba(40,20,50,.10);
+    backdrop-filter: blur(10px);
+  }
+
+  .launch-orbit-1 { top: 18%; left: 13%; transform: rotate(-8deg); }
+  .launch-orbit-2 { top: 24%; right: 12%; transform: rotate(8deg); }
+  .launch-orbit-3 { bottom: 25%; left: 14%; transform: rotate(7deg); }
+  .launch-orbit-4 { bottom: 19%; right: 13%; transform: rotate(-7deg); }
+  .launch-orbit-5 { top: 40%; left: 5%; transform: rotate(-4deg); }
+  .launch-orbit-6 { top: 43%; right: 5%; transform: rotate(5deg); }
+
+  .mobile-app-install-hero {
+    grid-template-columns: 64px minmax(0,1fr);
+    align-items: start;
+  }
+
+  .mobile-app-icon-preview {
+    width: 60px;
+    height: 60px;
+    border-radius: 15px;
+  }
+
+  .install-status {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .mobile-app-install-steps,
+  .mobile-app-test-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+
+  .mobile-app-install-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-app-install-actions > * {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .mobile-app-install-steps,
+  .mobile-app-test-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) and (display-mode: standalone) {
+  :root {
+    --header: calc(58px + env(safe-area-inset-top));
+  }
+
+  .app-layout {
+    padding-top: var(--header);
+    padding-bottom: calc(70px + env(safe-area-inset-bottom));
+  }
+
+  .app-header {
+    height: var(--header);
+    padding-top: env(safe-area-inset-top);
+    padding-left: max(13px,env(safe-area-inset-left));
+    padding-right: max(13px,env(safe-area-inset-right));
+  }
+
+  .app-content {
+    min-height: calc(100dvh - var(--header) - 70px - env(safe-area-inset-bottom));
+  }
+
+  .mobile-bottom-nav {
+    min-height: calc(66px + env(safe-area-inset-bottom));
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .page {
+    padding-bottom: calc(34px + env(safe-area-inset-bottom));
+  }
+
+  input,
+  textarea,
+  .custom-select-trigger {
+    font-size: 16px;
+  }
+}
+
+@keyframes famioo-launch-progress {
+  0% { transform: translateX(-110%); }
+  50% { transform: translateX(80%); }
+  100% { transform: translateX(230%); }
+}
