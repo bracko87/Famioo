@@ -274,6 +274,10 @@ export function AppShell() {
         <NavLink to="/app/calendar"><CalendarDays size={19} /><span>Calendar</span></NavLink>
         <NavLink to="/app/tasks"><ClipboardList size={19} /><span>Tasks</span></NavLink>
         <NavLink to="/app/checklists"><CheckSquare size={19} /><span>Lists</span></NavLink>
+        <button type="button" onClick={() => setMobileMenu(true)} aria-label="Open all Famioo modules">
+          <Menu size={19} />
+          <span>More</span>
+        </button>
       </nav>
     </div>
   )
