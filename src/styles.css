@@ -1270,7 +1270,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .users-table-row {
   min-height: 49px;
   display: grid;
-  grid-template-columns: minmax(150px,1.1fr) minmax(200px,1.5fr) 130px 90px;
+  grid-template-columns: minmax(150px,1.1fr) minmax(200px,1.5fr) 130px 90px 84px;
   align-items: center;
   gap: 12px;
   border-bottom: 1px solid var(--line);
@@ -1340,6 +1340,41 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .role-badge.admin { color: #356e90; background: #e6f1f7; }
 .role-badge.user { color: #50705f; background: #eaf3ee; }
 .status-badge.active { color: #3d7d63; background: #e8f5ef; }
+
+.user-actions-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.remove-member-button {
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid #ead7df;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: #a54869;
+  background: #fff7fa;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.remove-member-button:hover:not(:disabled) {
+  border-color: #dcb8c7;
+  background: #fcecf3;
+}
+
+.remove-member-button:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.user-actions-placeholder {
+  color: #b8adb9;
+}
 
 .mode-switch {
   margin-bottom: 14px;
@@ -1494,7 +1529,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 
   .users-table-head,
   .users-table-row {
-    min-width: 680px;
+    min-width: 760px;
   }
 
   .permission-legend {
@@ -6725,13 +6760,22 @@ b {
 .project-work-check {
   width: 24px;
   height: 24px;
-  margin-top: 1px;
+  margin-top: 0;
+  padding: 0;
   border: 1px solid #d9cede;
   border-radius: 8px;
   display: grid;
   place-items: center;
+  justify-self: center;
+  align-self: start;
+  line-height: 0;
   color: #fff;
   background: #fff;
+}
+
+.project-work-check > svg {
+  display: block;
+  margin: 0;
 }
 
 .project-work-check.done {
