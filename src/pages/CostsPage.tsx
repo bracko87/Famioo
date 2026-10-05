@@ -194,10 +194,13 @@ export function CostsPage() {
       const scheduleStart = fromKey(cost.cost_date)
       const rangeStart = fromKey(rangeBounds.start)
       const rangeEnd = fromKey(rangeBounds.end)
-      const cursor = new Date(Math.max(
-        new Date(scheduleStart.getFullYear(), scheduleStart.getMonth(), 1, 12).getTime(),
-        new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1, 12).getTime(),
-      ))
+      const interval = Math.max(1,cost.schedule_interval_months ?? 1)
+      const scheduleMonth = new Date(scheduleStart.getFullYear(),scheduleStart.getMonth(),1,12)
+      const rangeMonth = new Date(rangeStart.getFullYear(),rangeStart.getMonth(),1,12)
+      const monthsToRange = Math.max(0,(rangeMonth.getFullYear() - scheduleMonth.getFullYear()) * 12 + (rangeMonth.getMonth() - scheduleMonth.getMonth()))
+      const stepsToRange = Math.ceil(monthsToRange / interval)
+      const cursor = new Date(scheduleMonth)
+      cursor.setMonth(cursor.getMonth() + stepsToRange * interval)
 
       const day = cost.schedule_day ?? scheduleStart.getDate()
 
