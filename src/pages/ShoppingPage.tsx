@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, CalendarDays, GripVertical, Plus, ShoppingBag, X } from 'lucide-react'
+import { Archive, ArchiveRestore, CalendarDays, ClipboardCheck, GripVertical, Plus, ShoppingBag, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { Select } from '../components/ui/Select'
@@ -12,6 +12,8 @@ type ShoppingList = {
   title: string
   status: 'active' | 'archived'
   linked_event_id: string | null
+  sync_task: boolean
+  linked_task_id: string | null
   category_id: string | null
   scheduled_date: string | null
   location_text: string | null
@@ -42,6 +44,7 @@ export function ShoppingPage() {
   const { household, modules } = useHousehold()
   const access = modules.find((module) => module.code === 'shopping')
   const canWrite = Boolean(access?.can_write)
+  const canSyncTasks = Boolean(modules.find((module) => module.code === 'tasks')?.can_write)
 
   const [lists, setLists] = useState<ShoppingList[]>([])
   const [items, setItems] = useState<ShoppingItem[]>([])
@@ -58,6 +61,7 @@ export function ShoppingPage() {
   const [scheduledDate, setScheduledDate] = useState<string | null>(null)
   const [categoryId, setCategoryId] = useState<string | null>(null)
   const [locationText, setLocationText] = useState<string | null>(null)
+  const [syncTask, setSyncTask] = useState(false)
   const [itemDrafts, setItemDrafts] = useState<Record<string, string>>({})
   const [quantityDrafts, setQuantityDrafts] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
@@ -76,7 +80,7 @@ export function ShoppingPage() {
     const [listResult, itemResult, categoryResult, eventResult] = await Promise.all([
       supabase
         .from('shopping_lists')
-        .select('id,title,status,linked_event_id,category_id,scheduled_date,location_text,total_cost,currency,archived_at,expanded_slot,created_at')
+        .select('id,title,status,linked_event_id,sync_task,linked_task_id,category_id,scheduled_date,location_text,total_cost,currency,archived_at,expanded_slot,created_at')
         .eq('household_id', household.id)
         .order('created_at', { ascending: false }),
       supabase
@@ -156,6 +160,7 @@ export function ShoppingPage() {
     setScheduledDate(null)
     setCategoryId(null)
     setLocationText(null)
+    setSyncTask(false)
     setError('')
   }
 
@@ -191,11 +196,12 @@ export function ShoppingPage() {
     setSaving(true)
     setError('')
 
-    const result = await supabase.rpc('create_shopping_list_v1', {
+    const result = await supabase.rpc('create_shopping_list_v2', {
       p_household_id: household.id,
       p_title: sourceType === 'standalone' ? title.trim() : null,
       p_linked_event_id: sourceType === 'event' ? linkedEventId : null,
       p_scheduled_date: sourceType === 'event' ? scheduledDate : null,
+      p_sync_task: syncTask,
     })
 
     setSaving(false)
@@ -351,7 +357,9 @@ export function ShoppingPage() {
               )}
               {list.scheduled_date && <span>{list.scheduled_date}</span>}
               {list.location_text && <GoogleMapsLink location={list.location_text} />}
+            {list.linked_task_id && <span><ClipboardCheck size={11} />Tasks</span>}
               {list.linked_event_id && <span><CalendarDays size={11} />Calendar</span>}
+              {list.linked_task_id && <span><ClipboardCheck size={11} />Tasks</span>}
             </div>
           </div>
 
@@ -618,6 +626,19 @@ export function ShoppingPage() {
                 />
               </div>
               <small className="field-hint">Optional. If entered, Famioo creates an additional Household Cost entry.</small>
+            </label>
+
+            <label className="composer-option">
+              <input
+                type="checkbox"
+                checked={syncTask}
+                disabled={!canSyncTasks}
+                onChange={(event) => setSyncTask(event.target.checked)}
+              />
+              <span>
+                <span>Show this shopping list in Tasks</span>
+                <small>{canSyncTasks ? 'Creates one linked household Task. Archiving the shopping list completes the Task; restoring it reopens the Task.' : 'Tasks write access is required.'}</small>
+              </span>
             </label>
 
             {error && <div className="form-message error">{error}</div>}
