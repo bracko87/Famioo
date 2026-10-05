@@ -211,19 +211,24 @@ export function ChecklistsPage() {
     [categories, shoppingCategoryIds],
   )
 
+  const checklistCategoryIds = useMemo(
+    () => new Set(checklistCategories.map((category) => category.id)),
+    [checklistCategories],
+  )
+
   const allowedEventSources = useMemo(
-    () => eventSources.filter((event) => !event.category_id || !shoppingCategoryIds.has(event.category_id)),
-    [eventSources, shoppingCategoryIds],
+    () => eventSources.filter((event) => !event.category_id || checklistCategoryIds.has(event.category_id)),
+    [eventSources, checklistCategoryIds],
   )
 
   const allowedTaskSources = useMemo(
-    () => taskSources.filter((task) => !task.category_id || !shoppingCategoryIds.has(task.category_id)),
-    [taskSources, shoppingCategoryIds],
+    () => taskSources.filter((task) => !task.category_id || checklistCategoryIds.has(task.category_id)),
+    [taskSources, checklistCategoryIds],
   )
 
   const allowedTemplates = useMemo(
-    () => templates.filter((template) => !template.category_id || !shoppingCategoryIds.has(template.category_id)),
-    [templates, shoppingCategoryIds],
+    () => templates.filter((template) => !template.category_id || checklistCategoryIds.has(template.category_id)),
+    [templates, checklistCategoryIds],
   )
 
   const activeLists = useMemo(
@@ -264,7 +269,7 @@ export function ChecklistsPage() {
     setSourceId('')
     setTitle(list.title)
     setCategoryId(
-      list.category_id && !shoppingCategoryIds.has(list.category_id)
+      list.category_id && checklistCategoryIds.has(list.category_id)
         ? list.category_id
         : checklistCategories[0]?.id ?? '',
     )
