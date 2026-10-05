@@ -81,6 +81,27 @@ export function UsersSettings() {
     setBusy(true)
     setMessage('')
 
+    if (profileType === 'child') {
+      const childResult = await supabase.rpc('create_household_profile_v1', {
+        p_household_id: household.id,
+        p_display_name: displayName.trim(),
+        p_profile_type: 'child',
+      })
+
+      setBusy(false)
+
+      if (childResult.error) {
+        setMessage(childResult.error.message)
+        return
+      }
+
+      setDisplayName('')
+      setMessage('Child profile created. No login access was created.')
+      await loadUsers()
+      await refresh()
+      return
+    }
+
     const {
       data: { session },
     } = await supabase.auth.getSession()
@@ -91,7 +112,7 @@ export function UsersSettings() {
       return
     }
 
-    const action = profileType === 'child' ? 'create_profile' : mode
+    const action = mode
 
     const result = await supabase.functions.invoke('manage-household-user', {
       headers: {
