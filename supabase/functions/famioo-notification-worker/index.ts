@@ -114,6 +114,10 @@ async function sendPushes() {
 
 async function sendSummaryEmails() {
   const resendKey=await secret('famioo_resend_api_key')
+  if (!resendKey) {
+    return { claimed:0,sent:0,failed:0,configured:false }
+  }
+
   const deliveries=await sql.begin(async (tx)=> {
     const rows=await tx<Array<{
       id:string; household_id:string; user_id:string; summary_kind:'daily'|'weekly';
@@ -177,10 +181,44 @@ async function sendSummaryEmails() {
           ${delivery.period_start}::date,
           ${delivery.period_end}::date
         ) o
+        join public.calendar_events ce
+          on ce.id=o.event_id and ce.household_id=o.household_id
         left join public.event_participants ep
           on ep.event_id=o.event_id and ep.household_id=o.household_id
         left join public.family_profiles fp
           on fp.id=ep.profile_id and fp.household_id=ep.household_id and fp.active
+        where (
+          ce.visibility='household'
+          or ce.created_by_user_id=${delivery.user_id}::uuid
+          or exists(
+            select 1
+            from public.event_participants own_ep
+            join public.family_profiles own_fp
+              on own_fp.id=own_ep.profile_id
+             and own_fp.household_id=own_ep.household_id
+             and own_fp.active
+            where own_ep.event_id=ce.id
+              and own_fp.linked_user_id=${delivery.user_id}::uuid
+          )
+          or exists(
+            select 1
+            from public.household_members hm
+            left join public.module_role_permissions mrp
+              on mrp.household_id=hm.household_id
+             and mrp.module_code='calendar'
+             and mrp.role=hm.role
+            where hm.household_id=${delivery.household_id}::uuid
+              and hm.user_id=${delivery.user_id}::uuid
+              and hm.status='active'
+              and (
+                hm.role='owner'
+                or coalesce(
+                  mrp.access_level,
+                  case when hm.role='admin' then 'full' else 'read' end
+                )='full'
+              )
+          )
+        )
         group by
           o.event_id,o.occurrence_key,o.title,o.all_day,o.occurrence_start_at,
           o.occurrence_start_date,o.event_timezone,o.location_text
@@ -261,7 +299,7 @@ async function sendSummaryEmails() {
     }
   }
 
-  return { claimed:deliveries.length,sent,failed }
+  return { claimed:deliveries.length,sent,failed,configured:true }
 }
 
 Deno.serve(async (req) => {
