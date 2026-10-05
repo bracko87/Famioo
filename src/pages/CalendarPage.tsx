@@ -176,6 +176,7 @@ export function CalendarPage() {
   const [categories, setCategories] = useState<EventCategory[]>([])
   const [templates, setTemplates] = useState<EventTemplate[]>([])
   const [composerDate, setComposerDate] = useState<string | null>(null)
+  const [endDate, setEndDate] = useState('')
   const [editingEventId, setEditingEventId] = useState<string | null>(null)
   const [editingCalendarId, setEditingCalendarId] = useState<string | null>(null)
   const [templateId, setTemplateId] = useState('')
@@ -321,6 +322,7 @@ export function CalendarPage() {
 
   function closeComposer() {
     setComposerDate(null)
+    setEndDate('')
     setEditingEventId(null)
     setEditingCalendarId(null)
     setTemplateId('')
@@ -336,6 +338,7 @@ export function CalendarPage() {
     setEditingEventId(null)
     setEditingCalendarId(null)
     setComposerDate(day)
+    setEndDate(day)
     setTemplateId('')
     setTitle('')
     setDescription('')
@@ -398,12 +401,18 @@ export function CalendarPage() {
       : row.start_at
         ? dateInZone(row.start_at, timezone)
         : dateKey(anchor)
+    const eventEndDate = row.all_day
+      ? row.end_date ?? eventDate
+      : row.end_at
+        ? dateInZone(row.end_at, timezone)
+        : eventDate
     const parsed = parseRrule(ruleResult.data?.rrule ?? null)
     const reminder = reminderResult.data?.[0]
 
     setEditingEventId(row.id)
     setEditingCalendarId(row.calendar_id)
     setComposerDate(eventDate)
+    setEndDate(eventEndDate)
     setTemplateId('')
     setTitle(row.title)
     setDescription(row.description ?? '')
@@ -509,16 +518,24 @@ export function CalendarPage() {
     setSaving(true)
     setError('')
 
+    const effectiveEndDate = endDate || composerDate
+
+    if (effectiveEndDate < composerDate) {
+      setSaving(false)
+      setError('End date cannot be before the start date.')
+      return
+    }
+
     const startAt = allDay
       ? null
       : new Date(composerDate + 'T' + startTime + ':00').toISOString()
     const endAt = allDay
       ? null
-      : new Date(composerDate + 'T' + endTime + ':00').toISOString()
+      : new Date(effectiveEndDate + 'T' + endTime + ':00').toISOString()
 
     if (!allDay && endAt && startAt && new Date(endAt) <= new Date(startAt)) {
       setSaving(false)
-      setError('End time must be later than start time.')
+      setError('Event end must be later than the start.')
       return
     }
 
@@ -573,7 +590,7 @@ export function CalendarPage() {
       p_start_at: startAt,
       p_end_at: endAt,
       p_start_date: allDay ? composerDate : null,
-      p_end_date: allDay ? composerDate : null,
+      p_end_date: allDay ? effectiveEndDate : null,
       p_timezone: household.timezone,
       p_location_text: locationText.trim() || null,
       p_category_id: categoryId || null,
@@ -869,24 +886,35 @@ export function CalendarPage() {
 
             <div className="composer-grid-two">
               <label>
-                Date
+                Start date
                 <DatePicker
                   value={composerDate}
                   onChange={setComposerDate}
                   format={household.date_format}
-                  ariaLabel="Choose event date"
+                  ariaLabel="Choose event start date"
                 />
               </label>
 
               <label>
-                Description
-                <input
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  placeholder="Optional details"
+                End date
+                <DatePicker
+                  value={endDate || composerDate}
+                  onChange={setEndDate}
+                  min={composerDate}
+                  format={household.date_format}
+                  ariaLabel="Choose event end date"
                 />
               </label>
             </div>
+
+            <label>
+              Description
+              <input
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="Optional details"
+              />
+            </label>
 
             <div className="category-all-day-row">
               <label>
