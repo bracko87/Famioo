@@ -22,6 +22,7 @@ import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { Select } from '../components/ui/Select'
 import { useHousehold } from '../context/HouseholdContext'
+import { categoryColor } from '../lib/categoryColors'
 import { firstName } from '../lib/personName'
 import { supabase } from '../lib/supabase'
 
@@ -196,7 +197,7 @@ export function HomeCarePage() {
 
   const [tab, setTab] = useState<HomeCareTab>('overview')
   const [assets, setAssets] = useState<HomeAsset[]>([])
-  const [assetTypeOptions, setAssetTypeOptions] = useState<Array<{ value: string; label: string }>>([{ value: 'Appliance', label: 'Appliance' }])
+  const [assetTypeOptions, setAssetTypeOptions] = useState<Array<{ value: string; label: string; dotColor?: string }>>([{ value: 'Appliance', label: 'Appliance', dotColor: categoryColor('purple') }])
   const [maintenance, setMaintenance] = useState<MaintenanceItem[]>([])
   const [repairs, setRepairs] = useState<RepairItem[]>([])
   const [activity, setActivity] = useState<HomeActivity[]>([])
@@ -291,7 +292,7 @@ export function HomeCarePage() {
         .order('created_at'),
       supabase
         .from('household_module_types')
-        .select('type_key,label,sort_order')
+        .select('type_key,label,color_key,sort_order')
         .eq('household_id', household.id)
         .eq('module_code', 'home_care')
         .eq('group_code', 'asset_type')
@@ -315,8 +316,8 @@ export function HomeCarePage() {
     if (typeResult.error) {
       setError((current) => current || typeResult.error.message)
     } else {
-      const options = (typeResult.data ?? []).map((row) => ({ value: row.type_key, label: row.label }))
-      setAssetTypeOptions(options.length ? options : [{ value: 'Appliance', label: 'Appliance' }])
+      const options = (typeResult.data ?? []).map((row) => ({ value: row.type_key, label: row.label, dotColor: categoryColor(row.color_key) }))
+      setAssetTypeOptions(options.length ? options : [{ value: 'Appliance', label: 'Appliance', dotColor: categoryColor('purple') }])
     }
 
     if (attachmentResult.error) {
