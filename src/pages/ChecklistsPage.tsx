@@ -27,6 +27,14 @@ type TaskSource = {
   location_text: string | null
 }
 
+type ChecklistTemplate = {
+  id: string
+  name: string
+  title: string
+  category_id: string | null
+  location_text: string | null
+}
+
 type SourceType = 'standalone' | 'event' | 'task'
 
 function dateFromOccurrence(event: CalendarOccurrence) {
@@ -44,12 +52,14 @@ export function ChecklistsPage() {
   const [participants, setParticipants] = useState<ChecklistParticipant[]>([])
   const [categories, setCategories] = useState<EventCategory[]>([])
   const [eventSources, setEventSources] = useState<CalendarOccurrence[]>([])
+  const [templates, setTemplates] = useState<ChecklistTemplate[]>([])
   const [taskSources, setTaskSources] = useState<TaskSource[]>([])
   const [eventParticipants, setEventParticipants] = useState<{ event_id: string; profile_id: string }[]>([])
   const [taskParticipants, setTaskParticipants] = useState<{ task_id: string; profile_id: string }[]>([])
   const [itemDrafts, setItemDrafts] = useState<Record<string, string>>({})
   const [composerOpen, setComposerOpen] = useState(false)
   const [sourceType, setSourceType] = useState<SourceType>('standalone')
+  const [templateId, setTemplateId] = useState('')
   const [sourceId, setSourceId] = useState('')
   const [title, setTitle] = useState('')
   const [categoryId, setCategoryId] = useState('')
@@ -69,7 +79,7 @@ export function ChecklistsPage() {
     const future = new Date()
     future.setDate(future.getDate() + 365)
 
-    const [listResult, itemResult, participantResult, categoryResult, eventResult, taskResult, eventParticipantResult, taskParticipantResult] = await Promise.all([
+    const [listResult, itemResult, participantResult, categoryResult, eventResult, taskResult, eventParticipantResult, taskParticipantResult, templateResult] = await Promise.all([
       supabase
         .from('checklists')
         .select('id,title,category_id,due_date,location_text,linked_event_id,linked_task_id')
@@ -110,6 +120,12 @@ export function ChecklistsPage() {
         .from('task_participants')
         .select('task_id,profile_id')
         .eq('household_id', household.id),
+      supabase
+        .from('checklist_templates')
+        .select('id,name,title,category_id,location_text')
+        .eq('household_id', household.id)
+        .eq('active', true)
+        .order('name'),
     ])
 
     if (listResult.error) setError(listResult.error.message)
@@ -140,6 +156,7 @@ export function ChecklistsPage() {
     if (!taskResult.error) setTaskSources((taskResult.data ?? []) as TaskSource[])
     if (!eventParticipantResult.error) setEventParticipants(eventParticipantResult.data ?? [])
     if (!taskParticipantResult.error) setTaskParticipants(taskParticipantResult.data ?? [])
+    if (!templateResult.error) setTemplates((templateResult.data ?? []) as ChecklistTemplate[])
   }
 
   useEffect(() => { void load() }, [household.id])
@@ -156,6 +173,7 @@ export function ChecklistsPage() {
 
   function openComposer() {
     setSourceType('standalone')
+    setTemplateId('')
     setSourceId('')
     setTitle('')
     setDueDate('')
@@ -166,6 +184,18 @@ export function ChecklistsPage() {
     setSaveTemplate(false)
     setError('')
     setComposerOpen(true)
+  }
+
+  function applyTemplate(nextTemplateId: string) {
+    setTemplateId(nextTemplateId)
+    if (!nextTemplateId) return
+
+    const template = templates.find((item) => item.id === nextTemplateId)
+    if (!template) return
+
+    setTitle(template.title)
+    setCategoryId(template.category_id ?? categories[0]?.id ?? '')
+    setLocationText(template.location_text ?? '')
   }
 
   function applySource(nextType: SourceType, nextId: string) {
@@ -378,6 +408,25 @@ export function ChecklistsPage() {
                 <X size={18} />
               </button>
             </header>
+
+            {sourceType === 'standalone' && (
+              <label>
+                Saved template
+                <Select
+                  value={templateId}
+                  onChange={applyTemplate}
+                  placeholder="Blank checklist"
+                  options={[
+                    { value: '', label: 'Blank checklist' },
+                    ...templates.map((template) => ({
+                      value: template.id,
+                      label: template.name,
+                    })),
+                  ]}
+                  ariaLabel="Choose checklist template"
+                />
+              </label>
+            )}
 
             <div className="composer-grid-two">
               <label>
