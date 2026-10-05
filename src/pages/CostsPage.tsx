@@ -7,6 +7,8 @@ import { supabase } from '../lib/supabase'
 
 type CostRange = 'week' | 'month' | 'year' | 'all'
 type ScheduleType = 'one_time' | 'scheduled'
+type CostFlow = 'expense' | 'income'
+type CostFilterPeriod = 'all' | 'week' | 'month' | 'year'
 
 type HouseholdCost = {
   id: string
@@ -15,12 +17,14 @@ type HouseholdCost = {
   currency: string
   cost_date: string
   cost_kind: 'regular' | 'additional'
-  source_type: 'manual' | 'shopping' | 'task' | 'home_care'
+  source_type: 'manual' | 'shopping' | 'task' | 'home_care' | 'life_admin' | 'projects'
   source_shopping_list_id: string | null
   source_task_id: string | null
   source_home_care_activity_id: string | null
   schedule_type: ScheduleType
   schedule_day: number | null
+  schedule_interval_months: number
+  flow_type: CostFlow
   notes: string | null
   created_at: string
 }
@@ -89,6 +93,11 @@ export function CostsPage() {
   const [costs, setCosts] = useState<HouseholdCost[]>([])
   const [finance, setFinance] = useState<FinanceSettings | null>(null)
   const [range, setRange] = useState<CostRange>('month')
+  const [listSource, setListSource] = useState('all')
+  const [listTiming, setListTiming] = useState('all')
+  const [listFlow, setListFlow] = useState('all')
+  const [listPeriod, setListPeriod] = useState<CostFilterPeriod>('all')
+  const [listPage, setListPage] = useState(1)
   const [composerOpen, setComposerOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [amount, setAmount] = useState('')
@@ -107,7 +116,7 @@ export function CostsPage() {
     const [costResult, financeResult] = await Promise.all([
       supabase
         .from('household_costs')
-        .select('id,title,amount,currency,cost_date,cost_kind,source_type,source_shopping_list_id,source_task_id,source_home_care_activity_id,schedule_type,schedule_day,notes,created_at')
+        .select('id,title,amount,currency,cost_date,cost_kind,source_type,source_shopping_list_id,source_task_id,source_home_care_activity_id,source_home_care_asset_id,source_life_admin_item_id,schedule_type,schedule_day,schedule_interval_months,flow_type,notes,created_at')
         .eq('household_id', household.id)
         .order('cost_date', { ascending: false })
         .order('created_at', { ascending: false }),
@@ -206,7 +215,7 @@ export function CostsPage() {
           })
         }
 
-        cursor.setMonth(cursor.getMonth() + 1)
+        cursor.setMonth(cursor.getMonth() + Math.max(1, cost.schedule_interval_months ?? 1))
       }
     }
 
@@ -214,7 +223,16 @@ export function CostsPage() {
   }, [costs, rangeBounds])
 
   const periodTotal = useMemo(
-    () => occurrences.reduce((sum, item) => sum + item.amount, 0),
+    () => occurrences
+      .filter((item) => item.cost.flow_type !== 'income')
+      .reduce((sum, item) => sum + item.amount, 0),
+    [occurrences],
+  )
+
+  const periodIncome = useMemo(
+    () => occurrences
+      .filter((item) => item.cost.flow_type === 'income')
+      .reduce((sum, item) => sum + item.amount, 0),
     [occurrences],
   )
 
@@ -236,7 +254,15 @@ export function CostsPage() {
         if (start <= fromKey(currentMonthBounds.end)) {
           const day = Math.min(cost.schedule_day ?? start.getDate(), lastDayOfMonth(monthStart.getFullYear(), monthStart.getMonth()))
           const date = dateKey(new Date(monthStart.getFullYear(), monthStart.getMonth(), day, 12))
-          if (date >= currentMonthBounds.start && date <= currentMonthBounds.end && fromKey(date) >= start) {
+          const monthsFromStart = (monthStart.getFullYear() - start.getFullYear()) * 12 + (monthStart.getMonth() - start.getMonth())
+          const interval = Math.max(1, cost.schedule_interval_months ?? 1)
+          if (
+            monthsFromStart >= 0
+            && monthsFromStart % interval === 0
+            && date >= currentMonthBounds.start
+            && date <= currentMonthBounds.end
+            && fromKey(date) >= start
+          ) {
             rows.push({ key: cost.id + ':' + date, cost, date, amount: Number(cost.amount) })
           }
         }
@@ -245,7 +271,7 @@ export function CostsPage() {
       }
     }
 
-    return rows.reduce((sum, item) => sum + item.amount, 0)
+    return rows.filter((item) => item.cost.flow_type !== 'income').reduce((sum, item) => sum + item.amount, 0)
   }, [costs, currentMonthBounds])
 
   const monthlyLimit = finance?.monthly_budget ?? finance?.monthly_income ?? null
@@ -304,10 +330,12 @@ export function CostsPage() {
       ['shopping', 0],
       ['task', 0],
       ['home_care', 0],
+      ['life_admin', 0],
+      ['projects', 0],
     ])
 
     for (const occurrence of occurrences) {
-      totals.set(occurrence.cost.source_type, (totals.get(occurrence.cost.source_type) ?? 0) + occurrence.amount)
+      if (occurrence.cost.flow_type !== 'income') totals.set(occurrence.cost.source_type, (totals.get(occurrence.cost.source_type) ?? 0) + occurrence.amount)
     }
 
     return Array.from(totals.entries()).map(([key, value]) => ({
@@ -318,7 +346,11 @@ export function CostsPage() {
           ? 'Tasks'
           : key === 'home_care'
             ? 'Home Care'
-            : 'Other costs',
+            : key === 'life_admin'
+              ? 'Life Admin'
+              : key === 'projects'
+                ? 'Projects & Chores'
+                : 'Other costs',
       value,
     }))
   }, [occurrences])
@@ -327,10 +359,10 @@ export function CostsPage() {
 
   const timingBreakdown = useMemo(() => {
     const scheduled = occurrences
-      .filter((item) => item.cost.schedule_type === 'scheduled')
+      .filter((item) => item.cost.flow_type !== 'income' && item.cost.schedule_type === 'scheduled')
       .reduce((sum, item) => sum + item.amount, 0)
     const oneTime = occurrences
-      .filter((item) => item.cost.schedule_type !== 'scheduled')
+      .filter((item) => item.cost.flow_type !== 'income' && item.cost.schedule_type !== 'scheduled')
       .reduce((sum, item) => sum + item.amount, 0)
 
     return [
@@ -340,6 +372,73 @@ export function CostsPage() {
   }, [occurrences])
 
   const timingMax = Math.max(1, ...timingBreakdown.map((item) => item.value))
+
+  const listPeriodBounds = useMemo(() => {
+    if (listPeriod === 'all') return null
+
+    const now = new Date()
+    now.setHours(12,0,0,0)
+
+    if (listPeriod === 'week') {
+      const start = startOfWeek(now,mondayFirst)
+      return { start: dateKey(start), end: dateKey(addDays(start,6)) }
+    }
+
+    if (listPeriod === 'month') {
+      return {
+        start: dateKey(new Date(now.getFullYear(),now.getMonth(),1,12)),
+        end: dateKey(new Date(now.getFullYear(),now.getMonth()+1,0,12)),
+      }
+    }
+
+    return {
+      start: dateKey(new Date(now.getFullYear(),0,1,12)),
+      end: dateKey(new Date(now.getFullYear(),11,31,12)),
+    }
+  }, [listPeriod,mondayFirst])
+
+  const filteredCosts = useMemo(() => {
+    return costs.filter((cost) => {
+      if (listSource !== 'all' && cost.source_type !== listSource) return false
+      if (listTiming !== 'all' && cost.schedule_type !== listTiming) return false
+      if (listFlow !== 'all' && cost.flow_type !== listFlow) return false
+      if (listPeriodBounds && (cost.cost_date < listPeriodBounds.start || cost.cost_date > listPeriodBounds.end)) return false
+      return true
+    })
+  }, [costs,listSource,listTiming,listFlow,listPeriodBounds])
+
+  const pageSize = 15
+  const listPageCount = Math.max(1,Math.ceil(filteredCosts.length / pageSize))
+  const visibleCosts = useMemo(
+    () => filteredCosts.slice((listPage - 1) * pageSize,listPage * pageSize),
+    [filteredCosts,listPage],
+  )
+
+  useEffect(() => {
+    setListPage(1)
+  }, [listSource,listTiming,listFlow,listPeriod])
+
+  useEffect(() => {
+    if (listPage > listPageCount) setListPage(listPageCount)
+  }, [listPage,listPageCount])
+
+  function sourceLabel(source: HouseholdCost['source_type']) {
+    if (source === 'shopping') return 'Shopping'
+    if (source === 'task') return 'Task'
+    if (source === 'home_care') return 'Home Care'
+    if (source === 'life_admin') return 'Life Admin'
+    if (source === 'projects') return 'Projects & Chores'
+    return 'Manual'
+  }
+
+  function scheduleLabel(cost: HouseholdCost) {
+    if (cost.schedule_type !== 'scheduled') return 'One-time'
+    const interval = Math.max(1,cost.schedule_interval_months ?? 1)
+    if (interval === 1) return 'Scheduled monthly'
+    if (interval === 3) return 'Scheduled quarterly'
+    if (interval === 12) return 'Scheduled yearly'
+    return 'Scheduled every ' + interval + ' months'
+  }
 
   function resetComposer() {
     setTitle('')
@@ -410,6 +509,8 @@ export function CostsPage() {
       schedule_type: scheduleType,
       schedule_day: scheduleType === 'scheduled' ? fromKey(costDate).getDate() : null,
       notes: notes.trim() || null,
+      flow_type: 'expense',
+      schedule_interval_months: 1,
     })
 
     setSaving(false)
@@ -538,8 +639,9 @@ export function CostsPage() {
         </div>
 
         <div className="cost-report-total">
-          <span>Total in selected period</span>
+          <span>Total expenses in selected period</span>
           <strong>{money(periodTotal)}</strong>
+          {periodIncome > 0 && <small>{money(periodIncome)} income recorded</small>}
         </div>
 
         <div className="cost-chart-grid">
@@ -601,16 +703,79 @@ export function CostsPage() {
             <span className="eyebrow">COST ENTRIES</span>
             <h2>All costs</h2>
           </div>
-          <span>{costs.length}</span>
+          <span>{filteredCosts.length}</span>
         </div>
 
-        {costs.length === 0 ? (
+        <div className="cost-list-filters">
+          <label>
+            Source / category
+            <Select
+              value={listSource}
+              onChange={setListSource}
+              options={[
+                { value: 'all', label: 'All sources' },
+                { value: 'manual', label: 'Manual' },
+                { value: 'shopping', label: 'Shopping' },
+                { value: 'task', label: 'Tasks' },
+                { value: 'home_care', label: 'Home Care' },
+                { value: 'life_admin', label: 'Life Admin' },
+                { value: 'projects', label: 'Projects & Chores' },
+              ]}
+              ariaLabel="Filter costs by source"
+            />
+          </label>
+
+          <label>
+            Period
+            <Select
+              value={listPeriod}
+              onChange={(value) => setListPeriod(value as CostFilterPeriod)}
+              options={[
+                { value: 'all', label: 'All dates' },
+                { value: 'week', label: 'This week' },
+                { value: 'month', label: 'This month' },
+                { value: 'year', label: 'This year' },
+              ]}
+              ariaLabel="Filter costs by period"
+            />
+          </label>
+
+          <label>
+            Timing
+            <Select
+              value={listTiming}
+              onChange={setListTiming}
+              options={[
+                { value: 'all', label: 'All timing' },
+                { value: 'one_time', label: 'One-time / non-scheduled' },
+                { value: 'scheduled', label: 'Scheduled / recurring' },
+              ]}
+              ariaLabel="Filter costs by timing"
+            />
+          </label>
+
+          <label>
+            Direction
+            <Select
+              value={listFlow}
+              onChange={setListFlow}
+              options={[
+                { value: 'all', label: 'Costs & income' },
+                { value: 'expense', label: 'Costs only' },
+                { value: 'income', label: 'Income only' },
+              ]}
+              ariaLabel="Filter costs by direction"
+            />
+          </label>
+        </div>
+
+        {filteredCosts.length === 0 ? (
           <div className="empty-state">
             <Receipt size={24} />
-            <span className="empty-state-title">No household costs yet.</span>
-            <span>Manual costs, completed Shopping trips and task costs will appear here.</span>
+            <span className="empty-state-title">No matching household entries.</span>
+            <span>Change the filters or add a new household cost.</span>
           </div>
-        ) : costs.map((cost) => (
+        ) : visibleCosts.map((cost) => (
           <div className="cost-row" key={cost.id}>
             <span className="cost-source-icon">
               {cost.source_type === 'shopping'
@@ -624,14 +789,27 @@ export function CostsPage() {
               <small>
                 {cost.cost_date}
                 {' · '}
-                {cost.schedule_type === 'scheduled' ? 'Scheduled monthly' : 'One-time'}
-                {cost.source_type === 'shopping' ? ' · Shopping' : ''}
-                {cost.source_type === 'task' ? ' · Task' : ''}
+                {scheduleLabel(cost)}
+                {' · '}
+                {sourceLabel(cost.source_type)}
+                {cost.flow_type === 'income' ? ' · Income' : ''}
               </small>
             </span>
-            <strong>{money(Number(cost.amount), cost.currency || 'EUR')}</strong>
+            <strong className={cost.flow_type === 'income' ? 'income' : ''}>
+              {cost.flow_type === 'income' ? '+' : ''}{money(Number(cost.amount), cost.currency || 'EUR')}
+            </strong>
           </div>
         ))}
+
+        {filteredCosts.length > pageSize && (
+          <div className="cost-pagination">
+            <span>15 per page · Page {listPage} of {listPageCount}</span>
+            <div>
+              <button type="button" className="secondary-button compact" disabled={listPage <= 1} onClick={() => setListPage((page) => Math.max(1,page - 1))}>Previous</button>
+              <button type="button" className="secondary-button compact" disabled={listPage >= listPageCount} onClick={() => setListPage((page) => Math.min(listPageCount,page + 1))}>Next</button>
+            </div>
+          </div>
+        )}
       </section>
 
       {composerOpen && canWrite && (
