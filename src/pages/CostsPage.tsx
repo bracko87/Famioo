@@ -317,6 +317,22 @@ export function CostsPage() {
 
   const sourceMax = Math.max(1, ...sourceBreakdown.map((item) => item.value))
 
+  const timingBreakdown = useMemo(() => {
+    const scheduled = occurrences
+      .filter((item) => item.cost.schedule_type === 'scheduled')
+      .reduce((sum, item) => sum + item.amount, 0)
+    const oneTime = occurrences
+      .filter((item) => item.cost.schedule_type !== 'scheduled')
+      .reduce((sum, item) => sum + item.amount, 0)
+
+    return [
+      { key: 'scheduled', label: 'Scheduled', value: scheduled },
+      { key: 'one_time', label: 'One-time', value: oneTime },
+    ]
+  }, [occurrences])
+
+  const timingMax = Math.max(1, ...timingBreakdown.map((item) => item.value))
+
   function resetComposer() {
     setTitle('')
     setAmount('')
@@ -533,20 +549,39 @@ export function CostsPage() {
             </div>
           </div>
 
-          <div className="cost-chart source-chart">
-            <h3>Where costs came from</h3>
-            <div className="cost-source-bars">
-              {sourceBreakdown.map((item) => (
-                <div className="cost-source-row" key={item.key}>
-                  <div>
-                    <span>{item.label}</span>
-                    <strong>{money(item.value)}</strong>
+          <div className="cost-side-charts">
+            <div className="cost-chart source-chart">
+              <h3>Where costs came from</h3>
+              <div className="cost-source-bars">
+                {sourceBreakdown.map((item) => (
+                  <div className="cost-source-row" key={item.key}>
+                    <div>
+                      <span>{item.label}</span>
+                      <strong>{money(item.value)}</strong>
+                    </div>
+                    <div className="cost-source-track">
+                      <div style={{ width: (item.value / sourceMax) * 100 + '%' }} />
+                    </div>
                   </div>
-                  <div className="cost-source-track">
-                    <div style={{ width: (item.value / sourceMax) * 100 + '%' }} />
+                ))}
+              </div>
+            </div>
+
+            <div className="cost-chart timing-chart">
+              <h3>Scheduled vs one-time</h3>
+              <div className="cost-source-bars">
+                {timingBreakdown.map((item) => (
+                  <div className="cost-source-row" key={item.key}>
+                    <div>
+                      <span>{item.label}</span>
+                      <strong>{money(item.value)}</strong>
+                    </div>
+                    <div className="cost-source-track">
+                      <div style={{ width: (item.value / timingMax) * 100 + '%' }} />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>
