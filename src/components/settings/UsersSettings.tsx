@@ -6,24 +6,28 @@ import type { HouseholdRole } from '../../lib/types'
 import { Select } from '../ui/Select'
 
 type HouseholdUser = {
-  user_id: string
+  profile_id: string
+  user_id: string | null
   email: string | null
   phone: string | null
   display_name: string
   avatar_path: string | null
-  role: HouseholdRole
+  profile_type: 'adult' | 'child' | 'profile_only'
+  role: HouseholdRole | 'profile'
   status: string
   joined_at: string
 }
 
 type AddMode = 'invite' | 'create'
 type IdentityType = 'email' | 'phone'
+type ProfileType = 'adult' | 'child'
 
 export function UsersSettings() {
   const { household, refresh, user } = useHousehold()
   const [users, setUsers] = useState<HouseholdUser[]>([])
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({})
-  const [mode, setMode] = useState<AddMode>('invite')
+  const [profileType, setProfileType] = useState<ProfileType>('adult')
+  const [mode, setMode] = useState<AddMode>('create')
   const [identityType, setIdentityType] = useState<IdentityType>('email')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -39,13 +43,13 @@ export function UsersSettings() {
 
   async function loadAvatarUrls(rows: HouseholdUser[]) {
     const entries = await Promise.all(rows.map(async (member) => {
-      if (!member.avatar_path) return [member.user_id, ''] as const
+      if (!member.avatar_path) return [member.profile_id, ''] as const
 
       const result = await supabase.storage
         .from('profile-avatars')
         .createSignedUrl(member.avatar_path, 3600)
 
-      return [member.user_id, result.data?.signedUrl ?? ''] as const
+      return [member.profile_id, result.data?.signedUrl ?? ''] as const
     }))
 
     setAvatarUrls(Object.fromEntries(entries))
@@ -72,7 +76,7 @@ export function UsersSettings() {
 
   async function addUser(event: FormEvent) {
     event.preventDefault()
-    if (!isOwner) return
+    if (!isOwner || !displayName.trim()) return
 
     setBusy(true)
     setMessage('')
@@ -87,19 +91,22 @@ export function UsersSettings() {
       return
     }
 
+    const action = profileType === 'child' ? 'create_profile' : mode
+
     const result = await supabase.functions.invoke('manage-household-user', {
       headers: {
         Authorization: 'Bearer ' + session.access_token,
       },
       body: {
-        action: mode,
+        action,
         household_id: household.id,
+        profile_type: profileType,
         identity_type: mode === 'invite' ? 'email' : identityType,
-        email: email.trim() || undefined,
-        phone: phone.trim() || undefined,
+        email: profileType === 'adult' ? email.trim() || undefined : undefined,
+        phone: profileType === 'adult' ? phone.trim() || undefined : undefined,
         display_name: displayName.trim(),
         role,
-        ...(mode === 'create' ? { password } : {}),
+        ...(profileType === 'adult' && mode === 'create' ? { password } : {}),
       },
     })
 
@@ -132,13 +139,20 @@ export function UsersSettings() {
     setDisplayName('')
     setPassword('')
     setRole('user')
-    setMessage(mode === 'invite' ? 'Invitation email sent.' : 'User created successfully.')
+    setMessage(
+      profileType === 'child'
+        ? 'Child profile created. No login access was created.'
+        : mode === 'invite'
+          ? 'Invitation email sent.'
+          : 'User created successfully.',
+    )
+
     await loadUsers()
     await refresh()
   }
 
-  async function changeRole(userId: string, nextRole: 'admin' | 'user') {
-    if (!isOwner) return
+  async function changeRole(userId: string | null, nextRole: 'admin' | 'user') {
+    if (!isOwner || !userId) return
 
     setMessage('')
     const result = await supabase.rpc('set_household_member_role_v1', {
@@ -173,11 +187,11 @@ export function UsersSettings() {
     const canChange = canManageAvatars || member.user_id === user.id
     if (!canChange) return
 
-    setAvatarBusy(member.user_id)
+    setAvatarBusy(member.profile_id)
     setMessage('')
 
     const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-    const path = `${household.id}/${member.user_id}/avatar-${Date.now()}.${extension}`
+    const path = `${household.id}/${member.profile_id}/avatar-${Date.now()}.${extension}`
 
     const upload = await supabase.storage
       .from('profile-avatars')
@@ -198,8 +212,8 @@ export function UsersSettings() {
         avatar_path: path,
         updated_at: new Date().toISOString(),
       })
+      .eq('id', member.profile_id)
       .eq('household_id', household.id)
-      .eq('linked_user_id', member.user_id)
 
     if (update.error) {
       await supabase.storage.from('profile-avatars').remove([path])
@@ -218,13 +232,13 @@ export function UsersSettings() {
     await refresh()
   }
 
-  const createContactLabel = identityType === 'email' ? 'Email' : 'Phone number'
   const identityHint = useMemo(() => {
+    if (profileType === 'child') return 'Children are participant profiles only and do not receive sign-in access.'
     if (mode === 'invite') return 'Invitation requires an email address.'
     return identityType === 'email'
-      ? 'This user will sign in with email and password.'
-      : 'This user will sign in with phone number and password.'
-  }, [mode, identityType])
+      ? 'This adult will sign in with email and password.'
+      : 'This adult will sign in with phone number and password.'
+  }, [mode, identityType, profileType])
 
   return (
     <div className="users-settings-layout">
@@ -232,15 +246,15 @@ export function UsersSettings() {
         <div className="settings-section-head">
           <div>
             <span className="eyebrow">USERS</span>
-            <h2>Household users</h2>
-            <p>Owner controls roles. Admins can never assign roles or permissions.</p>
+            <h2>Household people</h2>
+            <p>Adults can have app access. Child profiles are participants only and do not receive login credentials.</p>
           </div>
           <span className="user-count">{users.length}</span>
         </div>
 
         <div className="users-table">
           <div className="users-table-head">
-            <span>User</span>
+            <span>Person</span>
             <span>Login / contact</span>
             <span>Role</span>
             <span>Status</span>
@@ -248,16 +262,16 @@ export function UsersSettings() {
 
           {users.map((member) => {
             const canChangeAvatar = canManageAvatars || member.user_id === user.id
-            const avatarUrl = avatarUrls[member.user_id]
+            const avatarUrl = avatarUrls[member.profile_id]
 
             return (
-              <div className="users-table-row" key={member.user_id}>
+              <div className="users-table-row" key={member.profile_id}>
                 <span className="user-cell">
                   <span className="user-avatar-wrap">
                     {avatarUrl ? (
                       <img className="user-avatar-image" src={avatarUrl} alt="" />
                     ) : (
-                      <b>{member.display_name.slice(0, 1).toUpperCase()}</b>
+                      <span className="user-avatar-fallback">{member.display_name.slice(0, 1).toUpperCase()}</span>
                     )}
 
                     {canChangeAvatar && (
@@ -266,21 +280,30 @@ export function UsersSettings() {
                         <input
                           type="file"
                           accept="image/jpeg,image/png,image/webp"
-                          disabled={avatarBusy === member.user_id}
+                          disabled={avatarBusy === member.profile_id}
                           onChange={(event) => void changeAvatar(member, event)}
                         />
                       </label>
                     )}
                   </span>
-                  <strong>{member.display_name}</strong>
+                  <span className="user-name-copy">
+                    <span>{member.display_name}</span>
+                    <small>{member.profile_type === 'child' ? 'Child' : 'Adult'}</small>
+                  </span>
                 </span>
 
                 <span className="user-contact-cell">
-                  {member.email ? <><Mail size={13} />{member.email}</> : member.phone ? <><Phone size={13} />{member.phone}</> : 'No login contact'}
+                  {member.email
+                    ? <><Mail size={13} />{member.email}</>
+                    : member.phone
+                      ? <><Phone size={13} />{member.phone}</>
+                      : 'No login access'}
                 </span>
 
                 <span>
-                  {member.role === 'owner' || !isOwner ? (
+                  {member.role === 'profile' ? (
+                    <em className="role-badge profile">Participant</em>
+                  ) : member.role === 'owner' || !isOwner ? (
                     <em className={'role-badge ' + member.role}>{member.role}</em>
                   ) : (
                     <Select
@@ -296,7 +319,11 @@ export function UsersSettings() {
                   )}
                 </span>
 
-                <span><em className="status-badge active">{member.status}</em></span>
+                <span>
+                  <em className={member.role === 'profile' ? 'status-badge profile' : 'status-badge active'}>
+                    {member.role === 'profile' ? 'Participant only' : member.status}
+                  </em>
+                </span>
               </div>
             )
           })}
@@ -307,29 +334,42 @@ export function UsersSettings() {
         <section className="settings-card add-user-card">
           <div className="settings-section-head">
             <div>
-              <span className="eyebrow">ADD USER</span>
-              <h2>{mode === 'invite' ? 'Invite user' : 'Create user'}</h2>
+              <span className="eyebrow">ADD PERSON</span>
+              <h2>{profileType === 'child' ? 'Create child profile' : mode === 'invite' ? 'Invite adult' : 'Create adult user'}</h2>
             </div>
           </div>
 
-          <div className="mode-switch">
-            <button type="button" className={mode === 'invite' ? 'active' : ''} onClick={() => setMode('invite')}>
-              <Mail size={15} />Invite
+          <div className="identity-switch person-type-switch">
+            <button type="button" className={profileType === 'adult' ? 'active' : ''} onClick={() => setProfileType('adult')}>
+              Adult
             </button>
-            <button type="button" className={mode === 'create' ? 'active' : ''} onClick={() => setMode('create')}>
-              <UserPlus size={15} />Create
+            <button type="button" className={profileType === 'child' ? 'active' : ''} onClick={() => setProfileType('child')}>
+              Child
             </button>
           </div>
 
-          {mode === 'create' && (
-            <div className="identity-switch">
-              <button type="button" className={identityType === 'email' ? 'active' : ''} onClick={() => setIdentityType('email')}>
-                <Mail size={14} />Email
-              </button>
-              <button type="button" className={identityType === 'phone' ? 'active' : ''} onClick={() => setIdentityType('phone')}>
-                <Phone size={14} />Phone
-              </button>
-            </div>
+          {profileType === 'adult' && (
+            <>
+              <div className="mode-switch">
+                <button type="button" className={mode === 'invite' ? 'active' : ''} onClick={() => setMode('invite')}>
+                  <Mail size={15} />Invite
+                </button>
+                <button type="button" className={mode === 'create' ? 'active' : ''} onClick={() => setMode('create')}>
+                  <UserPlus size={15} />Create
+                </button>
+              </div>
+
+              {mode === 'create' && (
+                <div className="identity-switch">
+                  <button type="button" className={identityType === 'email' ? 'active' : ''} onClick={() => setIdentityType('email')}>
+                    <Mail size={14} />Email
+                  </button>
+                  <button type="button" className={identityType === 'phone' ? 'active' : ''} onClick={() => setIdentityType('phone')}>
+                    <Phone size={14} />Phone
+                  </button>
+                </div>
+              )}
+            </>
           )}
 
           <form className="add-user-form" onSubmit={addUser}>
@@ -338,12 +378,14 @@ export function UsersSettings() {
               <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required />
             </label>
 
-            {(mode === 'invite' || identityType === 'email') ? (
+            {profileType === 'adult' && (mode === 'invite' || identityType === 'email') && (
               <label>
-                {createContactLabel}
+                Email
                 <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
               </label>
-            ) : (
+            )}
+
+            {profileType === 'adult' && mode === 'create' && identityType === 'phone' && (
               <label>
                 Phone number
                 <input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+491701234567" required />
@@ -352,20 +394,22 @@ export function UsersSettings() {
 
             <small className="identity-hint">{identityHint}</small>
 
-            <label>
-              Role
-              <Select
-                value={role}
-                onChange={(value) => setRole(value as 'admin' | 'user')}
-                options={[
-                  { value: 'user', label: 'User' },
-                  { value: 'admin', label: 'Admin' },
-                ]}
-                ariaLabel="Choose user role"
-              />
-            </label>
+            {profileType === 'adult' && (
+              <label>
+                Role
+                <Select
+                  value={role}
+                  onChange={(value) => setRole(value as 'admin' | 'user')}
+                  options={[
+                    { value: 'user', label: 'User' },
+                    { value: 'admin', label: 'Admin' },
+                  ]}
+                  ariaLabel="Choose user role"
+                />
+              </label>
+            )}
 
-            {mode === 'create' && (
+            {profileType === 'adult' && mode === 'create' && (
               <label>
                 Temporary password
                 <input type="password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required />
@@ -373,7 +417,13 @@ export function UsersSettings() {
             )}
 
             <button className="primary-button" disabled={busy}>
-              {busy ? 'Please wait…' : mode === 'invite' ? <><Mail size={16} />Send invitation</> : <><Plus size={16} />Create user</>}
+              {busy
+                ? 'Please wait…'
+                : profileType === 'child'
+                  ? <><Plus size={16} />Create child profile</>
+                  : mode === 'invite'
+                    ? <><Mail size={16} />Send invitation</>
+                    : <><Plus size={16} />Create user</>}
             </button>
           </form>
         </section>
