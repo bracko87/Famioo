@@ -7016,3 +7016,209 @@ b {
   font-size: 9px;
   text-align: right;
 }
+
+
+/* =========================================================
+   Refinements: Costs, sidebar arrow, Home spacing, Types,
+   Projects & Chores task import + point calculator
+   ========================================================= */
+
+.cost-list {
+  padding: 14px 16px 10px;
+  overflow: visible;
+}
+
+.cost-list .cost-list-head {
+  padding: 0 0 12px;
+}
+
+.cost-list .cost-list-filters {
+  padding: 12px 0 14px;
+}
+
+.cost-list .cost-row {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.cost-list .cost-pagination {
+  padding-bottom: 2px;
+}
+
+.desktop-sidebar-toggle {
+  top: 15px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 0;
+  color: rgba(255,255,255,.92);
+  background: transparent;
+  box-shadow: none;
+}
+
+.desktop-sidebar-toggle:hover {
+  color: #fff;
+  background: transparent;
+}
+
+.app-sidebar.collapsed .desktop-sidebar-toggle {
+  top: 75px;
+  right: 27px;
+}
+
+.home-module-area {
+  gap: 24px;
+  grid-template-columns: minmax(0,1fr) minmax(330px,.92fr);
+}
+
+.home-family-standing > header {
+  justify-content: flex-start;
+}
+
+.home-standing-trophy {
+  display: none;
+}
+
+.type-settings-row.category-row {
+  min-height: 49px;
+  grid-template-columns: 15px minmax(0,1fr) 90px 32px;
+  gap: 9px;
+}
+
+.type-settings-row.category-row:first-child {
+  border-top: 0;
+}
+
+.type-settings-row.category-row .category-name {
+  display: grid;
+  gap: 2px;
+}
+
+.type-settings-row.category-row .category-name strong {
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.type-settings-row.category-row .category-name small,
+.type-settings-row.category-row .category-color-label {
+  font-size: 8px;
+}
+
+.type-settings-add-colored.home_care {
+  grid-template-columns: minmax(0,1fr) minmax(150px,.52fr) auto;
+}
+
+.type-settings-add-colored.life_admin {
+  grid-template-columns: minmax(0,1fr) minmax(145px,.48fr) minmax(145px,.48fr) auto;
+}
+
+.type-settings-removed button i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.project-responsibility-composer {
+  width: min(900px,100%);
+}
+
+.project-points-calculator {
+  padding: 14px;
+  border: 1px solid #e7ddeb;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 96% 8%, rgba(215,90,156,.07), transparent 24%),
+    linear-gradient(135deg,#fbf8fc,#fff);
+}
+
+.project-points-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.project-points-head h3 {
+  margin: 4px 0 0;
+  color: #504553;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.project-points-head p {
+  max-width: 560px;
+  margin: 4px 0 0;
+  color: #908493;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.project-points-total {
+  min-width: 82px;
+  min-height: 64px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  color: #fff;
+  background: linear-gradient(135deg,#7644d7,#a44ec1 55%,#d75a9c);
+  box-shadow: 0 8px 18px rgba(118,68,215,.14);
+}
+
+.project-points-total strong {
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.project-points-total span {
+  margin-top: 3px;
+  font-size: 8px;
+  opacity: .9;
+}
+
+.project-points-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 10px 12px;
+}
+
+.project-points-grid label {
+  display: grid;
+  gap: 6px;
+  color: #716675;
+  font-size: 9px;
+}
+
+@media (max-width: 900px) {
+  .home-module-area {
+    gap: 14px;
+    grid-template-columns: 1fr;
+  }
+
+  .type-settings-add-colored.home_care,
+  .type-settings-add-colored.life_admin {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 650px) {
+  .cost-list {
+    padding: 12px;
+  }
+
+  .project-points-head {
+    flex-direction: column;
+  }
+
+  .project-points-total {
+    width: 100%;
+  }
+
+  .project-points-grid {
+    grid-template-columns: 1fr;
+  }
+}
