@@ -1,4 +1,4 @@
-import { CalendarDays, CheckSquare, ClipboardList } from 'lucide-react'
+import { CalendarDays, CheckSquare, ClipboardList, GraduationCap } from 'lucide-react'
 import { useEffect, useMemo, useState, type ComponentType } from 'react'
 import { useHousehold } from '../../context/HouseholdContext'
 import { categoryColor } from '../../lib/categoryColors'
@@ -12,7 +12,7 @@ type AvailabilityRow = {
 }
 
 type CategoryModule = {
-  code: Extract<ModuleCode, 'calendar' | 'tasks' | 'checklists'>
+  code: Extract<ModuleCode, 'calendar' | 'tasks' | 'checklists' | 'school'>
   label: string
   description: string
   icon: ComponentType<{ size?: number }>
@@ -36,6 +36,12 @@ const categoryModules: CategoryModule[] = [
     label: 'Checklists',
     description: 'Categories available for normal checklists. Shopping stays separate.',
     icon: CheckSquare,
+  },
+  {
+    code: 'school',
+    label: 'School & Kita',
+    description: 'Categories available for school, Kita, appointments and kids organization.',
+    icon: GraduationCap,
   },
 ]
 
@@ -141,7 +147,7 @@ export function CategoryAvailabilitySettings() {
                   })
                   .map((category) => {
                     const key = module.code + ':' + category.id
-                    const enabled = enabledByKey.get(key) ?? true
+                    const enabled = enabledByKey.get(key) ?? (module.code === 'school' ? false : true)
 
                     return (
                       <label className="category-availability-row" key={category.id}>
