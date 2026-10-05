@@ -92,6 +92,7 @@ export function ChecklistsPage() {
       itemResult,
       participantResult,
       categoryResult,
+      availabilityResult,
       eventResult,
       taskResult,
       eventParticipantResult,
@@ -118,6 +119,11 @@ export function ChecklistsPage() {
         .eq('household_id', household.id)
         .eq('active', true)
         .order('sort_order'),
+      supabase
+        .from('module_category_availability')
+        .select('category_id,enabled')
+        .eq('household_id', household.id)
+        .eq('module_code', 'checklists'),
       supabase.rpc('calendar_occurrences_v1', {
         p_household_id: household.id,
         p_range_start: today,
@@ -154,10 +160,12 @@ export function ChecklistsPage() {
     if (participantResult.error) setError((current) => current || participantResult.error.message)
     else setParticipants((participantResult.data ?? []) as ChecklistParticipant[])
 
-    if (categoryResult.error) {
-      setError((current) => current || categoryResult.error.message)
+    if (categoryResult.error || availabilityResult.error) {
+      setError((current) => current || categoryResult.error?.message || availabilityResult.error?.message || 'Could not load checklist categories.')
     } else {
-      const rows = (categoryResult.data ?? []) as EventCategory[]
+      const enabled = new Map((availabilityResult.data ?? []).map((row) => [row.category_id, row.enabled]))
+      const rows = ((categoryResult.data ?? []) as EventCategory[])
+        .filter((item) => enabled.get(item.id) ?? true)
       const allowed = rows.filter((item) => !['shopping', 'shoping'].includes(item.name.trim().toLowerCase()))
       setCategories(rows)
       setCategoryId((current) => allowed.some((item) => item.id === current) ? current : allowed[0]?.id ?? '')
