@@ -7,8 +7,9 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 }
 
-type Action = "invite" | "create"
+type Action = "invite" | "create" | "create_profile"
 type IdentityType = "email" | "phone"
+type ProfileType = "adult" | "child"
 
 type RequestBody = {
   action: Action
@@ -16,8 +17,9 @@ type RequestBody = {
   email?: string
   phone?: string
   identity_type?: IdentityType
+  profile_type?: ProfileType
   display_name?: string
-  role: "admin" | "user"
+  role?: "admin" | "user"
   password?: string
 }
 
@@ -32,13 +34,8 @@ function json(body: unknown, status = 200) {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders })
-  }
-
-  if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405)
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders })
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405)
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY")
@@ -49,9 +46,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const authorization = req.headers.get("Authorization")
-  if (!authorization) {
-    return json({ error: "Authentication required." }, 401)
-  }
+  if (!authorization) return json({ error: "Authentication required." }, 401)
 
   const userClient = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authorization } },
@@ -67,9 +62,7 @@ Deno.serve(async (req: Request) => {
     error: callerError,
   } = await userClient.auth.getUser()
 
-  if (callerError || !caller) {
-    return json({ error: "Authentication required." }, 401)
-  }
+  if (callerError || !caller) return json({ error: "Authentication required." }, 401)
 
   let body: RequestBody
 
@@ -79,31 +72,75 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Invalid request body." }, 400)
   }
 
-  const action = body.action
   const householdId = body.household_id?.trim()
   const email = body.email?.trim().toLowerCase() || undefined
   const phone = body.phone?.trim() || undefined
+  const profileType: ProfileType = body.profile_type === "child" ? "child" : "adult"
+  const action: Action = profileType === "child" ? "create_profile" : body.action
   const identityType: IdentityType = action === "invite"
     ? "email"
     : body.identity_type === "phone"
       ? "phone"
       : "email"
-  const role = body.role
+  const role = body.role === "admin" ? "admin" : "user"
   const displayName = body.display_name?.trim()
     || email?.split("@")[0]
     || phone
     || "Member"
 
-  if (!["invite", "create"].includes(action)) {
+  if (!householdId) return json({ error: "A household is required." }, 400)
+  if (!["invite", "create", "create_profile"].includes(action)) {
     return json({ error: "Invalid action." }, 400)
   }
+  if (!displayName.trim()) return json({ error: "Display name is required." }, 400)
 
-  if (!householdId) {
-    return json({ error: "A household is required." }, 400)
+  const [{ data: household, error: householdError }, { data: membership, error: membershipError }] = await Promise.all([
+    adminClient
+      .from("households")
+      .select("timezone,created_by_user_id")
+      .eq("id", householdId)
+      .maybeSingle(),
+    adminClient
+      .from("household_members")
+      .select("role,status")
+      .eq("household_id", householdId)
+      .eq("user_id", caller.id)
+      .maybeSingle(),
+  ])
+
+  if (householdError || !household) return json({ error: "Household not found." }, 404)
+
+  const callerIsOwner = household.created_by_user_id === caller.id
+    || (!membershipError && membership?.status === "active" && membership?.role === "owner")
+
+  if (!callerIsOwner) {
+    return json({ error: "Only the household owner can add or invite users." }, 403)
   }
 
-  if (!["admin", "user"].includes(role)) {
-    return json({ error: "Role must be Admin or User." }, 400)
+  if (profileType === "child") {
+    const { data: childProfile, error: childError } = await adminClient
+      .from("family_profiles")
+      .insert({
+        household_id: householdId,
+        linked_user_id: null,
+        display_name: displayName,
+        profile_type: "child",
+        color_key: "pink",
+      })
+      .select("id")
+      .single()
+
+    if (childError || !childProfile) {
+      return json({ error: childError?.message ?? "Could not create the child profile." }, 400)
+    }
+
+    return json({
+      ok: true,
+      action: "create_profile",
+      profile_id: childProfile.id,
+      profile_type: "child",
+      display_name: displayName,
+    })
   }
 
   if (action === "invite") {
@@ -122,32 +159,6 @@ Deno.serve(async (req: Request) => {
     if (identityType === "phone" && (!phone || !phone.startsWith("+") || phone.length < 8)) {
       return json({ error: "Use a full international phone number, for example +491701234567." }, 400)
     }
-  }
-
-  const { data: membership, error: membershipError } = await adminClient
-    .from("household_members")
-    .select("role,status")
-    .eq("household_id", householdId)
-    .eq("user_id", caller.id)
-    .maybeSingle()
-
-  if (
-    membershipError
-    || !membership
-    || membership.status !== "active"
-    || membership.role !== "owner"
-  ) {
-    return json({ error: "Only the household owner can add or invite users." }, 403)
-  }
-
-  const { data: household, error: householdError } = await adminClient
-    .from("households")
-    .select("timezone")
-    .eq("id", householdId)
-    .single()
-
-  if (householdError || !household) {
-    return json({ error: "Household not found." }, 404)
   }
 
   let createdUserId: string | null = null
@@ -255,11 +266,10 @@ Deno.serve(async (req: Request) => {
       email: authResult.data.user.email ?? null,
       phone: authResult.data.user.phone ?? null,
       role,
+      profile_type: "adult",
     })
   } catch (error) {
-    if (createdUserId) {
-      await adminClient.auth.admin.deleteUser(createdUserId)
-    }
+    if (createdUserId) await adminClient.auth.admin.deleteUser(createdUserId)
 
     return json(
       { error: error instanceof Error ? error.message : "Could not add the user." },
