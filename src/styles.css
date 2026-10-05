@@ -8903,6 +8903,11 @@ b {
   border: 0;
   text-align: left;
   font: inherit;
+  cursor: default;
+}
+
+.calendar-event-pill[role="button"],
+.calendar-event-detail[role="button"] {
   cursor: pointer;
 }
 
@@ -8914,15 +8919,9 @@ b {
   color: inherit;
 }
 
-.calendar-event-pill:not(:disabled):hover,
-.calendar-event-detail:not(:disabled):hover {
+.calendar-event-pill[role="button"]:hover,
+.calendar-event-detail[role="button"]:hover {
   background: #f4eef7;
-}
-
-.calendar-event-pill:disabled,
-.calendar-event-detail:disabled {
-  opacity: 1;
-  cursor: default;
 }
 
 .event-composer-actions {
