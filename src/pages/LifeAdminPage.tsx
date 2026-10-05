@@ -21,6 +21,7 @@ import { DatePicker } from '../components/ui/DatePicker'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { Select } from '../components/ui/Select'
 import { useHousehold } from '../context/HouseholdContext'
+import { categoryColor } from '../lib/categoryColors'
 import { firstName } from '../lib/personName'
 import { supabase } from '../lib/supabase'
 
@@ -157,12 +158,12 @@ export function LifeAdminPage() {
 
   const [tab, setTab] = useState<LifeAdminTab>('overview')
   const [items, setItems] = useState<LifeAdminItem[]>([])
-  const [typeOptions, setTypeOptions] = useState<Array<{ value: string; label: string; baseType: LifeAdminBaseType }>>([
-    { value: 'document', label: 'Document', baseType: 'document' },
-    { value: 'contract', label: 'Contract', baseType: 'contract' },
-    { value: 'insurance', label: 'Insurance', baseType: 'insurance' },
-    { value: 'subscription', label: 'Subscription', baseType: 'subscription' },
-    { value: 'deadline', label: 'Deadline', baseType: 'deadline' },
+  const [typeOptions, setTypeOptions] = useState<Array<{ value: string; label: string; baseType: LifeAdminBaseType; dotColor?: string }>>([
+    { value: 'document', label: 'Document', baseType: 'document', dotColor: categoryColor('purple') },
+    { value: 'contract', label: 'Contract', baseType: 'contract', dotColor: categoryColor('blue') },
+    { value: 'insurance', label: 'Insurance', baseType: 'insurance', dotColor: categoryColor('green') },
+    { value: 'subscription', label: 'Subscription', baseType: 'subscription', dotColor: categoryColor('orange') },
+    { value: 'deadline', label: 'Deadline', baseType: 'deadline', dotColor: categoryColor('red') },
   ])
   const [attachments, setAttachments] = useState<LifeAdminAttachment[]>([])
   const [attachmentUrls, setAttachmentUrls] = useState<Record<string, string>>({})
@@ -207,7 +208,7 @@ export function LifeAdminPage() {
         .order('created_at'),
       supabase
         .from('household_module_types')
-        .select('type_key,label,base_type,sort_order')
+        .select('type_key,label,base_type,color_key,sort_order')
         .eq('household_id', household.id)
         .eq('module_code', 'life_admin')
         .eq('group_code', 'item_type')
@@ -226,6 +227,7 @@ export function LifeAdminPage() {
         value: row.type_key,
         label: row.label,
         baseType: (row.base_type ?? 'document') as LifeAdminBaseType,
+        dotColor: categoryColor(row.color_key),
       }))
       if (options.length) setTypeOptions(options)
     }
@@ -788,7 +790,7 @@ export function LifeAdminPage() {
             </header>
 
             <div className="composer-grid-two aligned-field-row">
-              <label>Type<Select value={itemType} onChange={setItemType} options={typeOptions.map(({ value,label }) => ({ value,label }))} ariaLabel="Choose Life Admin item type" /></label>
+              <label>Type<Select value={itemType} onChange={setItemType} options={typeOptions.map(({ value,label,dotColor }) => ({ value,label,dotColor }))} ariaLabel="Choose Life Admin item type" /></label>
               <label>Title<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Home insurance" autoFocus required /></label>
             </div>
 
