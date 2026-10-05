@@ -4431,3 +4431,12 @@ b {
     max-width: none;
   }
 }
+
+
+/* Stack the two compact breakdown charts with consistent spacing. */
+.cost-side-charts {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
