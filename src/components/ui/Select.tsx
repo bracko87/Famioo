@@ -1,4 +1,5 @@
-import { Check, ChevronDown } from 'lucide-react'
+import { Check, ChevronDown, X } from 'lucide-react'
+import { createPortal } from 'react-dom'
 import { useEffect, useRef, useState } from 'react'
 
 export type SelectOption = {
@@ -28,9 +29,18 @@ export function Select({
   ariaLabel,
 }: SelectProps) {
   const [open, setOpen] = useState(false)
+  const [mobile, setMobile] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const selected = options.find((option) => option.value === value)
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 700px)')
+    const sync = () => setMobile(media.matches)
+    sync()
+    media.addEventListener('change', sync)
+    return () => media.removeEventListener('change', sync)
+  }, [])
 
   useEffect(() => {
     if (open) {
@@ -43,7 +53,8 @@ export function Select({
 
   useEffect(() => {
     function close(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+      const target = event.target as Node
+      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) setOpen(false)
     }
 
     function keydown(event: KeyboardEvent) {
@@ -57,6 +68,43 @@ export function Select({
       document.removeEventListener('keydown', keydown)
     }
   }, [])
+
+  useEffect(() => {
+    if (!open || !mobile) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [open, mobile])
+
+  function optionRows(extraClass = '') {
+    return (
+      <div className={'custom-select-menu ' + extraClass} role="listbox" ref={menuRef}>
+        {options.map((option) => (
+          <button
+            type="button"
+            role="option"
+            aria-selected={option.value === value}
+            data-selected={option.value === value ? 'true' : 'false'}
+            className={option.value === value ? 'selected' : ''}
+            disabled={option.disabled}
+            key={option.value}
+            onClick={() => {
+              onChange(option.value)
+              setOpen(false)
+            }}
+          >
+            <span className="custom-select-option-label">
+              {option.dotColor && <span className="custom-select-dot" style={{ backgroundColor: option.dotColor }} />}
+              <span>{option.label}</span>
+            </span>
+            {option.value === value && <Check size={16} />}
+          </button>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className={'custom-select ' + className + (open ? ' open' : '') + (disabled ? ' disabled' : '')} ref={rootRef}>
@@ -76,30 +124,26 @@ export function Select({
         <ChevronDown size={15} />
       </button>
 
-      {open && (
-        <div className="custom-select-menu" role="listbox" ref={menuRef}>
-          {options.map((option) => (
-            <button
-              type="button"
-              role="option"
-              aria-selected={option.value === value}
-              data-selected={option.value === value ? 'true' : 'false'}
-              className={option.value === value ? 'selected' : ''}
-              disabled={option.disabled}
-              key={option.value}
-              onClick={() => {
-                onChange(option.value)
-                setOpen(false)
-              }}
-            >
-              <span className="custom-select-option-label">
-                {option.dotColor && <span className="custom-select-dot" style={{ backgroundColor: option.dotColor }} />}
-                <span>{option.label}</span>
-              </span>
-              {option.value === value && <Check size={14} />}
-            </button>
-          ))}
-        </div>
+      {open && !mobile && optionRows()}
+
+      {open && mobile && typeof document !== 'undefined' && createPortal(
+        <div className="mobile-select-backdrop" role="presentation" onMouseDown={(event) => {
+          if (event.currentTarget === event.target) setOpen(false)
+        }}>
+          <section className="mobile-select-sheet" aria-label={ariaLabel ?? 'Choose option'}>
+            <header>
+              <div>
+                <span className="eyebrow">CHOOSE</span>
+                <strong>{ariaLabel ?? 'Select option'}</strong>
+              </div>
+              <button type="button" className="icon-button" onClick={() => setOpen(false)} aria-label="Close options">
+                <X size={18} />
+              </button>
+            </header>
+            {optionRows('mobile-select-menu')}
+          </section>
+        </div>,
+        document.body,
       )}
     </div>
   )
