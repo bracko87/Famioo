@@ -1,6 +1,7 @@
 import { Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useHousehold } from '../../context/HouseholdContext'
+import { categoryColor, categoryColorOptions } from '../../lib/categoryColors'
 import { supabase } from '../../lib/supabase'
 import { Select } from '../ui/Select'
 
@@ -11,6 +12,7 @@ type ModuleTypeRow = {
   type_key: string
   label: string
   base_type: string | null
+  color_key: string
   sort_order: number
   active: boolean
   is_default: boolean
@@ -51,9 +53,8 @@ export function TypesSettings() {
   const canWrite = household.role === 'owner' || household.role === 'admin'
   const [rows, setRows] = useState<ModuleTypeRow[]>([])
   const [draftNames, setDraftNames] = useState<Record<string,string>>({})
-  const [draftBases, setDraftBases] = useState<Record<string,string>>({
-    life_admin: 'document',
-  })
+  const [draftBases, setDraftBases] = useState<Record<string,string>>({ life_admin: 'document' })
+  const [draftColors, setDraftColors] = useState<Record<string,string>>({})
   const [busyKey, setBusyKey] = useState('')
   const [message, setMessage] = useState('')
 
@@ -62,7 +63,7 @@ export function TypesSettings() {
 
     const result = await supabase
       .from('household_module_types')
-      .select('id,module_code,group_code,type_key,label,base_type,sort_order,active,is_default')
+      .select('id,module_code,group_code,type_key,label,base_type,color_key,sort_order,active,is_default')
       .eq('household_id',household.id)
       .order('module_code')
       .order('group_code')
@@ -88,6 +89,30 @@ export function TypesSettings() {
     return map
   }, [rows])
 
+  function availableColorsFor(key: string) {
+    const used = new Set(
+      (rowsBySection.get(key) ?? [])
+        .filter((row) => row.active)
+        .map((row) => row.color_key),
+    )
+    const unused = categoryColorOptions.filter((color) => !used.has(color.key))
+    return unused.length ? unused : categoryColorOptions
+  }
+
+  useEffect(() => {
+    setDraftColors((current) => {
+      const next = { ...current }
+      for (const section of sections) {
+        const key = section.moduleCode + ':' + section.groupCode
+        const available = availableColorsFor(key)
+        if (!next[key] || !available.some((color) => color.key === next[key])) {
+          next[key] = available[0]?.key ?? 'purple'
+        }
+      }
+      return next
+    })
+  }, [rowsBySection])
+
   async function createType(event: FormEvent,section: TypeSection) {
     event.preventDefault()
     if (!canWrite) return
@@ -99,7 +124,7 @@ export function TypesSettings() {
     setBusyKey(key)
     setMessage('')
 
-    const result = await supabase.rpc('save_household_module_type_v1',{
+    const result = await supabase.rpc('save_household_module_type_v2',{
       p_household_id: household.id,
       p_module_code: section.moduleCode,
       p_group_code: section.groupCode,
@@ -107,6 +132,7 @@ export function TypesSettings() {
       p_base_type: section.moduleCode === 'life_admin'
         ? (draftBases.life_admin || 'document')
         : null,
+      p_color_key: draftColors[key] || 'purple',
     })
 
     setBusyKey('')
@@ -156,6 +182,8 @@ export function TypesSettings() {
           const sectionRows = rowsBySection.get(key) ?? []
           const activeRows = sectionRows.filter((row) => row.active)
           const removedRows = sectionRows.filter((row) => !row.active)
+          const availableColors = availableColorsFor(key)
+          const currentColor = draftColors[key] ?? availableColors[0]?.key ?? 'purple'
 
           return (
             <section className="settings-card type-settings-card" key={key}>
@@ -167,30 +195,33 @@ export function TypesSettings() {
                 </div>
               </div>
 
-              <div className="type-settings-list">
+              <div className="type-settings-list category-list">
                 {activeRows.map((row) => (
-                  <div className="type-settings-row" key={row.id}>
-                    <span className="type-settings-mark">{row.label.slice(0,1).toUpperCase()}</span>
-                    <div>
+                  <div className="type-settings-row category-row" key={row.id}>
+                    <span className="category-dot" style={{ backgroundColor:categoryColor(row.color_key) }} />
+
+                    <span className="category-name">
                       <strong>{row.label}</strong>
                       <small>
                         {row.module_code === 'life_admin'
                           ? (lifeAdminSections.find((item) => item.value === row.base_type)?.label ?? 'Life Admin')
                           : row.is_default ? 'Default asset type' : 'Custom asset type'}
                       </small>
-                    </div>
+                    </span>
 
-                    {canWrite && (
+                    <span className="category-color-label">{row.color_key}</span>
+
+                    {canWrite ? (
                       <button
                         type="button"
-                        className="icon-button compact-icon"
+                        className="icon-button category-delete"
                         aria-label={'Remove ' + row.label}
                         disabled={busyKey === row.id}
                         onClick={() => void setActive(row,false)}
                       >
                         <Trash2 size={14} />
                       </button>
-                    )}
+                    ) : <span />}
                   </div>
                 ))}
 
@@ -200,7 +231,7 @@ export function TypesSettings() {
               </div>
 
               {canWrite && (
-                <form className="type-settings-add" onSubmit={(event) => void createType(event,section)}>
+                <form className="type-settings-add type-settings-add-colored" onSubmit={(event) => void createType(event,section)}>
                   <label>
                     New type
                     <input
@@ -222,6 +253,20 @@ export function TypesSettings() {
                     </label>
                   )}
 
+                  <label>
+                    Color
+                    <Select
+                      value={currentColor}
+                      onChange={(value) => setDraftColors((current) => ({ ...current,[key]:value }))}
+                      options={availableColors.map((color) => ({
+                        value:color.key,
+                        label:color.label,
+                        dotColor:categoryColor(color.key),
+                      }))}
+                      ariaLabel={'Choose color for ' + section.title}
+                    />
+                  </label>
+
                   <button className="primary-button compact" disabled={busyKey === key || !(draftNames[key] ?? '').trim()}>
                     <Plus size={14} />
                     {busyKey === key ? 'Adding…' : 'Add type'}
@@ -236,6 +281,7 @@ export function TypesSettings() {
                     {removedRows.map((row) => (
                       <button type="button" key={row.id} disabled={!canWrite || busyKey === row.id} onClick={() => void setActive(row,true)}>
                         <RotateCcw size={13} />
+                        <i style={{ backgroundColor:categoryColor(row.color_key) }} />
                         {row.label}
                       </button>
                     ))}
