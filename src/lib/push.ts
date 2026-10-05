@@ -81,7 +81,7 @@ export async function enablePushNotifications(householdId:string,userId:string) 
       active:true,
       last_seen_at:new Date().toISOString(),
       updated_at:new Date().toISOString(),
-    },{ onConflict:'endpoint' })
+    },{ onConflict:'user_id,endpoint' })
 
   if (error) {
     await subscription.unsubscribe().catch(()=>false)
