@@ -6355,3 +6355,664 @@ b {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* =========================================================
+   Household Costs filters + pagination
+   ========================================================= */
+
+.cost-list-filters {
+  padding: 12px 0 14px;
+  border-bottom: 1px solid #eee7f0;
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 9px;
+}
+
+.cost-list-filters label {
+  display: grid;
+  gap: 5px;
+  color: #766a7b;
+  font-size: 9px;
+}
+
+.cost-row > strong.income {
+  color: #3f8b70;
+}
+
+.cost-pagination {
+  min-height: 54px;
+  padding: 10px 0 0;
+  border-top: 1px solid #eee7f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cost-pagination > span {
+  color: #95899a;
+  font-size: 9px;
+}
+
+.cost-pagination > div {
+  display: inline-flex;
+  gap: 7px;
+}
+
+.cost-report-total small {
+  color: #4b9278;
+  font-size: 9px;
+}
+
+@media (max-width: 900px) {
+  .cost-list-filters {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .cost-list-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .cost-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cost-pagination > div {
+    display: grid;
+    grid-template-columns: repeat(2,1fr);
+  }
+}
+
+
+/* =========================================================
+   Settings > Types
+   ========================================================= */
+
+.types-settings-page {
+  display: grid;
+  gap: 12px;
+}
+
+.types-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.type-settings-card {
+  min-width: 0;
+}
+
+.type-settings-list {
+  display: grid;
+}
+
+.type-settings-row {
+  min-height: 52px;
+  border-top: 1px solid #eee7f0;
+  display: grid;
+  grid-template-columns: 30px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.type-settings-row:first-child {
+  border-top: 0;
+}
+
+.type-settings-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #765489;
+  background: #f1eaf4;
+  font-size: 9px;
+}
+
+.type-settings-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.type-settings-row strong {
+  color: #514654;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.type-settings-row small {
+  color: #998d9d;
+  font-size: 8px;
+}
+
+.type-settings-add {
+  margin-top: 13px;
+  padding-top: 13px;
+  border-top: 1px solid #e9e1ec;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(140px,.55fr) auto;
+  align-items: end;
+  gap: 9px;
+}
+
+.type-settings-add label {
+  display: grid;
+  gap: 5px;
+  color: #736777;
+  font-size: 9px;
+}
+
+.type-settings-empty {
+  min-height: 65px;
+  display: grid;
+  place-items: center;
+  color: #998e9e;
+  font-size: 9px;
+}
+
+.type-settings-removed {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #eee7f0;
+  color: #8f8393;
+  font-size: 9px;
+}
+
+.type-settings-removed summary {
+  cursor: pointer;
+}
+
+.type-settings-removed > div {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.type-settings-removed button {
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid #e5dce8;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #765987;
+  background: #fbf9fc;
+  font-size: 8px;
+}
+
+@media (max-width: 960px) {
+  .types-settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .type-settings-add {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* =========================================================
+   Life Admin finance + six summary cards
+   ========================================================= */
+
+.life-admin-summary-grid {
+  grid-template-columns: repeat(6,minmax(0,1fr));
+}
+
+.life-admin-summary-card.tone-6 {
+  background: linear-gradient(135deg,#795dc8,#a65dbd 58%,#cb5f92);
+}
+
+.life-admin-finance-option {
+  display: flex;
+  align-items: end;
+}
+
+.life-admin-finance-option .composer-option {
+  width: 100%;
+}
+
+@media (max-width: 1380px) {
+  .life-admin-summary-grid {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+  }
+}
+
+
+/* =========================================================
+   Projects, Chores & family points
+   ========================================================= */
+
+.projects-heading {
+  margin-bottom: 12px;
+}
+
+.projects-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.projects-tabs {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.projects-tabs button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #e4dbe7;
+  border-radius: 10px;
+  color: #766a7c;
+  background: rgba(255,255,255,.76);
+  font-size: 10px;
+}
+
+.projects-tabs button:hover,
+.projects-tabs button.active {
+  color: #714890;
+  border-color: #c2acd0;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(81,54,92,.05);
+}
+
+.projects-layout,
+.chores-section {
+  display: grid;
+  gap: 12px;
+}
+
+.projects-empty {
+  min-height: 220px;
+}
+
+.project-card {
+  padding: 15px;
+}
+
+.project-card > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.project-card h2 {
+  margin: 4px 0 0;
+  color: #4f4453;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.project-card > p {
+  margin: 10px 0 0;
+  color: #756978;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.project-card-meta {
+  margin-top: 7px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+  color: #918594;
+  font-size: 8px;
+}
+
+.project-card-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.project-owner .profile-avatar-sm {
+  width: 22px;
+  height: 22px;
+}
+
+.project-card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.project-card-work {
+  margin-top: 13px;
+  padding-top: 12px;
+  border-top: 1px solid #eee7f0;
+  display: grid;
+  gap: 7px;
+}
+
+.project-card-empty {
+  min-height: 62px;
+  display: grid;
+  place-items: center;
+  color: #9a8e9e;
+  font-size: 9px;
+}
+
+.project-work-row {
+  min-height: 74px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 28px minmax(0,1fr) auto;
+  align-items: start;
+  gap: 9px;
+  box-shadow: none;
+}
+
+.project-work-row.done {
+  opacity: .68;
+}
+
+.project-work-check {
+  width: 24px;
+  height: 24px;
+  margin-top: 1px;
+  border: 1px solid #d9cede;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: #fff;
+}
+
+.project-work-check.done {
+  border-color: #7d58bd;
+  background: linear-gradient(135deg,#7b4bd6,#cb55a1);
+}
+
+.project-work-main {
+  min-width: 0;
+}
+
+.project-work-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.project-work-title > span {
+  color: #504553;
+  font-size: 11px;
+}
+
+.project-work-row.done .project-work-title > span {
+  text-decoration: line-through;
+}
+
+.points-chip {
+  min-height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  color: #70528a;
+  background: #f0e9f4;
+  font-size: 8px;
+}
+
+.project-work-meta {
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  color: #938797;
+  font-size: 8px;
+}
+
+.project-work-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.project-work-meta i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.project-work-person {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #746878;
+  font-size: 8px;
+}
+
+.project-work-person .profile-avatar-sm {
+  width: 22px;
+  height: 22px;
+}
+
+.project-work-main > p {
+  margin: 6px 0 0;
+  color: #786d7c;
+  font-size: 9px;
+}
+
+.projects-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.projects-section-head h2 {
+  margin: 3px 0 0;
+  color: #504454;
+  font-size: 16px;
+}
+
+.chores-list {
+  display: grid;
+  gap: 8px;
+}
+
+.family-standing-card {
+  padding: 16px;
+}
+
+.family-standing-card > header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee7f0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.family-standing-card h2 {
+  margin: 3px 0 0;
+  color: #504454;
+  font-size: 18px;
+}
+
+.family-standing-card header p {
+  margin: 4px 0 0;
+  color: #8f8393;
+  font-size: 9px;
+}
+
+.family-standing-card > header > svg {
+  color: #9b6b35;
+}
+
+.family-standing-list {
+  display: grid;
+}
+
+.family-standing-row {
+  min-height: 58px;
+  border-bottom: 1px solid #eee7f0;
+  display: grid;
+  grid-template-columns: 28px 34px minmax(0,1fr) 120px 100px;
+  align-items: center;
+  gap: 8px;
+}
+
+.family-standing-row:last-child {
+  border-bottom: 0;
+}
+
+.family-rank {
+  color: #9a8d9e;
+  font-size: 10px;
+  text-align: center;
+}
+
+.family-standing-name {
+  color: #514654;
+  font-size: 10px;
+}
+
+.family-standing-total,
+.family-standing-all {
+  display: grid;
+  gap: 1px;
+  text-align: right;
+}
+
+.family-standing-total strong,
+.family-standing-all strong {
+  color: #704b8d;
+  font-size: 12px;
+}
+
+.family-standing-total small,
+.family-standing-all small {
+  color: #a094a4;
+  font-size: 7px;
+}
+
+.projects-composer {
+  width: min(820px,100%);
+  max-height: min(880px,92vh);
+  padding: 26px 28px;
+  gap: 16px;
+}
+
+@media (max-width: 700px) {
+  .projects-heading,
+  .projects-section-head,
+  .project-card > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .projects-heading-actions,
+  .project-card-actions {
+    width: 100%;
+  }
+
+  .projects-heading-actions > button {
+    flex: 1;
+  }
+
+  .family-standing-row {
+    grid-template-columns: 24px 32px minmax(0,1fr) 86px;
+  }
+
+  .family-standing-all {
+    display: none;
+  }
+}
+
+
+/* =========================================================
+   Home family standing
+   ========================================================= */
+
+.home-family-standing {
+  min-height: 100%;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  color: inherit;
+  text-decoration: none;
+}
+
+.home-family-standing > header {
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee7f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.home-family-standing h2 {
+  margin: 3px 0 0;
+  color: #504454;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.home-standing-trophy {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: #9a6932;
+  background: #faefdf;
+}
+
+.home-family-standing-list {
+  display: grid;
+}
+
+.home-family-standing-row {
+  min-height: 54px;
+  border-bottom: 1px solid #eee7f0;
+  display: grid;
+  grid-template-columns: 24px 32px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.home-standing-rank {
+  color: #9a8d9f;
+  font-size: 9px;
+  text-align: center;
+}
+
+.home-family-standing-row > span:nth-of-type(2) {
+  color: #514654;
+  font-size: 9px;
+}
+
+.home-family-standing-row > strong {
+  color: #73508e;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.home-family-standing > footer {
+  margin-top: auto;
+  padding-top: 10px;
+  color: #78558b;
+  font-size: 9px;
+  text-align: right;
+}
