@@ -60,6 +60,7 @@ export function NotificationsSecuritySettings() {
   const [passkeys,setPasskeys]=useState<PasskeyRow[]>([])
   const [passkeyBusy,setPasskeyBusy]=useState(false)
   const [passkeySupported,setPasskeySupported]=useState(false)
+  const [passkeyServerEnabled,setPasskeyServerEnabled]=useState(true)
 
   const email=user.email ?? 'No email address on this account'
 
@@ -81,11 +82,16 @@ export function NotificationsSecuritySettings() {
     const result=await supabase.auth.passkey.list()
 
     if (result.error) {
-      if (!/passkey_disabled/i.test(result.error.message)) setError(result.error.message)
+      if (/passkey_disabled/i.test(result.error.message)) {
+        setPasskeyServerEnabled(false)
+      } else {
+        setError(result.error.message)
+      }
       setPasskeys([])
       return
     }
 
+    setPasskeyServerEnabled(true)
     setPasskeys((result.data ?? []) as PasskeyRow[])
   }
 
@@ -369,6 +375,13 @@ export function NotificationsSecuritySettings() {
           </div>
         )}
 
+        {!passkeyServerEnabled && (
+          <div className="notification-support-note">
+            <strong>Passkey sign-in still needs the one-time server switch.</strong>
+            <span>The Famioo app is ready for Face ID, Touch ID and device-lock sign-in, but Supabase Passkeys must be enabled for the production domain first.</span>
+          </div>
+        )}
+
         {passkeys.length>0 && (
           <div className="passkey-list">
             {passkeys.map((passkey)=>(
@@ -386,7 +399,7 @@ export function NotificationsSecuritySettings() {
           </div>
         )}
 
-        <button type="button" className="primary-button compact" disabled={passkeyBusy || !passkeySupported} onClick={()=>void registerPasskey()}>
+        <button type="button" className="primary-button compact" disabled={passkeyBusy || !passkeySupported || !passkeyServerEnabled} onClick={()=>void registerPasskey()}>
           <Fingerprint size={15} />{passkeyBusy ? 'Working…' : 'Add this device for Face ID / device unlock'}
         </button>
       </section>
