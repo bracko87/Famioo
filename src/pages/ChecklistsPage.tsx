@@ -64,6 +64,7 @@ export function ChecklistsPage() {
   const [taskParticipants, setTaskParticipants] = useState<{ task_id: string; profile_id: string }[]>([])
   const [itemDrafts, setItemDrafts] = useState<Record<string, string>>({})
   const [composerOpen, setComposerOpen] = useState(false)
+  const [archiveOpen, setArchiveOpen] = useState(false)
   const [editingChecklistId, setEditingChecklistId] = useState<string | null>(null)
   const [sourceType, setSourceType] = useState<SourceType>('standalone')
   const [templateId, setTemplateId] = useState('')
@@ -157,7 +158,7 @@ export function ChecklistsPage() {
       setError((current) => current || categoryResult.error.message)
     } else {
       const rows = (categoryResult.data ?? []) as EventCategory[]
-      const allowed = rows.filter((item) => item.name.trim().toLowerCase() !== 'shopping')
+      const allowed = rows.filter((item) => !['shopping', 'shoping'].includes(item.name.trim().toLowerCase()))
       setCategories(rows)
       setCategoryId((current) => allowed.some((item) => item.id === current) ? current : allowed[0]?.id ?? '')
     }
@@ -191,7 +192,7 @@ export function ChecklistsPage() {
   const shoppingCategoryIds = useMemo(
     () => new Set(
       categories
-        .filter((category) => category.name.trim().toLowerCase() === 'shopping')
+        .filter((category) => ['shopping', 'shoping'].includes(category.name.trim().toLowerCase()))
         .map((category) => category.id),
     ),
     [categories],
@@ -547,21 +548,62 @@ export function ChecklistsPage() {
         ) : activeLists.map((list) => <ChecklistCard list={list} key={list.id} />)}
       </section>
 
-      {archivedLists.length > 0 && (
-        <section className="archived-checklists-section">
-          <header>
-            <div>
-              <span className="eyebrow">ARCHIVE</span>
-              <h2>Archived checklists</h2>
-              <p>Finished lists stay here and can be restored later.</p>
-            </div>
-            <span className="archive-count">{archivedLists.length}</span>
-          </header>
+      <div className="archive-repository-bar">
+        <button
+          type="button"
+          className="secondary-button archive-repository-button"
+          onClick={() => setArchiveOpen(true)}
+        >
+          <Archive size={15} />
+          Archived checklists
+          <span>{archivedLists.length}</span>
+        </button>
+      </div>
 
-          <div className="checklist-grid archived-checklist-grid">
-            {archivedLists.map((list) => <ChecklistCard list={list} archived key={list.id} />)}
-          </div>
-        </section>
+      {archiveOpen && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target) setArchiveOpen(false)
+          }}
+        >
+          <section className="modal-card archive-repository-modal">
+            <header>
+              <div>
+                <span className="eyebrow">CHECKLIST ARCHIVE</span>
+                <h2>Archived checklists</h2>
+              </div>
+              <button type="button" className="icon-button" aria-label="Close checklist archive" onClick={() => setArchiveOpen(false)}>
+                <X size={18} />
+              </button>
+            </header>
+
+            {archivedLists.length === 0 ? (
+              <div className="archive-empty-state">No archived checklists yet.</div>
+            ) : (
+              <div className="archive-repository-list">
+                {archivedLists.map((list) => {
+                  const listItems = items.filter((item) => item.checklist_id === list.id)
+                  return (
+                    <div className="archive-repository-row" key={list.id}>
+                      <div>
+                        <strong>{list.title}</strong>
+                        <small>{listItems.length} items</small>
+                      </div>
+                      {canWrite && (
+                        <button className="secondary-button compact" type="button" onClick={() => void setArchived(list, false)}>
+                          <ArchiveRestore size={14} />
+                          Restore
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </section>
+        </div>
       )}
 
       {composerOpen && canWrite && (
