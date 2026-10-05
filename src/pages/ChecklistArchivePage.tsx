@@ -27,6 +27,7 @@ export function ChecklistArchivePage() {
 
   async function load() {
     setError('')
+    await supabase.rpc('purge_old_archives_v1', { p_household_id: household.id })
 
     const [listResult, categoryResult, itemResult] = await Promise.all([
       supabase
@@ -106,7 +107,7 @@ export function ChecklistArchivePage() {
         <div>
           <div className="page-label">CHECKLIST ARCHIVE</div>
           <h1>Archived checklists</h1>
-          <p className="page-subtitle">Finished checklists are sorted by archive date and can be restored for reuse.</p>
+          <p className="page-subtitle">Finished checklists are sorted by archive date and can be restored for reuse. Archived lists are removed automatically after about 6 months.</p>
         </div>
 
         <Link className="secondary-button compact" to="/app/checklists">
