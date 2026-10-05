@@ -1,4 +1,4 @@
-import { Archive, CalendarDays, ClipboardList, Pencil, Plus, X } from 'lucide-react'
+import { Archive, CalendarDays, ClipboardList, GripVertical, Pencil, Plus, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { DatePicker } from '../components/ui/DatePicker'
@@ -21,6 +21,7 @@ type Checklist = {
   linked_task_id: string | null
   status: 'active' | 'archived'
   archived_at: string | null
+  expanded_slot: number | null
   created_at: string
 }
 
@@ -78,10 +79,13 @@ export function ChecklistsPage() {
   const [addToTask, setAddToTask] = useState(false)
   const [saveTemplate, setSaveTemplate] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [draggedListId, setDraggedListId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
   async function load() {
     setError('')
+
+    await supabase.rpc('purge_old_archives_v1', { p_household_id: household.id })
 
     const today = new Date().toISOString().slice(0, 10)
     const future = new Date()
@@ -101,7 +105,7 @@ export function ChecklistsPage() {
     ] = await Promise.all([
       supabase
         .from('checklists')
-        .select('id,title,category_id,due_date,location_text,linked_event_id,linked_task_id,status,archived_at,created_at')
+        .select('id,title,category_id,due_date,location_text,linked_event_id,linked_task_id,status,archived_at,expanded_slot,created_at')
         .eq('household_id', household.id)
         .order('created_at', { ascending: false }),
       supabase
@@ -234,6 +238,21 @@ export function ChecklistsPage() {
   const activeLists = useMemo(
     () => lists.filter((list) => list.status === 'active' && (!list.category_id || !shoppingCategoryIds.has(list.category_id))),
     [lists, shoppingCategoryIds],
+  )
+
+  const expandedLists = useMemo(
+    () => [1, 2].map((slot) => activeLists.find((list) => list.expanded_slot === slot) ?? null),
+    [activeLists],
+  )
+
+  const collapsedLists = useMemo(
+    () => activeLists
+      .filter((list) => list.expanded_slot == null)
+      .sort((a, b) => {
+        const byDate = (a.due_date ?? '9999-12-31').localeCompare(b.due_date ?? '9999-12-31')
+        return byDate || b.created_at.localeCompare(a.created_at)
+      }),
+    [activeLists],
   )
 
   const archivedCount = useMemo(
@@ -432,6 +451,31 @@ export function ChecklistsPage() {
     else await load()
   }
 
+  async function setExpandedSlot(listId: string, slot: 1 | 2) {
+    if (!canWrite) return
+
+    setError('')
+    const result = await supabase.rpc('set_list_expanded_slot_v1', {
+      p_household_id: household.id,
+      p_list_type: 'checklist',
+      p_list_id: listId,
+      p_slot: slot,
+    })
+
+    if (result.error) {
+      setError(result.error.message)
+      return
+    }
+
+    setDraggedListId(null)
+    await load()
+  }
+
+  function dropIntoSlot(slot: 1 | 2) {
+    if (!draggedListId) return
+    void setExpandedSlot(draggedListId, slot)
+  }
+
   function renderChecklistCard(list: Checklist) {
     const listItems = items.filter((item) => item.checklist_id === list.id)
     const category = list.category_id ? categoryById.get(list.category_id) : undefined
@@ -522,6 +566,43 @@ export function ChecklistsPage() {
     )
   }
 
+  function renderCollapsedChecklist(list: Checklist) {
+    const listItems = items.filter((item) => item.checklist_id === list.id)
+    const category = list.category_id ? categoryById.get(list.category_id) : undefined
+    const completed = listItems.filter((item) => item.checked).length
+
+    return (
+      <article
+        className="list-card compact-list-card"
+        key={list.id}
+        draggable={canWrite}
+        onDragStart={() => setDraggedListId(list.id)}
+        onDragEnd={() => setDraggedListId(null)}
+      >
+        <span className="compact-list-drag" aria-hidden="true"><GripVertical size={16} /></span>
+        <div className="compact-list-main">
+          <h3>{list.title}</h3>
+          <div>
+            {category && <span><i className="meta-dot" style={{ backgroundColor: categoryColor(category.color_key) }} />{category.name}</span>}
+            {list.due_date && <span>{list.due_date}</span>}
+            {list.location_text && <GoogleMapsLink location={list.location_text} />}
+          </div>
+        </div>
+        <span className="compact-list-progress">{completed}/{listItems.length}</span>
+        {canWrite && (
+          <div className="compact-list-actions">
+            <button type="button" className="icon-button compact-icon" aria-label={'Edit ' + list.title} onClick={() => openEdit(list)}>
+              <Pencil size={14} />
+            </button>
+            <button type="button" className="icon-button compact-icon" aria-label={'Archive ' + list.title} onClick={() => void setArchived(list, true)}>
+              <Archive size={14} />
+            </button>
+          </div>
+        )}
+      </article>
+    )
+  }
+
   return (
     <div className="page checklists-page">
       <div className="page-heading-row">
@@ -542,14 +623,66 @@ export function ChecklistsPage() {
       {!canWrite && <div className="module-access-note">Read-only access</div>}
       {error && !composerOpen && <div className="notice error">{error}</div>}
 
-      <section className="checklist-grid">
-        {activeLists.length === 0 ? (
+      {activeLists.length === 0 ? (
+        <section className="checklist-grid">
           <div className="list-card empty-state">
             <span className="empty-state-title">No active checklists.</span>
             <span>{canWrite ? 'Create the first shared checklist.' : 'There are no checklists to show.'}</span>
           </div>
-        ) : activeLists.map((list) => renderChecklistCard(list))}
-      </section>
+        </section>
+      ) : (
+        <>
+          <section className="list-expanded-grid" aria-label="Expanded checklists">
+            {expandedLists.map((list, index) => {
+              const slot = (index + 1) as 1 | 2
+              return (
+                <div
+                  className={'list-expanded-slot ' + (draggedListId ? 'drag-ready' : '')}
+                  key={slot}
+                  onDragOver={(event) => {
+                    if (!canWrite) return
+                    event.preventDefault()
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault()
+                    dropIntoSlot(slot)
+                  }}
+                >
+                  {list ? (
+                    <div
+                      draggable={canWrite}
+                      onDragStart={() => setDraggedListId(list.id)}
+                      onDragEnd={() => setDraggedListId(null)}
+                    >
+                      {renderChecklistCard(list)}
+                    </div>
+                  ) : (
+                    <div className="list-drop-placeholder">
+                      <GripVertical size={18} />
+                      <span>Drag a checklist here to keep it expanded.</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </section>
+
+          {collapsedLists.length > 0 && (
+            <section className="collapsed-list-section">
+              <div className="collapsed-list-heading">
+                <div>
+                  <span className="eyebrow">MORE CHECKLISTS</span>
+                  <h2>Other active checklists</h2>
+                </div>
+                <small>Drag any checklist onto one of the two expanded cards above.</small>
+              </div>
+              <div className="collapsed-list-stack">
+                {collapsedLists.map((list) => renderCollapsedChecklist(list))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
 
       <div className="archive-repository-bar">
         <Link
