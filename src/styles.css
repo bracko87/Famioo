@@ -4893,3 +4893,11 @@ b {
     width: 44px;
   }
 }
+
+
+.archive-retention-note {
+  margin: 4px 0 0;
+  color: #9a8e9e;
+  font-size: 8px;
+  line-height: 1.4;
+}
