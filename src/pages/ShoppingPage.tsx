@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, CalendarDays, Plus, ShoppingBag, X } from 'lucide-react'
+import { Archive, ArchiveRestore, CalendarDays, GripVertical, Plus, ShoppingBag, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { Select } from '../components/ui/Select'
@@ -18,6 +18,7 @@ type ShoppingList = {
   total_cost: number | null
   currency: string
   archived_at: string | null
+  expanded_slot: number | null
   created_at: string
 }
 
@@ -60,10 +61,13 @@ export function ShoppingPage() {
   const [itemDrafts, setItemDrafts] = useState<Record<string, string>>({})
   const [quantityDrafts, setQuantityDrafts] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
+  const [draggedListId, setDraggedListId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
   async function load() {
     setError('')
+
+    await supabase.rpc('purge_old_archives_v1', { p_household_id: household.id })
 
     const today = new Date().toISOString().slice(0, 10)
     const future = new Date()
@@ -72,7 +76,7 @@ export function ShoppingPage() {
     const [listResult, itemResult, categoryResult, eventResult] = await Promise.all([
       supabase
         .from('shopping_lists')
-        .select('id,title,status,linked_event_id,category_id,scheduled_date,location_text,total_cost,currency,archived_at,created_at')
+        .select('id,title,status,linked_event_id,category_id,scheduled_date,location_text,total_cost,currency,archived_at,expanded_slot,created_at')
         .eq('household_id', household.id)
         .order('created_at', { ascending: false }),
       supabase
@@ -120,6 +124,21 @@ export function ShoppingPage() {
   const activeLists = useMemo(
     () => lists.filter((list) => list.status === 'active'),
     [lists],
+  )
+
+  const expandedLists = useMemo(
+    () => [1, 2].map((slot) => activeLists.find((list) => list.expanded_slot === slot) ?? null),
+    [activeLists],
+  )
+
+  const collapsedLists = useMemo(
+    () => activeLists
+      .filter((list) => list.expanded_slot == null)
+      .sort((a, b) => {
+        const byDate = (a.scheduled_date ?? '9999-12-31').localeCompare(b.scheduled_date ?? '9999-12-31')
+        return byDate || b.created_at.localeCompare(a.created_at)
+      }),
+    [activeLists],
   )
 
   const archivedLists = useMemo(
@@ -288,6 +307,31 @@ export function ShoppingPage() {
     else await load()
   }
 
+  async function setExpandedSlot(listId: string, slot: 1 | 2) {
+    if (!canWrite) return
+
+    setError('')
+    const result = await supabase.rpc('set_list_expanded_slot_v1', {
+      p_household_id: household.id,
+      p_list_type: 'shopping',
+      p_list_id: listId,
+      p_slot: slot,
+    })
+
+    if (result.error) {
+      setError(result.error.message)
+      return
+    }
+
+    setDraggedListId(null)
+    await load()
+  }
+
+  function dropIntoSlot(slot: 1 | 2) {
+    if (!draggedListId) return
+    void setExpandedSlot(draggedListId, slot)
+  }
+
   function renderShoppingCard(list: ShoppingList) {
     const listItems = items.filter((item) => item.shopping_list_id === list.id)
     const completed = listItems.filter((item) => item.checked).length
@@ -364,6 +408,39 @@ export function ShoppingPage() {
     )
   }
 
+  function renderCollapsedShoppingList(list: ShoppingList) {
+    const listItems = items.filter((item) => item.shopping_list_id === list.id)
+    const completed = listItems.filter((item) => item.checked).length
+    const category = list.category_id ? categoryById.get(list.category_id) : undefined
+
+    return (
+      <article
+        className="list-card compact-list-card"
+        key={list.id}
+        draggable={canWrite}
+        onDragStart={() => setDraggedListId(list.id)}
+        onDragEnd={() => setDraggedListId(null)}
+      >
+        <span className="compact-list-drag" aria-hidden="true"><GripVertical size={16} /></span>
+        <div className="compact-list-main">
+          <h3>{list.title}</h3>
+          <div>
+            {category && <span><i className="meta-dot" style={{ backgroundColor: categoryColor(category.color_key) }} />{category.name}</span>}
+            {list.scheduled_date && <span>{list.scheduled_date}</span>}
+            {list.location_text && <GoogleMapsLink location={list.location_text} />}
+          </div>
+        </div>
+        <span className="compact-list-progress">{completed}/{listItems.length}</span>
+        {canWrite && (
+          <button className="secondary-button compact" type="button" onClick={() => beginArchive(list)}>
+            <Archive size={14} />
+            Archive
+          </button>
+        )}
+      </article>
+    )
+  }
+
   return (
     <div className="page shopping-page">
       <div className="page-heading-row">
@@ -385,15 +462,67 @@ export function ShoppingPage() {
       {access?.enabled && !canWrite && <div className="module-access-note">Read-only access</div>}
       {error && !composerOpen && !archiveTarget && <div className="notice error">{error}</div>}
 
-      <section className="shopping-grid">
-        {activeLists.length === 0 ? (
+      {activeLists.length === 0 ? (
+        <section className="shopping-grid">
           <div className="list-card empty-state">
             <ShoppingBag size={24} />
             <span className="empty-state-title">No active shopping lists.</span>
             <span>{canWrite ? 'Create the first shared shopping list.' : 'There are no shopping lists to show.'}</span>
           </div>
-        ) : activeLists.map((list) => renderShoppingCard(list))}
-      </section>
+        </section>
+      ) : (
+        <>
+          <section className="list-expanded-grid" aria-label="Expanded shopping lists">
+            {expandedLists.map((list, index) => {
+              const slot = (index + 1) as 1 | 2
+              return (
+                <div
+                  className={'list-expanded-slot ' + (draggedListId ? 'drag-ready' : '')}
+                  key={slot}
+                  onDragOver={(event) => {
+                    if (!canWrite) return
+                    event.preventDefault()
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault()
+                    dropIntoSlot(slot)
+                  }}
+                >
+                  {list ? (
+                    <div
+                      draggable={canWrite}
+                      onDragStart={() => setDraggedListId(list.id)}
+                      onDragEnd={() => setDraggedListId(null)}
+                    >
+                      {renderShoppingCard(list)}
+                    </div>
+                  ) : (
+                    <div className="list-drop-placeholder">
+                      <GripVertical size={18} />
+                      <span>Drag a shopping list here to keep it expanded.</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </section>
+
+          {collapsedLists.length > 0 && (
+            <section className="collapsed-list-section">
+              <div className="collapsed-list-heading">
+                <div>
+                  <span className="eyebrow">MORE SHOPPING LISTS</span>
+                  <h2>Other active shopping lists</h2>
+                </div>
+                <small>Drag any list onto one of the two expanded cards above.</small>
+              </div>
+              <div className="collapsed-list-stack">
+                {collapsedLists.map((list) => renderCollapsedShoppingList(list))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
 
       <div className="archive-repository-bar">
         <button
