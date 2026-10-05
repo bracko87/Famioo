@@ -3495,3 +3495,350 @@ b {
     justify-content: flex-end;
   }
 }
+
+
+/* =========================================================
+   Participant cleanup, archive repositories, Shopping & Costs
+   ========================================================= */
+
+.profile-choice.profile-choice-plain > .profile-choice-name {
+  width: auto;
+  height: auto;
+  min-width: 0;
+  padding: 0;
+  border-radius: 0;
+  display: block;
+  place-items: initial;
+  color: #5f5364;
+  background: transparent;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.profile-choice.profile-choice-plain > .profile-avatar {
+  width: 30px;
+  height: 30px;
+}
+
+.checklist-card > header > .checklist-card-controls {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.checklist-card > header > .checklist-card-controls > small {
+  margin-left: 3px;
+}
+
+.archive-repository-bar {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid #e7dee9;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.archive-repository-button {
+  min-width: 190px;
+}
+
+.archive-repository-button > span {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #765783;
+  background: #f0e9f3;
+  font-size: 9px;
+}
+
+.archive-repository-modal {
+  width: min(720px, 100%);
+}
+
+.archive-repository-list {
+  display: grid;
+  gap: 8px;
+}
+
+.archive-repository-row {
+  min-height: 58px;
+  padding: 9px 11px;
+  border: 1px solid #e8e0eb;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #fff;
+}
+
+.archive-repository-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.archive-repository-row strong {
+  color: #544858;
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.archive-repository-row small,
+.archive-empty-state {
+  color: #968a9a;
+  font-size: 9px;
+}
+
+.archive-empty-state {
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed #dfd4e3;
+  border-radius: 11px;
+}
+
+.composer-grid-two {
+  align-items: start;
+}
+
+.composer-grid-two > label {
+  min-width: 0;
+  align-self: start;
+}
+
+.composer-grid-two > label > input,
+.composer-grid-two > label > .custom-select,
+.composer-grid-two > label > .date-picker,
+.composer-grid-two > label > .money-input {
+  align-self: start;
+}
+
+.shopping-list-meta {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  color: #938797;
+  font-size: 9px;
+}
+
+.shopping-list-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.shopping-card-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.shopping-card-head-actions > small {
+  color: #938797;
+  font-size: 9px;
+}
+
+.shopping-composer {
+  width: min(700px, 100%);
+}
+
+.shopping-event-preview {
+  padding: 12px;
+  border: 1px solid #e5dce8;
+  border-radius: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  background: #fbf9fc;
+}
+
+.shopping-event-preview > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.shopping-event-preview span {
+  color: #998d9d;
+  font-size: 8px;
+}
+
+.shopping-event-preview strong {
+  min-height: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #5d515f;
+  font-size: 10px;
+  font-weight: 550;
+}
+
+.shopping-event-location .google-maps-link {
+  font-size: 10px;
+}
+
+.shopping-archive-composer {
+  width: min(520px, 100%);
+}
+
+.form-intro {
+  margin: -4px 0 0;
+  font-size: 10px;
+}
+
+.money-input {
+  min-height: 42px;
+  border: 1px solid #ded4e3;
+  border-radius: 11px;
+  display: grid;
+  grid-template-columns: 35px minmax(0, 1fr);
+  overflow: hidden;
+  background: #fff;
+}
+
+.money-input:focus-within {
+  border-color: #9c79bb;
+  box-shadow: 0 0 0 3px rgba(121,77,155,.09);
+}
+
+.money-input > span {
+  display: grid;
+  place-items: center;
+  border-right: 1px solid #e8e0ec;
+  color: #7e6e84;
+  background: #faf7fb;
+  font-size: 11px;
+}
+
+.money-input > input {
+  min-height: 40px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none !important;
+}
+
+.cost-summary-grid {
+  margin-bottom: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cost-summary-card {
+  min-height: 115px;
+  padding: 18px;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+}
+
+.cost-summary-card > span {
+  color: #9b8d9f;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.cost-summary-card > strong {
+  color: #4d4251;
+  font-size: 23px;
+  font-weight: 600;
+}
+
+.cost-summary-card > small {
+  color: #9a8e9e;
+  font-size: 9px;
+}
+
+.cost-list {
+  overflow: hidden;
+}
+
+.cost-row {
+  min-height: 60px;
+  padding: 10px 13px;
+  border-bottom: 1px solid #eee8f0;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.cost-row:last-child {
+  border-bottom: 0;
+}
+
+.cost-source-icon {
+  width: 31px;
+  height: 31px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: #765a82;
+  background: #f1eaf4;
+}
+
+.cost-main-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.cost-main-copy > span {
+  color: #554a59;
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.cost-main-copy small {
+  color: #95899a;
+  font-size: 9px;
+}
+
+.cost-row > strong {
+  color: #524658;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cost-composer {
+  width: min(700px, 100%);
+}
+
+@media (max-width: 700px) {
+  .archive-repository-bar {
+    justify-content: stretch;
+  }
+
+  .archive-repository-button {
+    width: 100%;
+  }
+
+  .archive-repository-row {
+    align-items: flex-start;
+  }
+
+  .shopping-event-preview,
+  .cost-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shopping-card > header {
+    align-items: flex-start;
+  }
+
+  .shopping-card-head-actions {
+    align-items: flex-end;
+    flex-direction: column;
+  }
+}
