@@ -106,9 +106,8 @@ export function HomePage() {
     const costsRequest = costsModule?.enabled
       ? supabase
           .from('household_costs')
-          .select('amount')
+          .select('amount,cost_date,schedule_type')
           .eq('household_id', household.id)
-          .gte('cost_date', monthStart)
           .lte('cost_date', monthEnd)
       : Promise.resolve({ data: [], error: null })
 
@@ -118,7 +117,11 @@ export function HomePage() {
       setChecklistCount(lists.count ?? 0)
       setShoppingCount(shopping.count ?? 0)
       setCostMonthTotal(Array.isArray(costs.data)
-        ? costs.data.reduce((sum, row) => sum + Number(row.amount ?? 0), 0)
+        ? costs.data.reduce((sum, row) => {
+            const scheduled = row.schedule_type === 'scheduled'
+            const inCurrentMonth = row.cost_date >= monthStart && row.cost_date <= monthEnd
+            return sum + (scheduled || inCurrentMonth ? Number(row.amount ?? 0) : 0)
+          }, 0)
         : 0)
     })
   }, [household.id, modules])
