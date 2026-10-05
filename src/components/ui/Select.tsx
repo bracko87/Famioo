@@ -29,7 +29,17 @@ export function Select({
 }: SelectProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const selected = options.find((option) => option.value === value)
+
+  useEffect(() => {
+    if (open) {
+      requestAnimationFrame(() => {
+        const selectedNode = menuRef.current?.querySelector<HTMLElement>('[data-selected="true"]')
+        selectedNode?.scrollIntoView({ block: 'center' })
+      })
+    }
+  }, [open, value])
 
   useEffect(() => {
     function close(event: MouseEvent) {
@@ -67,12 +77,13 @@ export function Select({
       </button>
 
       {open && (
-        <div className="custom-select-menu" role="listbox">
+        <div className="custom-select-menu" role="listbox" ref={menuRef}>
           {options.map((option) => (
             <button
               type="button"
               role="option"
               aria-selected={option.value === value}
+              data-selected={option.value === value ? 'true' : 'false'}
               className={option.value === value ? 'selected' : ''}
               disabled={option.disabled}
               key={option.value}
