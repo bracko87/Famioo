@@ -13,6 +13,17 @@ import { firstName } from '../lib/personName'
 
 type CalendarView = 'day' | 'week' | 'month' | 'upcoming'
 
+type EventTemplate = {
+  id: string
+  name: string
+  title: string
+  category_id: string | null
+  all_day: boolean
+  start_time: string | null
+  end_time: string | null
+  location_text: string | null
+}
+
 function currentTimeInZone(timezone: string) {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: timezone,
@@ -103,7 +114,9 @@ export function CalendarPage() {
   const [events, setEvents] = useState<CalendarOccurrence[]>([])
   const [calendars, setCalendars] = useState<CalendarRow[]>([])
   const [categories, setCategories] = useState<EventCategory[]>([])
+  const [templates, setTemplates] = useState<EventTemplate[]>([])
   const [composerDate, setComposerDate] = useState<string | null>(null)
+  const [templateId, setTemplateId] = useState('')
   const [title, setTitle] = useState('')
   const [allDay, setAllDay] = useState(true)
   const [startTime, setStartTime] = useState('18:00')
@@ -115,6 +128,7 @@ export function CalendarPage() {
   const [repeatInterval, setRepeatInterval] = useState('1')
   const [repeatDays, setRepeatDays] = useState<string[]>([])
   const [repeatUntil, setRepeatUntil] = useState('')
+  const [saveTemplate, setSaveTemplate] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -126,7 +140,7 @@ export function CalendarPage() {
   async function load() {
     setError('')
 
-    const [occurrences, calendarRows, categoryRows] = await Promise.all([
+    const [occurrences, calendarRows, categoryRows, availabilityRows, templateRows] = await Promise.all([
       supabase.rpc('calendar_occurrences_v1', {
         p_household_id: household.id,
         p_range_start: range.start,
@@ -144,6 +158,17 @@ export function CalendarPage() {
         .eq('household_id', household.id)
         .eq('active', true)
         .order('sort_order'),
+      supabase
+        .from('module_category_availability')
+        .select('category_id,enabled')
+        .eq('household_id', household.id)
+        .eq('module_code', 'calendar'),
+      supabase
+        .from('event_templates')
+        .select('id,name,title,category_id,all_day,start_time,end_time,location_text')
+        .eq('household_id', household.id)
+        .eq('active', true)
+        .order('name'),
     ])
 
     if (occurrences.error) setError(occurrences.error.message)
@@ -152,15 +177,20 @@ export function CalendarPage() {
     if (calendarRows.error) setError((current) => current || calendarRows.error.message)
     else setCalendars((calendarRows.data ?? []) as CalendarRow[])
 
-    if (categoryRows.error) {
-      setError((current) => current || categoryRows.error.message)
+    if (categoryRows.error || availabilityRows.error) {
+      setError((current) => current || categoryRows.error?.message || availabilityRows.error?.message || 'Could not load categories.')
     } else {
-      const activeCategories = (categoryRows.data ?? []) as EventCategory[]
+      const enabled = new Map((availabilityRows.data ?? []).map((row) => [row.category_id, row.enabled]))
+      const activeCategories = ((categoryRows.data ?? []) as EventCategory[])
+        .filter((item) => enabled.get(item.id) ?? true)
       setCategories(activeCategories)
       setCategoryId((current) => activeCategories.some((item) => item.id === current)
         ? current
         : activeCategories[0]?.id ?? '')
     }
+
+    if (templateRows.error) setError((current) => current || templateRows.error.message)
+    else setTemplates((templateRows.data ?? []) as EventTemplate[])
   }
 
   useEffect(() => {
@@ -223,6 +253,7 @@ export function CalendarPage() {
 
     const defaultStart = timedStart ?? currentTimeInZone(household.timezone)
     setComposerDate(day)
+    setTemplateId('')
     setTitle('')
     setAllDay(!timedStart)
     setStartTime(defaultStart)
@@ -233,7 +264,23 @@ export function CalendarPage() {
     setRepeatInterval('1')
     setRepeatDays([])
     setRepeatUntil('')
+    setSaveTemplate(false)
     setError('')
+  }
+
+  function applyTemplate(nextTemplateId: string) {
+    setTemplateId(nextTemplateId)
+    if (!nextTemplateId) return
+
+    const template = templates.find((item) => item.id === nextTemplateId)
+    if (!template) return
+
+    setTitle(template.title)
+    setCategoryId(template.category_id ?? categories[0]?.id ?? '')
+    setAllDay(template.all_day)
+    setStartTime(template.start_time?.slice(0, 5) ?? currentTimeInZone(household.timezone))
+    setEndTime(template.end_time?.slice(0, 5) ?? addMinutesToTime(template.start_time?.slice(0, 5) ?? currentTimeInZone(household.timezone), 60))
+    setLocationText(template.location_text ?? '')
   }
 
   function navigate(direction: -1 | 1) {
@@ -334,6 +381,24 @@ export function CalendarPage() {
     if (result.error) {
       setError(result.error.message)
       return
+    }
+
+    if (saveTemplate) {
+      const templateResult = await supabase.from('event_templates').insert({
+        household_id: household.id,
+        name: title.trim(),
+        title: title.trim(),
+        category_id: categoryId || null,
+        all_day: allDay,
+        start_time: allDay ? null : startTime + ':00',
+        end_time: allDay ? null : endTime + ':00',
+        location_text: locationText.trim() || null,
+      })
+
+      if (templateResult.error) {
+        setError(templateResult.error.message)
+        return
+      }
     }
 
     setComposerDate(null)
@@ -554,6 +619,20 @@ export function CalendarPage() {
             </header>
 
             <label>
+              Start from template
+              <Select
+                value={templateId}
+                onChange={applyTemplate}
+                placeholder="Blank event"
+                options={[
+                  { value: '', label: 'Blank event' },
+                  ...templates.map((template) => ({ value: template.id, label: template.name })),
+                ]}
+                ariaLabel="Choose event template"
+              />
+            </label>
+
+            <label>
               Title
               <input value={title} onChange={(event) => setTitle(event.target.value)} autoFocus required />
             </label>
@@ -709,6 +788,16 @@ export function CalendarPage() {
                 ))}
               </div>
             </fieldset>
+
+            <div className="composer-option-list">
+              <label className="composer-option">
+                <input type="checkbox" checked={saveTemplate} onChange={(event) => setSaveTemplate(event.target.checked)} />
+                <span>
+                  <span>Save as event template</span>
+                  <small>Reuse this event setup later and manage it in Settings → Templates.</small>
+                </span>
+              </label>
+            </div>
 
             {error && <div className="form-message error">{error}</div>}
             <button className="primary-button" disabled={saving}>
