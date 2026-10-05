@@ -85,7 +85,10 @@ export function ChecklistsPage() {
   async function load() {
     setError('')
 
-    await supabase.rpc('purge_old_archives_v1', { p_household_id: household.id })
+    await Promise.all([
+      supabase.rpc('archive_overdue_work_v1', { p_household_id: household.id }),
+      supabase.rpc('purge_old_archives_v1', { p_household_id: household.id }),
+    ])
 
     const today = new Date().toISOString().slice(0, 10)
     const future = new Date()
