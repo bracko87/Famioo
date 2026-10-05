@@ -1,9 +1,9 @@
-import { CalendarDays, CheckSquare, ClipboardList, Trash2 } from 'lucide-react'
+import { CalendarDays, CheckSquare, ClipboardList, FolderKanban, Trash2 } from 'lucide-react'
 import { useEffect, useState, type ComponentType } from 'react'
 import { useHousehold } from '../../context/HouseholdContext'
 import { supabase } from '../../lib/supabase'
 
-type TemplateKind = 'calendar' | 'tasks' | 'checklists'
+type TemplateKind = 'calendar' | 'tasks' | 'checklists' | 'projects'
 
 type TemplateRow = {
   id: string
@@ -27,17 +27,19 @@ export function TemplatesSettings() {
   const [calendarTemplates, setCalendarTemplates] = useState<TemplateRow[]>([])
   const [taskTemplates, setTaskTemplates] = useState<TemplateRow[]>([])
   const [checklistTemplates, setChecklistTemplates] = useState<TemplateRow[]>([])
+  const [projectTemplates, setProjectTemplates] = useState<TemplateRow[]>([])
   const [busyId, setBusyId] = useState('')
   const [message, setMessage] = useState('')
 
   const calendarWrite = Boolean(modules.find((module) => module.code === 'calendar')?.can_write)
   const tasksWrite = Boolean(modules.find((module) => module.code === 'tasks')?.can_write)
   const checklistsWrite = Boolean(modules.find((module) => module.code === 'checklists')?.can_write)
+  const projectsWrite = Boolean(modules.find((module) => module.code === 'projects')?.can_write)
 
   async function load() {
     setMessage('')
 
-    const [calendarResult, taskResult, checklistResult] = await Promise.all([
+    const [calendarResult, taskResult, checklistResult, projectResult] = await Promise.all([
       supabase
         .from('event_templates')
         .select('id,name,title,category_id,location_text')
@@ -56,6 +58,12 @@ export function TemplatesSettings() {
         .eq('household_id', household.id)
         .eq('active', true)
         .order('name'),
+      supabase
+        .from('project_work_templates')
+        .select('id,name,title,category_id,location_text')
+        .eq('household_id', household.id)
+        .eq('active', true)
+        .order('name'),
     ])
 
     if (calendarResult.error) setMessage(calendarResult.error.message)
@@ -66,6 +74,9 @@ export function TemplatesSettings() {
 
     if (checklistResult.error) setMessage((current) => current || checklistResult.error.message)
     else setChecklistTemplates((checklistResult.data ?? []) as TemplateRow[])
+
+    if (projectResult.error) setMessage((current) => current || projectResult.error.message)
+    else setProjectTemplates((projectResult.data ?? []) as TemplateRow[])
   }
 
   useEffect(() => { void load() }, [household.id])
@@ -78,7 +89,9 @@ export function TemplatesSettings() {
       ? 'event_templates'
       : kind === 'tasks'
         ? 'task_templates'
-        : 'checklist_templates'
+        : kind === 'checklists'
+          ? 'checklist_templates'
+          : 'project_work_templates'
 
     const result = await supabase
       .from(table)
@@ -123,6 +136,14 @@ export function TemplatesSettings() {
       icon: CheckSquare,
       rows: checklistTemplates,
       canWrite: checklistsWrite,
+    },
+    {
+      kind: 'projects',
+      title: 'Projects & Chores',
+      description: 'Reusable responsibility setups with categories, assignees and point-calculator settings.',
+      icon: FolderKanban,
+      rows: projectTemplates,
+      canWrite: projectsWrite,
     },
   ]
 
