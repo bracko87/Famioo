@@ -1,9 +1,12 @@
-import { Plus, Receipt, ShoppingBag, X } from 'lucide-react'
+import { CalendarClock, Plus, Receipt, ShoppingBag, WalletCards, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { DatePicker } from '../components/ui/DatePicker'
 import { Select } from '../components/ui/Select'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
+
+type CostRange = 'week' | 'month' | 'year' | 'all'
+type ScheduleType = 'one_time' | 'scheduled'
 
 type HouseholdCost = {
   id: string
@@ -12,62 +15,349 @@ type HouseholdCost = {
   currency: string
   cost_date: string
   cost_kind: 'regular' | 'additional'
-  source_type: 'manual' | 'shopping'
+  source_type: 'manual' | 'shopping' | 'task'
   source_shopping_list_id: string | null
+  source_task_id: string | null
+  schedule_type: ScheduleType
+  schedule_day: number | null
   notes: string | null
   created_at: string
 }
 
+type FinanceSettings = {
+  household_id: string
+  monthly_income: number | null
+  monthly_budget: number | null
+  currency: string
+}
+
+type CostOccurrence = {
+  key: string
+  cost: HouseholdCost
+  date: string
+  amount: number
+}
+
+function dateKey(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return year + '-' + month + '-' + day
+}
+
+function fromKey(value: string) {
+  return new Date(value + 'T12:00:00')
+}
+
 function todayKey() {
-  return new Date().toISOString().slice(0, 10)
+  return dateKey(new Date())
+}
+
+function startOfWeek(date: Date, mondayFirst: boolean) {
+  const next = new Date(date)
+  next.setHours(12, 0, 0, 0)
+  const offset = mondayFirst ? (next.getDay() + 6) % 7 : next.getDay()
+  next.setDate(next.getDate() - offset)
+  return next
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date)
+  next.setDate(next.getDate() + days)
+  return next
+}
+
+function lastDayOfMonth(year: number, monthIndex: number) {
+  return new Date(year, monthIndex + 1, 0).getDate()
+}
+
+function money(amount: number, currency = 'EUR') {
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 2,
+  }).format(amount)
 }
 
 export function CostsPage() {
   const { household, modules } = useHousehold()
   const access = modules.find((module) => module.code === 'costs')
   const canWrite = Boolean(access?.can_write)
+  const mondayFirst = household.week_starts_on === 1
 
   const [costs, setCosts] = useState<HouseholdCost[]>([])
+  const [finance, setFinance] = useState<FinanceSettings | null>(null)
+  const [range, setRange] = useState<CostRange>('month')
   const [composerOpen, setComposerOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [amount, setAmount] = useState('')
   const [costDate, setCostDate] = useState(todayKey())
-  const [kind, setKind] = useState<'regular' | 'additional'>('additional')
+  const [scheduleType, setScheduleType] = useState<ScheduleType>('one_time')
   const [notes, setNotes] = useState('')
+  const [incomeDraft, setIncomeDraft] = useState('')
+  const [budgetDraft, setBudgetDraft] = useState('')
   const [saving, setSaving] = useState(false)
+  const [savingFinance, setSavingFinance] = useState(false)
   const [error, setError] = useState('')
 
   async function load() {
     setError('')
 
-    const result = await supabase
-      .from('household_costs')
-      .select('id,title,amount,currency,cost_date,cost_kind,source_type,source_shopping_list_id,notes,created_at')
-      .eq('household_id', household.id)
-      .order('cost_date', { ascending: false })
-      .order('created_at', { ascending: false })
+    const [costResult, financeResult] = await Promise.all([
+      supabase
+        .from('household_costs')
+        .select('id,title,amount,currency,cost_date,cost_kind,source_type,source_shopping_list_id,source_task_id,schedule_type,schedule_day,notes,created_at')
+        .eq('household_id', household.id)
+        .order('cost_date', { ascending: false })
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('household_finance_settings')
+        .select('household_id,monthly_income,monthly_budget,currency')
+        .eq('household_id', household.id)
+        .maybeSingle(),
+    ])
 
-    if (result.error) setError(result.error.message)
-    else setCosts((result.data ?? []) as HouseholdCost[])
+    if (costResult.error) setError(costResult.error.message)
+    else setCosts((costResult.data ?? []) as HouseholdCost[])
+
+    if (financeResult.error) {
+      setError((current) => current || financeResult.error.message)
+    } else {
+      const nextFinance = financeResult.data as FinanceSettings | null
+      setFinance(nextFinance)
+      setIncomeDraft(nextFinance?.monthly_income != null ? String(nextFinance.monthly_income) : '')
+      setBudgetDraft(nextFinance?.monthly_budget != null ? String(nextFinance.monthly_budget) : '')
+    }
   }
 
   useEffect(() => { void load() }, [household.id])
 
-  const monthKey = todayKey().slice(0, 7)
-  const monthTotal = useMemo(
-    () => costs
-      .filter((cost) => cost.cost_date.startsWith(monthKey))
-      .reduce((sum, cost) => sum + Number(cost.amount), 0),
-    [costs, monthKey],
+  const rangeBounds = useMemo(() => {
+    const now = new Date()
+    now.setHours(12, 0, 0, 0)
+
+    if (range === 'week') {
+      const start = startOfWeek(now, mondayFirst)
+      return { start: dateKey(start), end: dateKey(addDays(start, 6)) }
+    }
+
+    if (range === 'month') {
+      return {
+        start: dateKey(new Date(now.getFullYear(), now.getMonth(), 1, 12)),
+        end: dateKey(new Date(now.getFullYear(), now.getMonth() + 1, 0, 12)),
+      }
+    }
+
+    if (range === 'year') {
+      return {
+        start: dateKey(new Date(now.getFullYear(), 0, 1, 12)),
+        end: dateKey(new Date(now.getFullYear(), 11, 31, 12)),
+      }
+    }
+
+    const earliest = costs.length
+      ? costs.reduce((min, cost) => cost.cost_date < min ? cost.cost_date : min, costs[0].cost_date)
+      : dateKey(new Date(now.getFullYear(), 0, 1, 12))
+
+    return {
+      start: earliest,
+      end: dateKey(new Date(now.getFullYear(), 11, 31, 12)),
+    }
+  }, [range, costs, mondayFirst])
+
+  const occurrences = useMemo<CostOccurrence[]>(() => {
+    const rows: CostOccurrence[] = []
+
+    for (const cost of costs) {
+      if (cost.schedule_type !== 'scheduled') {
+        if (cost.cost_date >= rangeBounds.start && cost.cost_date <= rangeBounds.end) {
+          rows.push({
+            key: cost.id + ':' + cost.cost_date,
+            cost,
+            date: cost.cost_date,
+            amount: Number(cost.amount),
+          })
+        }
+        continue
+      }
+
+      const scheduleStart = fromKey(cost.cost_date)
+      const rangeStart = fromKey(rangeBounds.start)
+      const rangeEnd = fromKey(rangeBounds.end)
+      const cursor = new Date(Math.max(
+        new Date(scheduleStart.getFullYear(), scheduleStart.getMonth(), 1, 12).getTime(),
+        new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1, 12).getTime(),
+      ))
+
+      const day = cost.schedule_day ?? scheduleStart.getDate()
+
+      while (cursor <= rangeEnd) {
+        const occurrenceDay = Math.min(day, lastDayOfMonth(cursor.getFullYear(), cursor.getMonth()))
+        const occurrence = new Date(cursor.getFullYear(), cursor.getMonth(), occurrenceDay, 12)
+        const occurrenceKey = dateKey(occurrence)
+
+        if (occurrence >= scheduleStart && occurrenceKey >= rangeBounds.start && occurrenceKey <= rangeBounds.end) {
+          rows.push({
+            key: cost.id + ':' + occurrenceKey,
+            cost,
+            date: occurrenceKey,
+            amount: Number(cost.amount),
+          })
+        }
+
+        cursor.setMonth(cursor.getMonth() + 1)
+      }
+    }
+
+    return rows.sort((a, b) => a.date.localeCompare(b.date))
+  }, [costs, rangeBounds])
+
+  const periodTotal = useMemo(
+    () => occurrences.reduce((sum, item) => sum + item.amount, 0),
+    [occurrences],
   )
+
+  const currentMonthBounds = useMemo(() => {
+    const now = new Date()
+    return {
+      start: dateKey(new Date(now.getFullYear(), now.getMonth(), 1, 12)),
+      end: dateKey(new Date(now.getFullYear(), now.getMonth() + 1, 0, 12)),
+    }
+  }, [])
+
+  const currentMonthSpend = useMemo(() => {
+    const rows: CostOccurrence[] = []
+
+    for (const cost of costs) {
+      if (cost.schedule_type === 'scheduled') {
+        const start = fromKey(cost.cost_date)
+        const monthStart = fromKey(currentMonthBounds.start)
+        if (start <= fromKey(currentMonthBounds.end)) {
+          const day = Math.min(cost.schedule_day ?? start.getDate(), lastDayOfMonth(monthStart.getFullYear(), monthStart.getMonth()))
+          const date = dateKey(new Date(monthStart.getFullYear(), monthStart.getMonth(), day, 12))
+          if (date >= currentMonthBounds.start && date <= currentMonthBounds.end && fromKey(date) >= start) {
+            rows.push({ key: cost.id + ':' + date, cost, date, amount: Number(cost.amount) })
+          }
+        }
+      } else if (cost.cost_date >= currentMonthBounds.start && cost.cost_date <= currentMonthBounds.end) {
+        rows.push({ key: cost.id + ':' + cost.cost_date, cost, date: cost.cost_date, amount: Number(cost.amount) })
+      }
+    }
+
+    return rows.reduce((sum, item) => sum + item.amount, 0)
+  }, [costs, currentMonthBounds])
+
+  const monthlyLimit = finance?.monthly_budget ?? finance?.monthly_income ?? null
+  const monthRemaining = monthlyLimit != null ? Number(monthlyLimit) - currentMonthSpend : null
+
+  const chartBuckets = useMemo(() => {
+    const map = new Map<string, number>()
+
+    if (range === 'week' || range === 'month') {
+      const start = fromKey(rangeBounds.start)
+      const end = fromKey(rangeBounds.end)
+      for (let cursor = new Date(start); cursor <= end; cursor = addDays(cursor, 1)) {
+        map.set(dateKey(cursor), 0)
+      }
+
+      for (const item of occurrences) {
+        map.set(item.date, (map.get(item.date) ?? 0) + item.amount)
+      }
+
+      return Array.from(map.entries()).map(([key, value]) => ({
+        key,
+        label: fromKey(key).toLocaleDateString(undefined, range === 'week'
+          ? { weekday: 'short' }
+          : { day: 'numeric' }),
+        value,
+      }))
+    }
+
+    const start = fromKey(rangeBounds.start)
+    const end = fromKey(rangeBounds.end)
+    let cursor = new Date(start.getFullYear(), start.getMonth(), 1, 12)
+
+    while (cursor <= end) {
+      const key = cursor.getFullYear() + '-' + String(cursor.getMonth() + 1).padStart(2, '0')
+      map.set(key, 0)
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1, 12)
+    }
+
+    for (const item of occurrences) {
+      const key = item.date.slice(0, 7)
+      map.set(key, (map.get(key) ?? 0) + item.amount)
+    }
+
+    return Array.from(map.entries()).map(([key, value]) => ({
+      key,
+      label: new Date(key + '-01T12:00:00').toLocaleDateString(undefined, { month: 'short', year: range === 'all' ? '2-digit' : undefined }),
+      value,
+    }))
+  }, [range, rangeBounds, occurrences])
+
+  const chartMax = Math.max(1, ...chartBuckets.map((item) => item.value))
+
+  const sourceBreakdown = useMemo(() => {
+    const totals = new Map<string, number>([
+      ['manual', 0],
+      ['shopping', 0],
+      ['task', 0],
+    ])
+
+    for (const occurrence of occurrences) {
+      totals.set(occurrence.cost.source_type, (totals.get(occurrence.cost.source_type) ?? 0) + occurrence.amount)
+    }
+
+    return Array.from(totals.entries()).map(([key, value]) => ({
+      key,
+      label: key === 'shopping' ? 'Shopping' : key === 'task' ? 'Tasks' : 'Other costs',
+      value,
+    }))
+  }, [occurrences])
+
+  const sourceMax = Math.max(1, ...sourceBreakdown.map((item) => item.value))
 
   function resetComposer() {
     setTitle('')
     setAmount('')
     setCostDate(todayKey())
-    setKind('additional')
+    setScheduleType('one_time')
     setNotes('')
     setError('')
+  }
+
+  async function saveFinance(event: FormEvent) {
+    event.preventDefault()
+    if (!canWrite) return
+
+    const normalizedIncome = incomeDraft.trim().replace(',', '.')
+    const normalizedBudget = budgetDraft.trim().replace(',', '.')
+    const income = normalizedIncome ? Number(normalizedIncome) : null
+    const budget = normalizedBudget ? Number(normalizedBudget) : null
+
+    if ((income != null && (!Number.isFinite(income) || income < 0))
+      || (budget != null && (!Number.isFinite(budget) || budget < 0))) {
+      setError('Income and budget must be valid positive amounts.')
+      return
+    }
+
+    setSavingFinance(true)
+    setError('')
+
+    const result = await supabase
+      .from('household_finance_settings')
+      .upsert({
+        household_id: household.id,
+        monthly_income: income,
+        monthly_budget: budget,
+        currency: 'EUR',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'household_id' })
+
+    setSavingFinance(false)
+
+    if (result.error) setError(result.error.message)
+    else await load()
   }
 
   async function createCost(event: FormEvent) {
@@ -91,8 +381,10 @@ export function CostsPage() {
       amount: numericAmount,
       currency: 'EUR',
       cost_date: costDate,
-      cost_kind: kind,
+      cost_kind: scheduleType === 'scheduled' ? 'regular' : 'additional',
       source_type: 'manual',
+      schedule_type: scheduleType,
+      schedule_day: scheduleType === 'scheduled' ? fromKey(costDate).getDate() : null,
       notes: notes.trim() || null,
     })
 
@@ -114,7 +406,7 @@ export function CostsPage() {
         <div>
           <div className="page-label">HOUSEHOLD COSTS</div>
           <h1>Household costs</h1>
-          <p className="page-subtitle">Regular and additional household spending. Archived Shopping lists can send their final cost here automatically.</p>
+          <p className="page-subtitle">Plan the family budget, track one-time spending and keep monthly scheduled costs visible before they happen.</p>
         </div>
 
         {canWrite && (
@@ -129,37 +421,172 @@ export function CostsPage() {
       {access?.enabled && !canWrite && <div className="module-access-note">Read-only access</div>}
       {error && !composerOpen && <div className="notice error">{error}</div>}
 
-      <section className="cost-summary-grid">
-        <article className="list-card cost-summary-card">
-          <span>This month</span>
-          <strong>{new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR' }).format(monthTotal)}</strong>
-          <small>{costs.filter((cost) => cost.cost_date.startsWith(monthKey)).length} entries</small>
-        </article>
+      <section className="finance-overview-grid">
+        <form className="list-card finance-plan-card" onSubmit={saveFinance}>
+          <div className="finance-card-heading">
+            <div>
+              <span className="eyebrow">MONTHLY PLAN</span>
+              <h2>Budget & income</h2>
+              <p>Income is optional. If you prefer not to store it, enter only the monthly household budget.</p>
+            </div>
+            <WalletCards size={21} />
+          </div>
 
-        <article className="list-card cost-summary-card">
-          <span>Total entries</span>
-          <strong>{costs.length}</strong>
-          <small>Manual and Shopping costs</small>
-        </article>
+          <div className="finance-plan-fields">
+            <label>
+              Monthly income
+              <div className="money-input">
+                <span>€</span>
+                <input
+                  inputMode="decimal"
+                  value={incomeDraft}
+                  onChange={(event) => setIncomeDraft(event.target.value)}
+                  placeholder="Optional"
+                  disabled={!canWrite}
+                />
+              </div>
+            </label>
+
+            <label>
+              Monthly budget
+              <div className="money-input">
+                <span>€</span>
+                <input
+                  inputMode="decimal"
+                  value={budgetDraft}
+                  onChange={(event) => setBudgetDraft(event.target.value)}
+                  placeholder="e.g. 2500"
+                  disabled={!canWrite}
+                />
+              </div>
+            </label>
+          </div>
+
+          {canWrite && (
+            <button className="secondary-button compact finance-save-button" disabled={savingFinance}>
+              {savingFinance ? 'Saving…' : 'Save monthly plan'}
+            </button>
+          )}
+        </form>
+
+        <div className="cost-summary-panel">
+          <article className="list-card cost-summary-card">
+            <span>This month</span>
+            <strong>{money(currentMonthSpend)}</strong>
+            <small>Including scheduled monthly costs</small>
+          </article>
+
+          <article className="list-card cost-summary-card">
+            <span>{finance?.monthly_budget != null ? 'Budget' : 'Income'}</span>
+            <strong>{monthlyLimit != null ? money(Number(monthlyLimit)) : '—'}</strong>
+            <small>{finance?.monthly_budget != null ? 'Monthly budget' : finance?.monthly_income != null ? 'Monthly income' : 'Add a budget or income'}</small>
+          </article>
+
+          <article className="list-card cost-summary-card">
+            <span>Remaining</span>
+            <strong className={monthRemaining != null && monthRemaining < 0 ? 'negative' : ''}>
+              {monthRemaining != null ? money(monthRemaining) : '—'}
+            </strong>
+            <small>Based on this month</small>
+          </article>
+        </div>
+      </section>
+
+      <section className="cost-report-card list-card">
+        <div className="cost-report-head">
+          <div>
+            <span className="eyebrow">REPORTING</span>
+            <h2>Cost overview</h2>
+          </div>
+
+          <div className="cost-range-tabs" aria-label="Cost range">
+            {(['week','month','year','all'] as CostRange[]).map((item) => (
+              <button
+                type="button"
+                className={range === item ? 'active' : ''}
+                key={item}
+                onClick={() => setRange(item)}
+              >
+                {item === 'all' ? 'All' : item[0].toUpperCase() + item.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="cost-report-total">
+          <span>Total in selected period</span>
+          <strong>{money(periodTotal)}</strong>
+        </div>
+
+        <div className="cost-chart-grid">
+          <div className="cost-chart">
+            <h3>Spending over time</h3>
+            <div className="cost-bar-chart">
+              {chartBuckets.map((item) => (
+                <div className="cost-bar-column" key={item.key} title={item.label + ': ' + money(item.value)}>
+                  <div className="cost-bar-track">
+                    <div className="cost-bar-fill" style={{ height: Math.max(item.value > 0 ? 4 : 0, (item.value / chartMax) * 100) + '%' }} />
+                  </div>
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="cost-chart source-chart">
+            <h3>Where costs came from</h3>
+            <div className="cost-source-bars">
+              {sourceBreakdown.map((item) => (
+                <div className="cost-source-row" key={item.key}>
+                  <div>
+                    <span>{item.label}</span>
+                    <strong>{money(item.value)}</strong>
+                  </div>
+                  <div className="cost-source-track">
+                    <div style={{ width: (item.value / sourceMax) * 100 + '%' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="list-card cost-list">
+        <div className="cost-list-head">
+          <div>
+            <span className="eyebrow">COST ENTRIES</span>
+            <h2>All costs</h2>
+          </div>
+          <span>{costs.length}</span>
+        </div>
+
         {costs.length === 0 ? (
           <div className="empty-state">
             <Receipt size={24} />
             <span className="empty-state-title">No household costs yet.</span>
-            <span>Manual costs and completed Shopping trips will appear here.</span>
+            <span>Manual costs, completed Shopping trips and task costs will appear here.</span>
           </div>
         ) : costs.map((cost) => (
           <div className="cost-row" key={cost.id}>
             <span className="cost-source-icon">
-              {cost.source_type === 'shopping' ? <ShoppingBag size={15} /> : <Receipt size={15} />}
+              {cost.source_type === 'shopping'
+                ? <ShoppingBag size={15} />
+                : cost.schedule_type === 'scheduled'
+                  ? <CalendarClock size={15} />
+                  : <Receipt size={15} />}
             </span>
             <span className="cost-main-copy">
               <span>{cost.title}</span>
-              <small>{cost.cost_date} · {cost.cost_kind === 'regular' ? 'Regular' : 'Additional'}{cost.source_type === 'shopping' ? ' · Shopping' : ''}</small>
+              <small>
+                {cost.cost_date}
+                {' · '}
+                {cost.schedule_type === 'scheduled' ? 'Scheduled monthly' : 'One-time'}
+                {cost.source_type === 'shopping' ? ' · Shopping' : ''}
+                {cost.source_type === 'task' ? ' · Task' : ''}
+              </small>
             </span>
-            <strong>{new Intl.NumberFormat(undefined, { style: 'currency', currency: cost.currency || 'EUR' }).format(Number(cost.amount))}</strong>
+            <strong>{money(Number(cost.amount), cost.currency || 'EUR')}</strong>
           </div>
         ))}
       </section>
@@ -210,21 +637,21 @@ export function CostsPage() {
               <label>
                 Date
                 <DatePicker value={costDate} onChange={setCostDate} format={household.date_format} ariaLabel="Choose cost date" />
-                <small className="field-hint">Date the cost occurred.</small>
+                <small className="field-hint">{scheduleType === 'scheduled' ? 'First month and recurring day.' : 'Date the cost occurred.'}</small>
               </label>
 
               <label>
-                Type
+                Cost timing
                 <Select
-                  value={kind}
-                  onChange={(value) => setKind(value as typeof kind)}
+                  value={scheduleType}
+                  onChange={(value) => setScheduleType(value as ScheduleType)}
                   options={[
-                    { value: 'additional', label: 'Additional' },
-                    { value: 'regular', label: 'Regular' },
+                    { value: 'one_time', label: 'One-time / non-scheduled' },
+                    { value: 'scheduled', label: 'Scheduled every month' },
                   ]}
-                  ariaLabel="Choose cost type"
+                  ariaLabel="Choose cost timing"
                 />
-                <small className="field-hint">Regular or additional household cost.</small>
+                <small className="field-hint">{scheduleType === 'scheduled' ? 'Included automatically in every following month.' : 'Recorded only once.'}</small>
               </label>
             </div>
 
