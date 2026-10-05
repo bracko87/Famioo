@@ -107,7 +107,7 @@ export function ChecklistArchivePage() {
         <div>
           <div className="page-label">CHECKLIST ARCHIVE</div>
           <h1>Archived checklists</h1>
-          <p className="page-subtitle">Finished checklists are sorted by archive date and can be restored for reuse. Archived lists are removed automatically after about 6 months.</p>
+          <p className="page-subtitle">Checklists with dates in the past move here automatically, even if unfinished. Manually archived lists appear here too, and archives are removed after about 6 months.</p>
         </div>
 
         <Link className="secondary-button compact" to="/app/checklists">
