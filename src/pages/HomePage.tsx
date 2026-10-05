@@ -10,7 +10,6 @@ import {
   ShoppingBag,
   Sparkles,
   Utensils,
-  Trophy,
 } from 'lucide-react'
 import { useEffect, useState, type ComponentType } from 'react'
 import { Link } from 'react-router-dom'
@@ -211,7 +210,6 @@ export function HomePage() {
                   <span className="eyebrow">FAMILY STANDING</span>
                   <h2>This month</h2>
                 </div>
-                <span className="home-standing-trophy"><Trophy size={18} /></span>
               </header>
 
               <div className="home-family-standing-list">
