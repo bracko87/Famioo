@@ -5922,3 +5922,436 @@ b {
 .home-care-summary-card > div > small {
   opacity: .78;
 }
+
+
+/* =========================================================
+   Life Admin
+   ========================================================= */
+
+.life-admin-heading {
+  margin-bottom: 12px;
+}
+
+.life-admin-tabs {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.life-admin-tabs button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #e4dbe7;
+  border-radius: 10px;
+  color: #766a7c;
+  background: rgba(255,255,255,.76);
+  font-size: 10px;
+}
+
+.life-admin-tabs button:hover,
+.life-admin-tabs button.active {
+  color: #714890;
+  border-color: #c2acd0;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(81,54,92,.05);
+}
+
+.life-admin-summary-grid {
+  margin-bottom: 18px;
+  display: grid;
+  grid-template-columns: repeat(5,minmax(0,1fr));
+  gap: 10px;
+}
+
+.life-admin-summary-card {
+  min-height: 96px;
+  padding: 13px;
+  border-radius: 15px;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 38px minmax(0,1fr);
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(72,45,88,.10);
+}
+
+.life-admin-summary-card::after {
+  content: "";
+  position: absolute;
+  width: 105px;
+  height: 105px;
+  top: -55px;
+  right: -34px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.14);
+  pointer-events: none;
+}
+
+.life-admin-summary-card::before {
+  content: "";
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  top: -17px;
+  right: 22px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.08);
+  pointer-events: none;
+}
+
+.life-admin-summary-card.tone-1 { background: linear-gradient(135deg,#7557d8,#aa5bc7 65%,#ce589c); }
+.life-admin-summary-card.tone-2 { background: linear-gradient(135deg,#df9b38,#e88d45 58%,#e7766c); }
+.life-admin-summary-card.tone-3 { background: linear-gradient(135deg,#3c9675,#49a486 60%,#5aaead); }
+.life-admin-summary-card.tone-4 { background: linear-gradient(135deg,#5a7ccc,#7371c9 58%,#896ac0); }
+.life-admin-summary-card.tone-5 { background: linear-gradient(135deg,#55976c,#72a36b 60%,#a0a362); }
+
+.life-admin-summary-card > span {
+  width: 36px;
+  height: 36px;
+  z-index: 1;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(255,255,255,.14);
+}
+
+.life-admin-summary-card > div {
+  min-width: 0;
+  z-index: 1;
+  display: grid;
+  gap: 2px;
+}
+
+.life-admin-summary-card small,
+.life-admin-summary-card em {
+  color: rgba(255,255,255,.78);
+  font-size: 8px;
+  font-style: normal;
+}
+
+.life-admin-summary-card small {
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+
+.life-admin-summary-card strong {
+  overflow: hidden;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.life-admin-summary-card:hover {
+  box-shadow: 0 13px 30px rgba(72,45,88,.16);
+  transform: translateY(-1px);
+}
+
+.life-admin-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.life-admin-overview-panel > header {
+  min-height: 40px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.life-admin-overview-panel > header h2,
+.life-admin-section-heading h2 {
+  margin: 3px 0 0;
+  color: #504454;
+  font-size: 16px;
+}
+
+.life-admin-overview-list,
+.life-admin-list {
+  display: grid;
+  gap: 8px;
+}
+
+.life-admin-section {
+  display: grid;
+  gap: 12px;
+}
+
+.life-admin-section-heading {
+  min-height: 40px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.life-admin-item-card {
+  min-height: 92px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 42px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 11px;
+}
+
+.life-admin-type-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: #76558c;
+  background: #f1eaf4;
+}
+
+.life-admin-type-icon.type-contract {
+  color: #5a73a7;
+  background: #eaf0f8;
+}
+
+.life-admin-type-icon.type-insurance {
+  color: #43866f;
+  background: #e4f3ec;
+}
+
+.life-admin-type-icon.type-subscription {
+  color: #a06a33;
+  background: #faefdf;
+}
+
+.life-admin-type-icon.type-deadline {
+  color: #a25360;
+  background: #f8e7ea;
+}
+
+.life-admin-item-main {
+  min-width: 0;
+}
+
+.life-admin-item-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.life-admin-item-title-row > div {
+  min-width: 0;
+}
+
+.life-admin-item-type {
+  display: block;
+  color: #a08fa4;
+  font-size: 7px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.life-admin-item-title-row h3 {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: #4f4453;
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.life-admin-item-meta {
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  color: #918494;
+  font-size: 8px;
+}
+
+.life-admin-item-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.life-admin-person .profile-avatar-sm {
+  width: 22px;
+  height: 22px;
+  font-size: 8px;
+}
+
+.life-admin-date-strip {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.life-admin-date-strip > span {
+  min-height: 31px;
+  padding: 4px 8px;
+  border: 1px solid #ece4ee;
+  border-radius: 8px;
+  display: grid;
+  gap: 1px;
+  color: #655a69;
+  background: #fbf9fc;
+  font-size: 8px;
+}
+
+.life-admin-date-strip > span small {
+  color: #a194a5;
+  font-size: 7px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.life-admin-item-main > p {
+  margin: 7px 0 0;
+  color: #766a79;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.life-admin-item-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.life-admin-attachments {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.life-admin-attachments a {
+  max-width: 100%;
+  min-height: 27px;
+  padding: 0 8px;
+  border: 1px solid #e5dce8;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  color: #765388;
+  background: #fbf9fc;
+  font-size: 8px;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.life-admin-mini-empty {
+  min-height: 150px;
+}
+
+.life-admin-empty {
+  min-height: 200px;
+}
+
+.life-admin-composer {
+  width: min(860px,100%);
+  max-height: min(900px,92vh);
+  padding: 26px 28px;
+  gap: 16px;
+}
+
+.life-admin-money-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 100px;
+  gap: 8px;
+}
+
+.life-admin-upload-field {
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px dashed #d9cede;
+  border-radius: 11px;
+  display: grid !important;
+  gap: 6px !important;
+  background: #fbf9fc;
+}
+
+.life-admin-upload-field > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #65586a;
+  font-size: 10px;
+  font-weight: 550;
+}
+
+.life-admin-upload-field input {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 9px;
+}
+
+.life-admin-upload-field small {
+  color: #998d9d;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+@media (max-width: 1180px) {
+  .life-admin-summary-grid {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+  }
+
+  .life-admin-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 800px) {
+  .life-admin-heading,
+  .life-admin-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .life-admin-item-card {
+    grid-template-columns: 42px minmax(0,1fr);
+  }
+
+  .life-admin-item-actions {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 620px) {
+  .life-admin-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 3px;
+  }
+
+  .life-admin-tabs button {
+    flex: 0 0 auto;
+  }
+
+  .life-admin-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .life-admin-money-row {
+    grid-template-columns: 1fr;
+  }
+}
