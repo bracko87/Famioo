@@ -40,6 +40,7 @@ type HomeAsset = {
   serial_number: string | null
   purchase_date: string | null
   purchase_price: number | null
+  purchase_cost_id: string | null
   retailer: string | null
   warranty_until: string | null
   responsible_profile_id: string | null
@@ -201,7 +202,9 @@ export function HomeCarePage() {
   const canWrite = Boolean(access?.can_write)
   const canSyncCalendar = Boolean(modules.find((module) => module.code === 'calendar')?.can_write)
   const canSyncTasks = Boolean(modules.find((module) => module.code === 'tasks')?.can_write)
-  const costsEnabled = Boolean(modules.find((module) => module.code === 'costs')?.enabled)
+  const costsModule = modules.find((module) => module.code === 'costs')
+  const costsEnabled = Boolean(costsModule?.enabled)
+  const costsCanWrite = Boolean(costsModule?.can_write)
 
   const [tab, setTab] = useState<HomeCareTab>('overview')
   const [assets, setAssets] = useState<HomeAsset[]>([])
@@ -222,6 +225,7 @@ export function HomeCarePage() {
   const [assetSerial, setAssetSerial] = useState('')
   const [assetPurchaseDate, setAssetPurchaseDate] = useState('')
   const [assetPurchasePrice, setAssetPurchasePrice] = useState('')
+  const [assetIncludeCost, setAssetIncludeCost] = useState(false)
   const [assetRetailer, setAssetRetailer] = useState('')
   const [assetWarranty, setAssetWarranty] = useState('')
   const [assetResponsible, setAssetResponsible] = useState('')
@@ -270,7 +274,7 @@ export function HomeCarePage() {
     const [assetResult, maintenanceResult, repairResult, activityResult, attachmentResult] = await Promise.all([
       supabase
         .from('home_care_assets')
-        .select('id,name,asset_type,room_location,brand,model,serial_number,purchase_date,purchase_price,retailer,warranty_until,responsible_profile_id,notes,active,created_at')
+        .select('id,name,asset_type,room_location,brand,model,serial_number,purchase_date,purchase_price,purchase_cost_id,retailer,warranty_until,responsible_profile_id,notes,active,created_at')
         .eq('household_id', household.id)
         .eq('active', true)
         .order('name'),
@@ -465,6 +469,7 @@ export function HomeCarePage() {
     setAssetSerial('')
     setAssetPurchaseDate('')
     setAssetPurchasePrice('')
+    setAssetIncludeCost(false)
     setAssetRetailer('')
     setAssetWarranty('')
     setAssetResponsible('')
@@ -485,6 +490,7 @@ export function HomeCarePage() {
       setAssetSerial(asset.serial_number ?? '')
       setAssetPurchaseDate(asset.purchase_date ?? '')
       setAssetPurchasePrice(asset.purchase_price != null ? String(asset.purchase_price) : '')
+      setAssetIncludeCost(Boolean(asset.purchase_cost_id))
       setAssetRetailer(asset.retailer ?? '')
       setAssetWarranty(asset.warranty_until ?? '')
       setAssetResponsible(asset.responsible_profile_id ?? '')
@@ -510,28 +516,30 @@ export function HomeCarePage() {
     setSaving(true)
     setError('')
 
-    const payload = {
-      household_id: household.id,
-      name: assetName.trim(),
-      asset_type: assetType,
-      room_location: assetRoom.trim() || null,
-      brand: assetBrand.trim() || null,
-      model: assetModel.trim() || null,
-      serial_number: assetSerial.trim() || null,
-      purchase_date: assetPurchaseDate || null,
-      purchase_price: numericPrice,
-      retailer: assetRetailer.trim() || null,
-      warranty_until: assetWarranty || null,
-      responsible_profile_id: assetResponsible || null,
-      notes: assetNotes.trim() || null,
-      updated_at: new Date().toISOString(),
+    if (assetIncludeCost && (!numericPrice || numericPrice <= 0)) {
+      setError('Enter a purchase price before adding it to Household Costs.')
+      return
     }
 
-    const result = editingAssetId
-      ? await supabase.from('home_care_assets').update(payload).eq('id', editingAssetId).eq('household_id', household.id).select('id').single()
-      : await supabase.from('home_care_assets').insert(payload).select('id').single()
+    const result = await supabase.rpc('save_home_asset_v1', {
+      p_id: editingAssetId,
+      p_household_id: household.id,
+      p_name: assetName.trim(),
+      p_asset_type: assetType,
+      p_room_location: assetRoom.trim() || null,
+      p_brand: assetBrand.trim() || null,
+      p_model: assetModel.trim() || null,
+      p_serial_number: assetSerial.trim() || null,
+      p_purchase_date: assetPurchaseDate || null,
+      p_purchase_price: numericPrice,
+      p_retailer: assetRetailer.trim() || null,
+      p_warranty_until: assetWarranty || null,
+      p_responsible_profile_id: assetResponsible || null,
+      p_notes: assetNotes.trim() || null,
+      p_include_cost: assetIncludeCost,
+    })
 
-    if (result.error || !result.data?.id) {
+    if (result.error || !result.data) {
       setSaving(false)
       setError(result.error?.message ?? 'Could not save the asset.')
       return
@@ -539,7 +547,7 @@ export function HomeCarePage() {
 
     if (assetFile) {
       try {
-        await uploadAttachment('asset', result.data.id, assetFile)
+        await uploadAttachment('asset', String(result.data), assetFile)
       } catch (reason) {
         setSaving(false)
         setError(reason instanceof Error ? reason.message : 'Asset saved, but the document could not be uploaded.')
@@ -1243,6 +1251,23 @@ export function HomeCarePage() {
 
             <label>Warranty until<DatePicker value={assetWarranty} onChange={setAssetWarranty} format={household.date_format} ariaLabel="Choose warranty end date" /></label>
             <label>Notes<textarea value={assetNotes} onChange={(event) => setAssetNotes(event.target.value)} rows={3} placeholder="Optional asset notes" /></label>
+
+            <label className="composer-option">
+              <input
+                type="checkbox"
+                checked={assetIncludeCost}
+                disabled={!costsCanWrite}
+                onChange={(event) => setAssetIncludeCost(event.target.checked)}
+              />
+              <span>
+                <span>Include purchase price in Household Costs</span>
+                <small>
+                  {costsCanWrite
+                    ? 'Creates or updates one one-time Household Cost using the purchase date and purchase price.'
+                    : 'Household Costs must be unlocked with write access to use this option.'}
+                </small>
+              </span>
+            </label>
 
             <label className="home-care-upload-field">
               <span><Upload size={14} />Receipt, manual, photo or document</span>
