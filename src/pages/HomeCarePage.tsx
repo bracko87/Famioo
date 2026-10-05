@@ -122,18 +122,6 @@ type CompletionTarget = {
   suggestedCost: number | null
 } | null
 
-const assetTypes = [
-  'Appliance',
-  'Heating',
-  'Electronics',
-  'Furniture',
-  'Garden',
-  'Vehicle',
-  'Safety',
-  'Plumbing',
-  'Other',
-]
-
 const tabs: Array<{ key: HomeCareTab; label: string }> = [
   { key: 'overview', label: 'Overview' },
   { key: 'assets', label: 'Assets' },
@@ -208,6 +196,7 @@ export function HomeCarePage() {
 
   const [tab, setTab] = useState<HomeCareTab>('overview')
   const [assets, setAssets] = useState<HomeAsset[]>([])
+  const [assetTypeOptions, setAssetTypeOptions] = useState<Array<{ value: string; label: string }>>([{ value: 'Appliance', label: 'Appliance' }])
   const [maintenance, setMaintenance] = useState<MaintenanceItem[]>([])
   const [repairs, setRepairs] = useState<RepairItem[]>([])
   const [activity, setActivity] = useState<HomeActivity[]>([])
@@ -271,7 +260,7 @@ export function HomeCarePage() {
   async function load() {
     setError('')
 
-    const [assetResult, maintenanceResult, repairResult, activityResult, attachmentResult] = await Promise.all([
+    const [assetResult, maintenanceResult, repairResult, activityResult, attachmentResult, typeResult] = await Promise.all([
       supabase
         .from('home_care_assets')
         .select('id,name,asset_type,room_location,brand,model,serial_number,purchase_date,purchase_price,purchase_cost_id,retailer,warranty_until,responsible_profile_id,notes,active,created_at')
@@ -300,6 +289,15 @@ export function HomeCarePage() {
         .select('id,asset_id,maintenance_id,repair_id,file_name,storage_path,mime_type,file_size')
         .eq('household_id', household.id)
         .order('created_at'),
+      supabase
+        .from('household_module_types')
+        .select('type_key,label,sort_order')
+        .eq('household_id', household.id)
+        .eq('module_code', 'home_care')
+        .eq('group_code', 'asset_type')
+        .eq('active', true)
+        .order('sort_order')
+        .order('label'),
     ])
 
     if (assetResult.error) setError(assetResult.error.message)
@@ -313,6 +311,13 @@ export function HomeCarePage() {
 
     if (activityResult.error) setError((current) => current || activityResult.error.message)
     else setActivity((activityResult.data ?? []) as HomeActivity[])
+
+    if (typeResult.error) {
+      setError((current) => current || typeResult.error.message)
+    } else {
+      const options = (typeResult.data ?? []).map((row) => ({ value: row.type_key, label: row.label }))
+      setAssetTypeOptions(options.length ? options : [{ value: 'Appliance', label: 'Appliance' }])
+    }
 
     if (attachmentResult.error) {
       setError((current) => current || attachmentResult.error.message)
@@ -462,7 +467,7 @@ export function HomeCarePage() {
   function resetAsset() {
     setEditingAssetId(null)
     setAssetName('')
-    setAssetType('Appliance')
+    setAssetType(assetTypeOptions[0]?.value ?? 'Appliance')
     setAssetRoom('')
     setAssetBrand('')
     setAssetModel('')
@@ -1226,7 +1231,7 @@ export function HomeCarePage() {
 
             <div className="composer-grid-two aligned-field-row">
               <label>Name<input value={assetName} onChange={(event) => setAssetName(event.target.value)} placeholder="e.g. Washing machine" autoFocus required /></label>
-              <label>Type<Select value={assetType} onChange={setAssetType} options={assetTypes.map((value) => ({ value, label: value }))} ariaLabel="Choose asset type" /></label>
+              <label>Type<Select value={assetType} onChange={setAssetType} options={assetTypeOptions} ariaLabel="Choose asset type" /></label>
             </div>
 
             <div className="composer-grid-two aligned-field-row">
