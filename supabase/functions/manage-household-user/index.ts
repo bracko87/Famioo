@@ -180,76 +180,19 @@ Deno.serve(async (req: Request) => {
 
     createdUserId = authResult.data.user.id
 
-    const { error: profileError } = await adminClient
-      .from("user_profiles")
-      .upsert(
-        {
-          id: createdUserId,
-          display_name: displayName,
-          default_timezone: household.timezone,
-        },
-        {
-          onConflict: "id",
-          ignoreDuplicates: true,
-        },
-      )
+    const { data: attachedProfileId, error: attachError } = await userClient.rpc(
+      "attach_household_user_v1",
+      {
+        p_household_id: householdId,
+        p_user_id: createdUserId,
+        p_display_name: displayName,
+        p_role: role,
+      },
+    )
 
-    if (profileError) throw profileError
-
-    const { error: memberError } = await adminClient
-      .from("household_members")
-      .upsert(
-        {
-          household_id: householdId,
-          user_id: createdUserId,
-          role,
-          status: "active",
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "household_id,user_id" },
-      )
-
-    if (memberError) throw memberError
-
-    const { data: existingFamilyProfile, error: familyProfileReadError } = await adminClient
-      .from("family_profiles")
-      .select("id")
-      .eq("household_id", householdId)
-      .eq("linked_user_id", createdUserId)
-      .eq("active", true)
-      .maybeSingle()
-
-    if (familyProfileReadError) throw familyProfileReadError
-
-    if (!existingFamilyProfile) {
-      const { error: familyProfileError } = await adminClient
-        .from("family_profiles")
-        .insert({
-          household_id: householdId,
-          linked_user_id: createdUserId,
-          display_name: displayName,
-          profile_type: "adult",
-          color_key: role === "admin" ? "blue" : "green",
-        })
-
-      if (familyProfileError) throw familyProfileError
+    if (attachError || !attachedProfileId) {
+      throw attachError ?? new Error("Could not attach the new user to this household.")
     }
-
-    const { error: preferenceError } = await adminClient
-      .from("notification_preferences")
-      .upsert(
-        {
-          household_id: householdId,
-          user_id: createdUserId,
-          timezone: household.timezone,
-        },
-        {
-          onConflict: "household_id,user_id",
-          ignoreDuplicates: true,
-        },
-      )
-
-    if (preferenceError) throw preferenceError
 
     return json({
       ok: true,
@@ -261,7 +204,7 @@ Deno.serve(async (req: Request) => {
       profile_type: "adult",
     })
   } catch (error) {
-    if (createdUserId) await adminClient.auth.admin.deleteUser(createdUserId)
+    console.error("manage-household-user failed", error)
 
     return json(
       { error: error instanceof Error ? error.message : "Could not add the user." },
