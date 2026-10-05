@@ -1,4 +1,4 @@
-import { CalendarDays, CheckSquare, ClipboardList, GraduationCap } from 'lucide-react'
+import { CalendarDays, CheckSquare, ClipboardList, FolderKanban, GraduationCap } from 'lucide-react'
 import { useEffect, useMemo, useState, type ComponentType } from 'react'
 import { useHousehold } from '../../context/HouseholdContext'
 import { categoryColor } from '../../lib/categoryColors'
@@ -12,7 +12,7 @@ type AvailabilityRow = {
 }
 
 type CategoryModule = {
-  code: Extract<ModuleCode, 'calendar' | 'tasks' | 'checklists' | 'school'>
+  code: Extract<ModuleCode, 'calendar' | 'tasks' | 'checklists' | 'school' | 'projects'>
   label: string
   description: string
   icon: ComponentType<{ size?: number }>
@@ -42,6 +42,12 @@ const categoryModules: CategoryModule[] = [
     label: 'School & Kita',
     description: 'Categories available for school, Kita, appointments and kids organization.',
     icon: GraduationCap,
+  },
+  {
+    code: 'projects',
+    label: 'Projects & Chores',
+    description: 'Categories available for projects, chores and point-scored responsibilities.',
+    icon: FolderKanban,
   },
 ]
 
