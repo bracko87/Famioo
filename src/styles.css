@@ -8987,3 +8987,43 @@ b {
     margin-right: 0;
   }
 }
+
+
+/* Calendar month cells keep a stable height; busy days scroll instead of hiding events behind "+ more". */
+@media (min-width: 701px) {
+  .month-calendar .calendar-day {
+    height: 158px;
+    min-height: 158px;
+    overflow: hidden;
+  }
+
+  .month-calendar .calendar-day-events {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+    padding-right: 3px;
+  }
+
+  .month-calendar .calendar-day-events::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .month-calendar .calendar-day-events::-webkit-scrollbar-thumb {
+    background: rgba(117,65,165,.24);
+    border-radius: 999px;
+  }
+}
+
+.calendar-event-pill,
+.calendar-event-detail {
+  cursor: pointer;
+}
+
+.calendar-event-pill:focus-visible,
+.calendar-event-detail:focus-visible {
+  outline: 2px solid rgba(117,65,165,.45);
+  outline-offset: 2px;
+}
