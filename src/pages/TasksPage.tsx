@@ -1,5 +1,6 @@
-import { CalendarDays, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { Archive, CalendarDays, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { DatePicker } from '../components/ui/DatePicker'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { Select } from '../components/ui/Select'
@@ -130,6 +131,7 @@ export function TasksPage() {
   const [categories, setCategories] = useState<EventCategory[]>([])
   const [templates, setTemplates] = useState<TaskTemplate[]>([])
   const [participants, setParticipants] = useState<TaskParticipant[]>([])
+  const [archivedCount, setArchivedCount] = useState(0)
   const [composerOpen, setComposerOpen] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [templateId, setTemplateId] = useState('')
@@ -147,7 +149,12 @@ export function TasksPage() {
   async function load() {
     setError('')
 
-    const [taskResult, participantResult, categoryResult, availabilityResult, templateResult] = await Promise.all([
+    await Promise.all([
+      supabase.rpc('archive_overdue_work_v1', { p_household_id: household.id }),
+      supabase.rpc('purge_old_archives_v1', { p_household_id: household.id }),
+    ])
+
+    const [taskResult, participantResult, categoryResult, availabilityResult, templateResult, archiveResult] = await Promise.all([
       supabase
         .from('tasks')
         .select('id,title,status,priority,due_date,category_id,location_text,linked_event_id,cost_amount,created_at')
@@ -175,6 +182,11 @@ export function TasksPage() {
         .eq('household_id', household.id)
         .eq('active', true)
         .order('name'),
+      supabase
+        .from('tasks')
+        .select('id', { count: 'exact', head: true })
+        .eq('household_id', household.id)
+        .not('archived_at', 'is', null),
     ])
 
     if (taskResult.error) setError(taskResult.error.message)
@@ -197,6 +209,9 @@ export function TasksPage() {
 
     if (templateResult.error) setError((current) => current || templateResult.error.message)
     else setTemplates((templateResult.data ?? []) as TaskTemplate[])
+
+    if (archiveResult.error) setError((current) => current || archiveResult.error.message)
+    else setArchivedCount(archiveResult.count ?? 0)
   }
 
   useEffect(() => { void load() }, [household.id])
@@ -214,10 +229,11 @@ export function TasksPage() {
   const taskGroups = useMemo(() => {
     const today = new Date()
     today.setHours(12, 0, 0, 0)
-    const boundary = dateKey(addDays(today, 10))
+    const todayKey = dateKey(today)
+    const boundary = dateKey(addDays(today, 9))
 
     const dated = tasks
-      .filter((task) => task.due_date)
+      .filter((task) => task.due_date && (task.due_date ?? '') >= todayKey)
       .sort((a, b) => {
         const byDate = (a.due_date ?? '').localeCompare(b.due_date ?? '')
         return byDate || a.title.localeCompare(b.title)
@@ -508,7 +524,7 @@ export function TasksPage() {
         <div className="task-sections">
           <TaskSection
             title="Next 10 days"
-            subtitle="Tasks due soon are shown first. Overdue tasks stay here until completed or moved."
+            subtitle="Only tasks due today or within the next 10 days. Past-dated tasks move to Archive automatically."
             rows={taskGroups.near}
           />
           <TaskSection
@@ -524,6 +540,17 @@ export function TasksPage() {
           />
         </div>
       )}
+
+      <div className="archive-repository-bar">
+        <Link
+          className="secondary-button compact archive-repository-button"
+          to="/app/tasks/archive"
+        >
+          <Archive size={14} />
+          Archived tasks
+          <span>{archivedCount}</span>
+        </Link>
+      </div>
 
       {composerOpen && canWrite && (
         <div
