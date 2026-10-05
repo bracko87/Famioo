@@ -78,25 +78,15 @@ export function NotificationsSecuritySettings() {
   }
 
   async function loadPasskeys() {
-    const auth=supabase.auth as typeof supabase.auth & {
-      passkey?:{
-        list:()=>Promise<{ data:PasskeyRow[] | null;error:{ message:string } | null }>
-      }
-    }
+    const result=await supabase.auth.passkey.list()
 
-    if (!auth.passkey) {
-      setPasskeys([])
-      return
-    }
-
-    const result=await auth.passkey.list()
     if (result.error) {
       if (!/passkey_disabled/i.test(result.error.message)) setError(result.error.message)
       setPasskeys([])
       return
     }
 
-    setPasskeys(result.data ?? [])
+    setPasskeys((result.data ?? []) as PasskeyRow[])
   }
 
   useEffect(()=>{
@@ -233,13 +223,7 @@ export function NotificationsSecuritySettings() {
     setMessage('')
 
     try {
-      const auth=supabase.auth as typeof supabase.auth & {
-        registerPasskey?:()=>Promise<{ data:PasskeyRow | null;error:{ message:string } | null }>
-      }
-
-      if (!auth.registerPasskey) throw new Error('Passkey support is not available in this app build.')
-
-      const result=await auth.registerPasskey()
+      const result=await supabase.auth.registerPasskey()
       if (result.error) throw new Error(result.error.message)
 
       await loadPasskeys()
@@ -259,14 +243,7 @@ export function NotificationsSecuritySettings() {
     setMessage('')
 
     try {
-      const auth=supabase.auth as typeof supabase.auth & {
-        passkey?:{
-          delete:(args:{ passkeyId:string })=>Promise<{ error:{ message:string } | null }>
-        }
-      }
-
-      if (!auth.passkey) throw new Error('Passkey management is not available in this app build.')
-      const result=await auth.passkey.delete({ passkeyId })
+      const result=await supabase.auth.passkey.delete({ passkeyId })
       if (result.error) throw new Error(result.error.message)
       await loadPasskeys()
       setMessage('Device sign-in removed.')
