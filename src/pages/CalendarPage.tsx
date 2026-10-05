@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
@@ -103,6 +103,66 @@ function eventTime(event: CalendarOccurrence, timeFormat: '24h' | '12h') {
   })
 }
 
+function dateInZone(value: string, timezone: string) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(value))
+
+  const year = parts.find((part) => part.type === 'year')?.value ?? '1970'
+  const month = parts.find((part) => part.type === 'month')?.value ?? '01'
+  const day = parts.find((part) => part.type === 'day')?.value ?? '01'
+  return year + '-' + month + '-' + day
+}
+
+function timeInZone(value: string, timezone: string) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(value))
+
+  const hour = parts.find((part) => part.type === 'hour')?.value ?? '00'
+  const minute = parts.find((part) => part.type === 'minute')?.value ?? '00'
+  return hour + ':' + minute
+}
+
+function parseRrule(rrule: string | null) {
+  if (!rrule) {
+    return {
+      repeatType: 'none' as const,
+      repeatInterval: '1',
+      repeatDays: [] as string[],
+      repeatUntil: '',
+    }
+  }
+
+  const values = Object.fromEntries(
+    rrule.split(';').map((part) => {
+      const [key, value = ''] = part.split('=')
+      return [key, value]
+    }),
+  )
+
+  const freq = values.FREQ?.toLowerCase()
+  const repeatType = freq === 'daily' || freq === 'weekly' || freq === 'monthly'
+    ? freq
+    : 'none'
+  const until = values.UNTIL && /^\d{8}$/.test(values.UNTIL)
+    ? values.UNTIL.slice(0, 4) + '-' + values.UNTIL.slice(4, 6) + '-' + values.UNTIL.slice(6, 8)
+    : ''
+
+  return {
+    repeatType,
+    repeatInterval: values.INTERVAL || '1',
+    repeatDays: values.BYDAY ? values.BYDAY.split(',').filter(Boolean) : [],
+    repeatUntil: until,
+  }
+}
+
 export function CalendarPage() {
   const { household, profiles, modules, user } = useHousehold()
   const calendarAccess = modules.find((module) => module.code === 'calendar')
@@ -116,8 +176,11 @@ export function CalendarPage() {
   const [categories, setCategories] = useState<EventCategory[]>([])
   const [templates, setTemplates] = useState<EventTemplate[]>([])
   const [composerDate, setComposerDate] = useState<string | null>(null)
+  const [editingEventId, setEditingEventId] = useState<string | null>(null)
+  const [editingCalendarId, setEditingCalendarId] = useState<string | null>(null)
   const [templateId, setTemplateId] = useState('')
   const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
   const [allDay, setAllDay] = useState(true)
   const [startTime, setStartTime] = useState('18:00')
   const [endTime, setEndTime] = useState('19:00')
@@ -132,6 +195,7 @@ export function CalendarPage() {
   const [repeatUntil, setRepeatUntil] = useState('')
   const [saveTemplate, setSaveTemplate] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
 
   const range = useMemo(
@@ -255,13 +319,26 @@ export function CalendarPage() {
 
   const dayHours = Array.from({ length: 24 }, (_, hour) => hour)
 
+  function closeComposer() {
+    setComposerDate(null)
+    setEditingEventId(null)
+    setEditingCalendarId(null)
+    setTemplateId('')
+    setDescription('')
+    setSaveTemplate(false)
+    setError('')
+  }
+
   function openComposer(day: string, timedStart?: string) {
     if (!canWrite) return
 
     const defaultStart = timedStart ?? currentTimeInZone(household.timezone)
+    setEditingEventId(null)
+    setEditingCalendarId(null)
     setComposerDate(day)
     setTemplateId('')
     setTitle('')
+    setDescription('')
     setAllDay(!timedStart)
     setStartTime(defaultStart)
     setEndTime(addMinutesToTime(defaultStart, 60))
@@ -275,6 +352,107 @@ export function CalendarPage() {
     setRepeatUntil('')
     setSaveTemplate(false)
     setError('')
+  }
+
+  async function openEventEditor(item: CalendarOccurrence) {
+    if (!canWrite) return
+
+    setError('')
+
+    const [eventResult, participantResult, ruleResult, reminderResult] = await Promise.all([
+      supabase
+        .from('calendar_events')
+        .select('id,calendar_id,category_id,title,description,all_day,start_at,end_at,start_date,end_date,event_timezone,location_text')
+        .eq('id', item.event_id)
+        .eq('household_id', household.id)
+        .single(),
+      supabase
+        .from('event_participants')
+        .select('profile_id')
+        .eq('household_id', household.id)
+        .eq('event_id', item.event_id),
+      supabase
+        .from('event_recurrence_rules')
+        .select('rrule')
+        .eq('household_id', household.id)
+        .eq('event_id', item.event_id)
+        .maybeSingle(),
+      supabase
+        .from('event_reminders')
+        .select('profile_id,reminder_kind,offset_minutes,morning_time,enabled')
+        .eq('household_id', household.id)
+        .eq('event_id', item.event_id)
+        .eq('delivery_channel', 'push')
+        .eq('enabled', true),
+    ])
+
+    if (eventResult.error || !eventResult.data) {
+      setError(eventResult.error?.message ?? 'Could not open this event.')
+      return
+    }
+
+    const row = eventResult.data
+    const timezone = row.event_timezone || household.timezone
+    const eventDate = row.all_day
+      ? row.start_date ?? item.occurrence_start_date ?? dateKey(anchor)
+      : row.start_at
+        ? dateInZone(row.start_at, timezone)
+        : dateKey(anchor)
+    const parsed = parseRrule(ruleResult.data?.rrule ?? null)
+    const reminder = reminderResult.data?.[0]
+
+    setEditingEventId(row.id)
+    setEditingCalendarId(row.calendar_id)
+    setComposerDate(eventDate)
+    setTemplateId('')
+    setTitle(row.title)
+    setDescription(row.description ?? '')
+    setCategoryId(row.category_id ?? categories[0]?.id ?? '')
+    setAllDay(row.all_day)
+    setStartTime(row.start_at ? timeInZone(row.start_at, timezone) : '18:00')
+    setEndTime(row.end_at ? timeInZone(row.end_at, timezone) : row.start_at ? addMinutesToTime(timeInZone(row.start_at, timezone), 60) : '19:00')
+    setParticipantIds((participantResult.data ?? []).map((entry) => entry.profile_id))
+    setNotificationEnabled(Boolean(reminder))
+    setReminderValue(
+      reminder?.reminder_kind === 'morning_of'
+        ? 'morning'
+        : reminder?.offset_minutes != null
+          ? String(reminder.offset_minutes) as typeof reminderValue
+          : '60',
+    )
+    setLocationText(row.location_text ?? '')
+    setRepeatType(parsed.repeatType)
+    setRepeatInterval(parsed.repeatInterval)
+    setRepeatDays(parsed.repeatDays)
+    setRepeatUntil(parsed.repeatUntil)
+    setSaveTemplate(false)
+
+    if (participantResult.error) setError(participantResult.error.message)
+    else if (ruleResult.error) setError(ruleResult.error.message)
+    else if (reminderResult.error) setError(reminderResult.error.message)
+  }
+
+  async function deleteEvent() {
+    if (!editingEventId || !canWrite || deleting) return
+    if (!window.confirm('Delete this calendar event?')) return
+
+    setDeleting(true)
+    setError('')
+
+    const result = await supabase.rpc('delete_event_v1', {
+      p_event_id: editingEventId,
+      p_household_id: household.id,
+    })
+
+    setDeleting(false)
+
+    if (result.error) {
+      setError(result.error.message)
+      return
+    }
+
+    closeComposer()
+    await load()
   }
 
   function applyTemplate(nextTemplateId: string) {
@@ -386,11 +564,11 @@ export function CalendarPage() {
       : []
 
     const result = await supabase.rpc('save_event_v1', {
-      p_event_id: null,
+      p_event_id: editingEventId,
       p_household_id: household.id,
-      p_calendar_id: calendars.find((item) => item.is_default)?.id ?? calendars[0].id,
+      p_calendar_id: editingCalendarId ?? calendars.find((item) => item.is_default)?.id ?? calendars[0].id,
       p_title: title.trim(),
-      p_description: null,
+      p_description: description.trim() || null,
       p_all_day: allDay,
       p_start_at: startAt,
       p_end_at: endAt,
@@ -416,7 +594,7 @@ export function CalendarPage() {
       return
     }
 
-    if (saveTemplate) {
+    if (saveTemplate && !editingEventId) {
       const templateResult = await supabase.from('event_templates').insert({
         household_id: household.id,
         name: title.trim(),
@@ -434,7 +612,7 @@ export function CalendarPage() {
       }
     }
 
-    setComposerDate(null)
+    closeComposer()
     await load()
   }
 
@@ -443,7 +621,17 @@ export function CalendarPage() {
     const color = categoryColor(category?.color_key ?? 'slate')
 
     return (
-      <span className={detailed ? 'calendar-event-detail' : 'calendar-event-pill'} key={item.occurrence_key}>
+      <button
+        type="button"
+        className={detailed ? 'calendar-event-detail' : 'calendar-event-pill'}
+        key={item.occurrence_key}
+        onClick={(event) => {
+          event.stopPropagation()
+          void openEventEditor(item)
+        }}
+        disabled={!canWrite}
+        aria-label={'Open event ' + item.title}
+      >
         <span className="calendar-event-dot" style={{ backgroundColor: color }} />
         <span className="calendar-event-text">
           <strong>{item.title}</strong>
@@ -452,7 +640,7 @@ export function CalendarPage() {
             <GoogleMapsLink location={item.location_text} className="calendar-location-link" />
           )}
         </span>
-      </span>
+      </button>
     )
   }
 
@@ -516,17 +704,25 @@ export function CalendarPage() {
             const dayEvents = eventsByDay.get(key) ?? []
 
             return (
-              <button
+              <div
                 className={'calendar-day ' + (inMonth ? '' : 'outside ') + (today ? 'today ' : '') + (!canWrite ? 'read-only' : '')}
                 key={key}
+                role={canWrite ? 'button' : undefined}
+                tabIndex={canWrite ? 0 : -1}
                 onClick={() => openComposer(key)}
+                onKeyDown={(event) => {
+                  if (!canWrite) return
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    openComposer(key)
+                  }
+                }}
               >
                 <span className="calendar-day-number">{day.getDate()}</span>
-                <span className="calendar-day-events">
-                  {dayEvents.slice(0, 3).map((item) => <EventPill item={item} key={item.occurrence_key} />)}
-                  {dayEvents.length > 3 && <small>+{dayEvents.length - 3} more</small>}
+                <span className="calendar-day-events" onClick={(event) => event.stopPropagation()}>
+                  {dayEvents.map((item) => <EventPill item={item} key={item.occurrence_key} />)}
                 </span>
-              </button>
+              </div>
             )
           })}
         </section>
@@ -631,13 +827,13 @@ export function CalendarPage() {
           className="modal-backdrop"
           role="presentation"
           onMouseDown={(event) => {
-            if (event.currentTarget === event.target) setComposerDate(null)
+            if (event.currentTarget === event.target) closeComposer()
           }}
         >
           <form className="modal-card event-composer" onSubmit={save}>
             <header>
               <div>
-                <span className="eyebrow">NEW EVENT</span>
+                <span className="eyebrow">{editingEventId ? 'EDIT EVENT' : 'NEW EVENT'}</span>
                 <h2>
                   {new Date(composerDate + 'T12:00:00').toLocaleDateString(undefined, {
                     weekday: 'long',
@@ -646,29 +842,52 @@ export function CalendarPage() {
                   })}
                 </h2>
               </div>
-              <button type="button" className="icon-button" aria-label="Close event form" onClick={() => setComposerDate(null)}>
+              <button type="button" className="icon-button" aria-label="Close event form" onClick={closeComposer}>
                 <X size={18} />
               </button>
             </header>
 
-            <label>
-              Start from template
-              <Select
-                value={templateId}
-                onChange={applyTemplate}
-                placeholder="Blank event"
-                options={[
-                  { value: '', label: 'Blank event' },
-                  ...templates.map((template) => ({ value: template.id, label: template.name })),
-                ]}
-                ariaLabel="Choose event template"
-              />
-            </label>
+            {!editingEventId && (
+              <label>
+                Start from template
+                <Select
+                  value={templateId}
+                  onChange={applyTemplate}
+                  placeholder="Blank event"
+                  options={[
+                    { value: '', label: 'Blank event' },
+                    ...templates.map((template) => ({ value: template.id, label: template.name })),
+                  ]}
+                  ariaLabel="Choose event template"
+                />
+              </label>
+            )}
 
             <label>
               Title
               <input value={title} onChange={(event) => setTitle(event.target.value)} autoFocus required />
             </label>
+
+            <div className="composer-grid-two">
+              <label>
+                Date
+                <DatePicker
+                  value={composerDate}
+                  onChange={setComposerDate}
+                  format={household.date_format}
+                  ariaLabel="Choose event date"
+                />
+              </label>
+
+              <label>
+                Description
+                <input
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="Optional details"
+                />
+              </label>
+            </div>
 
             <div className="category-all-day-row">
               <label>
@@ -861,20 +1080,37 @@ export function CalendarPage() {
               </div>
             </fieldset>
 
-            <div className="composer-option-list">
-              <label className="composer-option">
-                <input type="checkbox" checked={saveTemplate} onChange={(event) => setSaveTemplate(event.target.checked)} />
-                <span>
-                  <span>Save as event template</span>
-                  <small>Reuse this event setup later and manage it in Settings → Templates.</small>
-                </span>
-              </label>
-            </div>
+            {!editingEventId && (
+              <div className="composer-option-list">
+                <label className="composer-option">
+                  <input type="checkbox" checked={saveTemplate} onChange={(event) => setSaveTemplate(event.target.checked)} />
+                  <span>
+                    <span>Save as event template</span>
+                    <small>Reuse this event setup later and manage it in Settings → Templates.</small>
+                  </span>
+                </label>
+              </div>
+            )}
 
             {error && <div className="form-message error">{error}</div>}
-            <button className="primary-button" disabled={saving}>
-              {saving ? 'Saving…' : 'Save event'}
-            </button>
+
+            <div className="event-composer-actions">
+              {editingEventId && (
+                <button
+                  type="button"
+                  className="secondary-button danger-button"
+                  disabled={saving || deleting}
+                  onClick={() => void deleteEvent()}
+                >
+                  <Trash2 size={15} />
+                  {deleting ? 'Deleting…' : 'Delete event'}
+                </button>
+              )}
+
+              <button className="primary-button" disabled={saving || deleting}>
+                {saving ? 'Saving…' : editingEventId ? 'Save changes' : 'Save event'}
+              </button>
+            </div>
           </form>
         </div>
       )}
