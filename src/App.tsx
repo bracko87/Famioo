@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { CalendarDays, CheckSquare, ClipboardList, House, ShoppingBag, Sparkles } from 'lucide-react'
 import type { Session, User } from '@supabase/supabase-js'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { supabase } from './lib/supabase'
@@ -25,8 +26,24 @@ import { ModulePlaceholderPage } from './pages/ModulePlaceholderPage'
 function LoadingScreen() {
   return (
     <main className="loading-screen">
-      <div className="loading-mark" />
-      <strong>Opening Famioo…</strong>
+      <div className="desktop-loading-mark">
+        <div className="loading-mark" />
+        <strong>Opening Famioo…</strong>
+      </div>
+
+      <div className="mobile-launch-screen" aria-label="Opening Famioo">
+        <span className="launch-orbit launch-orbit-1"><CalendarDays size={19} /></span>
+        <span className="launch-orbit launch-orbit-2"><ClipboardList size={18} /></span>
+        <span className="launch-orbit launch-orbit-3"><ShoppingBag size={18} /></span>
+        <span className="launch-orbit launch-orbit-4"><House size={19} /></span>
+        <span className="launch-orbit launch-orbit-5"><CheckSquare size={17} /></span>
+        <span className="launch-orbit launch-orbit-6"><Sparkles size={18} /></span>
+
+        <img className="launch-app-icon" src="/famioo-app-icon.svg" alt="" />
+        <strong>Famioo</strong>
+        <span>Family life, organized.</span>
+        <i className="launch-loader" />
+      </div>
     </main>
   )
 }
@@ -143,6 +160,18 @@ function AuthenticatedApp({ user }: { user: User }) {
 export function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [ready, setReady] = useState(false)
+  const [introReady, setIntroReady] = useState(false)
+
+  useEffect(() => {
+    const mobile = window.matchMedia('(max-width: 900px)').matches
+    if (!mobile) {
+      setIntroReady(true)
+      return
+    }
+
+    const timer = window.setTimeout(() => setIntroReady(true), 1800)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => {
@@ -160,7 +189,7 @@ export function App() {
 
   const user = useMemo(() => session?.user ?? null, [session])
 
-  if (!ready) return <LoadingScreen />
+  if (!ready || !introReady) return <LoadingScreen />
 
   if (!user) {
     return (
