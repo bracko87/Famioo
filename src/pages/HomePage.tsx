@@ -53,12 +53,14 @@ export function HomePage() {
   const [eventCount, setEventCount] = useState(0)
   const [taskCount, setTaskCount] = useState(0)
   const [checklistCount, setChecklistCount] = useState(0)
+  const [shoppingCount, setShoppingCount] = useState(0)
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10)
     const calendarModule = modules.find((module) => module.code === 'calendar')
     const tasksModule = modules.find((module) => module.code === 'tasks')
     const checklistsModule = modules.find((module) => module.code === 'checklists')
+    const shoppingModule = modules.find((module) => module.code === 'shopping')
 
     const calendarRequest = calendarModule?.enabled
       ? supabase.rpc('calendar_occurrences_v1', {
@@ -85,10 +87,19 @@ export function HomePage() {
           .eq('status', 'active')
       : Promise.resolve({ count: 0, error: null })
 
-    void Promise.all([calendarRequest, tasksRequest, checklistsRequest]).then(([events, tasks, lists]) => {
+    const shoppingRequest = shoppingModule?.enabled
+      ? supabase
+          .from('shopping_lists')
+          .select('id', { count: 'exact', head: true })
+          .eq('household_id', household.id)
+          .eq('status', 'active')
+      : Promise.resolve({ count: 0, error: null })
+
+    void Promise.all([calendarRequest, tasksRequest, checklistsRequest, shoppingRequest]).then(([events, tasks, lists, shopping]) => {
       setEventCount(Array.isArray(events.data) ? events.data.length : 0)
       setTaskCount(tasks.count ?? 0)
       setChecklistCount(lists.count ?? 0)
+      setShoppingCount(shopping.count ?? 0)
     })
   }, [household.id, modules])
 
@@ -96,6 +107,7 @@ export function HomePage() {
     calendar: `${eventCount} today`,
     tasks: `${taskCount} open`,
     checklists: `${checklistCount} active`,
+    shopping: `${shoppingCount} active lists`,
   }
 
   const enabledModules = modules.filter((module) => module.enabled)
