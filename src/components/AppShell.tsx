@@ -10,8 +10,8 @@ import {
   House,
   LogOut,
   Menu,
-  PanelLeftClose,
-  PanelLeftOpen,
+  ChevronLeft,
+  ChevronRight,
   Receipt,
   Settings,
   ShoppingBag,
@@ -170,7 +170,7 @@ export function AppShell() {
           aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+          {sidebarCollapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
         </button>
 
         <nav className="side-nav" aria-label="Main navigation">
