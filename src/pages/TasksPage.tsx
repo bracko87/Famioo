@@ -19,6 +19,7 @@ type Task = {
   category_id: string | null
   location_text: string | null
   linked_event_id: string | null
+  cost_amount: number | null
   created_at: string
 }
 
@@ -123,6 +124,7 @@ function TaskActions({
 export function TasksPage() {
   const { household, modules, profiles } = useHousehold()
   const canWrite = Boolean(modules.find((module) => module.code === 'tasks')?.can_write)
+  const costsEnabled = Boolean(modules.find((module) => module.code === 'costs')?.enabled)
 
   const [tasks, setTasks] = useState<Task[]>([])
   const [categories, setCategories] = useState<EventCategory[]>([])
@@ -135,6 +137,7 @@ export function TasksPage() {
   const [categoryId, setCategoryId] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [locationText, setLocationText] = useState('')
+  const [costAmount, setCostAmount] = useState('')
   const [participantIds, setParticipantIds] = useState<string[]>([])
   const [addToCalendar, setAddToCalendar] = useState(false)
   const [saveTemplate, setSaveTemplate] = useState(false)
@@ -144,10 +147,10 @@ export function TasksPage() {
   async function load() {
     setError('')
 
-    const [taskResult, participantResult, categoryResult, templateResult] = await Promise.all([
+    const [taskResult, participantResult, categoryResult, availabilityResult, templateResult] = await Promise.all([
       supabase
         .from('tasks')
-        .select('id,title,status,priority,due_date,category_id,location_text,linked_event_id,created_at')
+        .select('id,title,status,priority,due_date,category_id,location_text,linked_event_id,cost_amount,created_at')
         .eq('household_id', household.id)
         .is('archived_at', null)
         .order('created_at', { ascending: false }),
@@ -162,6 +165,11 @@ export function TasksPage() {
         .eq('active', true)
         .order('sort_order'),
       supabase
+        .from('module_category_availability')
+        .select('category_id,enabled')
+        .eq('household_id', household.id)
+        .eq('module_code', 'tasks'),
+      supabase
         .from('task_templates')
         .select('id,name,title,category_id,location_text,default_assigned_profile_id')
         .eq('household_id', household.id)
@@ -175,10 +183,12 @@ export function TasksPage() {
     if (participantResult.error) setError((current) => current || participantResult.error.message)
     else setParticipants((participantResult.data ?? []) as TaskParticipant[])
 
-    if (categoryResult.error) {
-      setError((current) => current || categoryResult.error.message)
+    if (categoryResult.error || availabilityResult.error) {
+      setError((current) => current || categoryResult.error?.message || availabilityResult.error?.message || 'Could not load task categories.')
     } else {
-      const rows = (categoryResult.data ?? []) as EventCategory[]
+      const enabled = new Map((availabilityResult.data ?? []).map((row) => [row.category_id, row.enabled]))
+      const rows = ((categoryResult.data ?? []) as EventCategory[])
+        .filter((item) => enabled.get(item.id) ?? true)
       setCategories(rows)
       setCategoryId((current) => rows.some((item) => item.id === current)
         ? current
@@ -228,6 +238,7 @@ export function TasksPage() {
     setTitle('')
     setDueDate('')
     setLocationText('')
+    setCostAmount('')
     setParticipantIds([])
     setAddToCalendar(false)
     setSaveTemplate(false)
@@ -246,6 +257,7 @@ export function TasksPage() {
     setCategoryId(task.category_id ?? categories[0]?.id ?? '')
     setDueDate(task.due_date ?? '')
     setLocationText(task.location_text ?? '')
+    setCostAmount(task.cost_amount != null ? String(task.cost_amount) : '')
     setParticipantIds(
       participants
         .filter((item) => item.task_id === task.id)
@@ -305,6 +317,36 @@ export function TasksPage() {
           p_add_to_calendar: addToCalendar,
           p_create_template: saveTemplate,
         })
+
+    if (!result.error && costsEnabled) {
+      const normalizedCost = costAmount.trim().replace(',', '.')
+      const numericCost = normalizedCost ? Number(normalizedCost) : null
+
+      if (normalizedCost && (!Number.isFinite(numericCost) || Number(numericCost) < 0)) {
+        setSaving(false)
+        setError('Enter a valid task cost.')
+        return
+      }
+
+      const taskId = editingTaskId ?? (result.data as string | null)
+      if (taskId) {
+        const costResult = await supabase
+          .from('tasks')
+          .update({
+            cost_amount: numericCost,
+            cost_currency: 'EUR',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', taskId)
+          .eq('household_id', household.id)
+
+        if (costResult.error) {
+          setSaving(false)
+          setError(costResult.error.message)
+          return
+        }
+      }
+    }
 
     setSaving(false)
 
@@ -376,6 +418,7 @@ export function TasksPage() {
             )}
             <span className={overdue ? 'overdue' : ''}>{task.due_date ?? 'No date'}</span>
             {task.location_text && <GoogleMapsLink location={task.location_text} />}
+            {task.cost_amount != null && task.cost_amount > 0 && <span>€{Number(task.cost_amount).toFixed(2)}</span>}
             {task.linked_event_id && <span><CalendarDays size={11} />Calendar</span>}
           </small>
         </span>
@@ -570,6 +613,24 @@ export function TasksPage() {
                   : <small className="field-hint">Optional.</small>}
               </label>
             </div>
+
+            {costsEnabled && (
+              <div className="task-cost-field">
+                <label>
+                  Task cost
+                  <div className="money-input">
+                    <span>€</span>
+                    <input
+                      inputMode="decimal"
+                      value={costAmount}
+                      onChange={(event) => setCostAmount(event.target.value)}
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <small className="field-hint">Optional. When this task is completed, the amount is added to Household Costs.</small>
+                </label>
+              </div>
+            )}
 
             <fieldset className="participant-fieldset">
               <legend>Participants</legend>
