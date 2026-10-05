@@ -160,13 +160,7 @@ export function UsersSettings() {
     setDisplayName('')
     setPassword('')
     setRole('user')
-    setMessage(
-      profileType === 'child'
-        ? 'Child profile created. No login access was created.'
-        : mode === 'invite'
-          ? 'Invitation email sent.'
-          : 'User created successfully.',
-    )
+    setMessage(mode === 'invite' ? 'Invitation email sent.' : 'User created successfully.')
 
     await loadUsers()
     await refresh()
