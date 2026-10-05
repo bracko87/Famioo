@@ -57,6 +57,8 @@ export function HomePage() {
   const [costMonthTotal, setCostMonthTotal] = useState(0)
 
   useEffect(() => {
+    void supabase.rpc('purge_old_archives_v1', { p_household_id: household.id })
+
     const today = new Date().toISOString().slice(0, 10)
     const calendarModule = modules.find((module) => module.code === 'calendar')
     const tasksModule = modules.find((module) => module.code === 'tasks')
