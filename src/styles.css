@@ -5785,3 +5785,140 @@ b {
     width: 100%;
   }
 }
+
+
+/* =========================================================
+   Module-style summary banners
+   School & Kita + Home Care
+   ========================================================= */
+
+.school-summary-card,
+.home-care-summary-card {
+  position: relative;
+  overflow: hidden;
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(72,45,88,.10);
+}
+
+.school-summary-card::after,
+.home-care-summary-card::after {
+  content: "";
+  position: absolute;
+  width: 105px;
+  height: 105px;
+  top: -55px;
+  right: -34px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.14);
+  pointer-events: none;
+}
+
+.school-summary-card::before,
+.home-care-summary-card::before {
+  content: "";
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  top: -17px;
+  right: 22px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.08);
+  pointer-events: none;
+}
+
+.school-summary-card:nth-child(8n+1),
+.home-care-summary-card:nth-child(8n+1) {
+  background: linear-gradient(135deg,#7557d8,#aa5bc7 65%,#ce589c);
+}
+
+.school-summary-card:nth-child(8n+2),
+.home-care-summary-card:nth-child(8n+2) {
+  background: linear-gradient(135deg,#df9b38,#e88d45 58%,#e7766c);
+}
+
+.school-summary-card:nth-child(8n+3),
+.home-care-summary-card:nth-child(8n+3) {
+  background: linear-gradient(135deg,#3c9675,#49a486 60%,#5aaead);
+}
+
+.school-summary-card:nth-child(8n+4),
+.home-care-summary-card:nth-child(8n+4) {
+  background: linear-gradient(135deg,#5a7ccc,#7371c9 58%,#896ac0);
+}
+
+.school-summary-card:nth-child(8n+5),
+.home-care-summary-card:nth-child(8n+5) {
+  background: linear-gradient(135deg,#55976c,#72a36b 60%,#a0a362);
+}
+
+.school-summary-card:nth-child(8n+6),
+.home-care-summary-card:nth-child(8n+6) {
+  background: linear-gradient(135deg,#795dc8,#a65dbd 58%,#cb5f92);
+}
+
+.school-summary-card:nth-child(8n+7),
+.home-care-summary-card:nth-child(8n+7) {
+  background: linear-gradient(135deg,#5d70ca,#657fc2 50%,#51a08e);
+}
+
+.school-summary-card:nth-child(8n+8),
+.home-care-summary-card:nth-child(8n+8) {
+  background: linear-gradient(135deg,#cb8052,#d17679 50%,#cc628e);
+}
+
+.school-summary-card:hover,
+.home-care-summary-card:hover {
+  border-color: transparent;
+  box-shadow: 0 13px 30px rgba(72,45,88,.16);
+  transform: translateY(-1px);
+}
+
+.school-summary-card.active {
+  border-color: rgba(255,255,255,.55);
+  box-shadow:
+    0 0 0 2px rgba(116,72,146,.18),
+    0 13px 30px rgba(72,45,88,.16);
+}
+
+.school-summary-icon,
+.home-care-summary-card .summary-icon,
+.home-care-summary-card .summary-icon.warning,
+.home-care-summary-card .summary-icon.repair,
+.home-care-summary-card .summary-icon.warranty,
+.home-care-summary-card .summary-icon.cost {
+  position: relative;
+  z-index: 1;
+  color: #fff;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.18);
+}
+
+.school-summary-card > .profile-avatar {
+  position: relative;
+  z-index: 1;
+  border: 2px solid rgba(255,255,255,.72);
+  box-shadow: 0 4px 12px rgba(48,25,58,.14);
+}
+
+.school-summary-card > div,
+.home-care-summary-card > div {
+  position: relative;
+  z-index: 1;
+}
+
+.school-summary-card > div > span,
+.school-summary-card > div > strong,
+.school-summary-card > div > small,
+.home-care-summary-card > div > span,
+.home-care-summary-card > div > strong,
+.home-care-summary-card > div > small {
+  color: #fff;
+}
+
+.school-summary-card > div > span,
+.school-summary-card > div > small,
+.home-care-summary-card > div > span,
+.home-care-summary-card > div > small {
+  opacity: .78;
+}
