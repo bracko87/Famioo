@@ -1,15 +1,14 @@
 import { createClient } from '@supabase/supabase-js'
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined
+const defaultUrl = 'https://pqnotyfcypxsspyhtcqn.supabase.co'
+const defaultPublishableKey = 'sb_publishable_xJJyzoEgJFQJeZT3nMQUiA_dcCchPkC'
 
-if (!url || !key) {
-  console.warn('Famioo Supabase environment variables are not configured.')
-}
+const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || defaultUrl
+const key = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) || defaultPublishableKey
 
 export const supabase = createClient(
-  url ?? 'https://example.invalid',
-  key ?? 'missing-key',
+  url,
+  key,
   {
     auth: {
       persistSession: true,
