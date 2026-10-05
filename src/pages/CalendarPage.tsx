@@ -8,8 +8,30 @@ import { Select } from '../components/ui/Select'
 import { TimePicker } from '../components/ui/TimePicker'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { DatePicker } from '../components/ui/DatePicker'
+import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
+import { firstName } from '../lib/personName'
 
 type CalendarView = 'day' | 'week' | 'month' | 'upcoming'
+
+function currentTimeInZone(timezone: string) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date())
+
+  const hour = parts.find((part) => part.type === 'hour')?.value ?? '00'
+  const minute = parts.find((part) => part.type === 'minute')?.value ?? '00'
+  return hour + ':' + minute
+}
+
+function addMinutesToTime(value: string, minutesToAdd: number) {
+  const [hour, minute] = value.split(':').map(Number)
+  const total = hour * 60 + minute + minutesToAdd
+  if (total >= 24 * 60) return '23:59'
+  return String(Math.floor(total / 60)).padStart(2, '0') + ':' + String(total % 60).padStart(2, '0')
+}
 
 function dateKey(date: Date) {
   const year = date.getFullYear()
@@ -196,10 +218,15 @@ export function CalendarPage() {
 
   const dayHours = Array.from({ length: 24 }, (_, hour) => hour)
 
-  function openComposer(day: string) {
+  function openComposer(day: string, timedStart?: string) {
     if (!canWrite) return
+
+    const defaultStart = timedStart ?? currentTimeInZone(household.timezone)
     setComposerDate(day)
     setTitle('')
+    setAllDay(!timedStart)
+    setStartTime(defaultStart)
+    setEndTime(addMinutesToTime(defaultStart, 60))
     setParticipantIds([])
     setLocationText('')
     setRepeatType('none')
@@ -323,6 +350,9 @@ export function CalendarPage() {
         <span className="calendar-event-text">
           <strong>{item.title}</strong>
           {detailed && <small>{eventTime(item, household.time_format)}{category ? ' · ' + category.name : ''}</small>}
+          {detailed && item.location_text && (
+            <GoogleMapsLink location={item.location_text} className="calendar-location-link" />
+          )}
         </span>
       </span>
     )
@@ -463,13 +493,7 @@ export function CalendarPage() {
                     type="button"
                     className="day-hour-label"
                     disabled={!canWrite}
-                    onClick={() => {
-                      setStartTime(label)
-                      const nextHour = Math.min(hour + 1, 23)
-                      setEndTime(String(nextHour).padStart(2, '0') + ':00')
-                      setAllDay(false)
-                      openComposer(dateKey(anchor))
-                    }}
+                    onClick={() => openComposer(dateKey(anchor), label)}
                   >
                     {label}
                   </button>
@@ -576,6 +600,7 @@ export function CalendarPage() {
                 onChange={(event) => setLocationText(event.target.value)}
                 placeholder="Optional location"
               />
+              {locationText.trim() && <GoogleMapsLink location={locationText} label="Open in Google Maps" className="field-map-link" />}
             </label>
 
             <div className="composer-grid-two">
@@ -660,7 +685,7 @@ export function CalendarPage() {
               </label>
             )}
 
-            <fieldset>
+            <fieldset className="participant-fieldset">
               <legend>Participants</legend>
               <div className="profile-choice-grid">
                 {profiles.map((profile) => (
@@ -679,7 +704,7 @@ export function CalendarPage() {
                       name={profile.display_name}
                       size="sm"
                     />
-                    <span className="profile-choice-name">{profile.display_name}</span>
+                    <span className="profile-choice-name">{firstName(profile.display_name)}</span>
                   </label>
                 ))}
               </div>
