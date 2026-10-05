@@ -2375,3 +2375,486 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
     min-width: 110px;
   }
 }
+
+
+/* =========================================================
+   Rich composers, lighter typography and Shopping
+   ========================================================= */
+
+strong,
+b {
+  font-weight: 600;
+}
+
+.page h1,
+.modal-card h2,
+.settings-card h2,
+.list-card h2 {
+  font-weight: 600;
+}
+
+.page-heading-row {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.page-heading-row h1 {
+  margin: 4px 0 0;
+  font-size: clamp(24px, 2vw, 32px);
+  color: var(--ink);
+}
+
+.page-subtitle {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.modal-card.event-composer,
+.modal-card.task-composer,
+.modal-card.checklist-composer {
+  width: min(820px, 100%);
+  max-height: min(860px, 92vh);
+  padding: 26px 28px;
+  gap: 17px;
+}
+
+.modal-card.shopping-composer {
+  width: min(560px, 100%);
+}
+
+.composer-grid-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.field-hint {
+  margin-top: 5px;
+  display: block;
+  color: #9c90a1;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.repeat-weekday-fieldset {
+  display: grid;
+  gap: 8px;
+}
+
+.repeat-weekday-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.repeat-weekday-grid button {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: #776b7d;
+  background: #fff;
+  font-size: 10px;
+}
+
+.repeat-weekday-grid button:hover,
+.repeat-weekday-grid button.active {
+  color: #714590;
+  border-color: #bda7ca;
+  background: #f6eff9;
+}
+
+.profile-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #f0e9f5;
+  color: #725c7c;
+  border: 1px solid #e4d9e8;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar > span {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.profile-avatar-sm {
+  width: 30px;
+  height: 30px;
+  font-size: 10px;
+}
+
+.profile-avatar-md {
+  width: 38px;
+  height: 38px;
+  font-size: 11px;
+}
+
+.profile-avatar-lg {
+  width: 48px;
+  height: 48px;
+  font-size: 13px;
+}
+
+.profile-choice-grid-wide {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.profile-choice {
+  grid-template-columns: 20px 30px minmax(0, 1fr);
+  min-height: 48px;
+}
+
+.profile-choice > .profile-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #f0e9f5;
+}
+
+.profile-choice-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #55495b;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.composer-option-list {
+  display: grid;
+  gap: 8px;
+}
+
+.composer-option {
+  min-height: 56px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #fbf9fc;
+}
+
+.composer-option > input {
+  width: 17px;
+  height: 17px;
+  margin-top: 2px;
+}
+
+.composer-option > span {
+  display: grid;
+  gap: 3px;
+}
+
+.composer-option > span > span {
+  color: #574a5e;
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.composer-option small {
+  color: #978a9c;
+  font-size: 9px;
+}
+
+.composer-source-note {
+  padding: 11px 12px;
+  border: 1px solid #e8ddeb;
+  border-radius: 10px;
+  color: #776a7e;
+  background: #faf6fb;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.empty-state-title {
+  color: #514657;
+  font-size: 12px;
+  font-weight: 550;
+}
+
+.task-row {
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  min-height: 68px;
+  padding: 11px 14px;
+}
+
+.task-main-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.task-title {
+  color: #4c414f;
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.task-meta,
+.checklist-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px 11px;
+  color: #928797;
+  font-size: 9px;
+}
+
+.task-meta > span,
+.checklist-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.meta-dot {
+  width: 7px;
+  height: 7px;
+  display: inline-block;
+  border-radius: 50%;
+}
+
+.task-participant-stack,
+.checklist-participants {
+  display: flex;
+  align-items: center;
+}
+
+.task-participant-stack .profile-avatar + .profile-avatar,
+.checklist-participants .profile-avatar + .profile-avatar {
+  margin-left: -7px;
+}
+
+.checklist-card > header {
+  align-items: flex-start;
+}
+
+.checklist-card > header > div {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.checklist-card h2 {
+  font-size: 14px;
+}
+
+.checklist-participants {
+  padding: 8px 12px 0;
+}
+
+.checklist-add {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.checklist-add .secondary-button {
+  white-space: nowrap;
+}
+
+.user-avatar-fallback {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: #71557c;
+  background: #f0e9f5;
+  font-size: 10px;
+  font-weight: 550;
+}
+
+.user-name-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.user-name-copy > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #514655;
+  font-size: 10px;
+  font-weight: 550;
+}
+
+.user-name-copy small {
+  color: #9a8d9e;
+  font-size: 8px;
+}
+
+.role-badge.profile,
+.status-badge.profile {
+  color: #7a6685;
+  background: #f1ebf3;
+}
+
+.person-type-switch {
+  margin-top: 0;
+}
+
+.shopping-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.shopping-card {
+  overflow: hidden;
+}
+
+.shopping-card > header {
+  min-height: 64px;
+  padding: 13px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.shopping-card > header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.shopping-card h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.shopping-card header small {
+  color: #9a8f9e;
+  font-size: 9px;
+}
+
+.shopping-items {
+  display: grid;
+}
+
+.shopping-item {
+  width: 100%;
+  min-height: 45px;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 1px solid #eee8f0;
+  display: grid;
+  grid-template-columns: 23px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  color: #554a59;
+  background: #fff;
+  text-align: left;
+}
+
+.shopping-item.checked {
+  opacity: .58;
+}
+
+.shopping-item.checked .shopping-item-name {
+  text-decoration: line-through;
+}
+
+.shopping-check {
+  width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #cfc2d5;
+  border-radius: 7px;
+  color: #fff;
+  background: #fff;
+}
+
+.shopping-item.checked .shopping-check {
+  border-color: #7551b2;
+  background: #7551b2;
+}
+
+.shopping-item-name {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.shopping-item small {
+  color: #918596;
+  font-size: 9px;
+}
+
+.shopping-add {
+  padding: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 82px auto;
+  gap: 7px;
+}
+
+.shopping-quantity {
+  min-width: 0;
+}
+
+@media (max-width: 1050px) {
+  .profile-choice-grid-wide {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shopping-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .page-heading-row {
+    align-items: flex-start;
+  }
+
+  .composer-grid-two,
+  .profile-choice-grid-wide {
+    grid-template-columns: 1fr;
+  }
+
+  .repeat-weekday-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .modal-card.event-composer,
+  .modal-card.task-composer,
+  .modal-card.checklist-composer {
+    padding: 20px 17px;
+  }
+
+  .task-row {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .task-participant-stack {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .shopping-add {
+    grid-template-columns: minmax(0, 1fr) 70px;
+  }
+
+  .shopping-add .secondary-button {
+    grid-column: 1 / -1;
+  }
+}
