@@ -231,7 +231,7 @@ export function TypesSettings() {
               </div>
 
               {canWrite && (
-                <form className="type-settings-add type-settings-add-colored" onSubmit={(event) => void createType(event,section)}>
+                <form className={"type-settings-add type-settings-add-colored " + section.moduleCode} onSubmit={(event) => void createType(event,section)}>
                   <label>
                     New type
                     <input
