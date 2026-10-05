@@ -34,7 +34,9 @@ type LifeAdminTab =
   | 'deadlines'
   | 'archive'
 
-type LifeAdminType = 'document' | 'contract' | 'insurance' | 'subscription' | 'deadline'
+type LifeAdminType = string
+type LifeAdminBaseType = 'document' | 'contract' | 'insurance' | 'subscription' | 'deadline'
+type FinanceFlow = 'expense' | 'income'
 type Frequency = 'none' | 'monthly' | 'quarterly' | 'yearly'
 
 type LifeAdminItem = {
@@ -56,6 +58,11 @@ type LifeAdminItem = {
   notes: string | null
   add_to_calendar: boolean
   linked_event_id: string | null
+  flow_type: FinanceFlow
+  include_in_finance: boolean
+  household_cost_id: string | null
+  sync_task: boolean
+  linked_task_id: string | null
   status: 'active' | 'archived'
   archived_at: string | null
   created_at: string
@@ -79,14 +86,6 @@ const tabs: Array<{ key: LifeAdminTab; label: string }> = [
   { key: 'subscriptions', label: 'Subscriptions' },
   { key: 'deadlines', label: 'Deadlines' },
   { key: 'archive', label: 'Archive' },
-]
-
-const typeOptions: Array<{ value: LifeAdminType; label: string }> = [
-  { value: 'document', label: 'Document' },
-  { value: 'contract', label: 'Contract' },
-  { value: 'insurance', label: 'Insurance' },
-  { value: 'subscription', label: 'Subscription' },
-  { value: 'deadline', label: 'Deadline' },
 ]
 
 function todayKey() {
@@ -118,10 +117,6 @@ function money(value: number | null | undefined, currency = 'EUR') {
     currency,
     maximumFractionDigits: 2,
   }).format(Number(value))
-}
-
-function typeLabel(type: LifeAdminType) {
-  return typeOptions.find((option) => option.value === type)?.label ?? type
 }
 
 function frequencyLabel(frequency: Frequency) {
@@ -157,9 +152,18 @@ export function LifeAdminPage() {
   const access = modules.find((module) => module.code === 'life_admin')
   const canWrite = Boolean(access?.can_write)
   const canSyncCalendar = Boolean(modules.find((module) => module.code === 'calendar')?.can_write)
+  const canSyncTasks = Boolean(modules.find((module) => module.code === 'tasks')?.can_write)
+  const costsCanWrite = Boolean(modules.find((module) => module.code === 'costs')?.can_write)
 
   const [tab, setTab] = useState<LifeAdminTab>('overview')
   const [items, setItems] = useState<LifeAdminItem[]>([])
+  const [typeOptions, setTypeOptions] = useState<Array<{ value: string; label: string; baseType: LifeAdminBaseType }>>([
+    { value: 'document', label: 'Document', baseType: 'document' },
+    { value: 'contract', label: 'Contract', baseType: 'contract' },
+    { value: 'insurance', label: 'Insurance', baseType: 'insurance' },
+    { value: 'subscription', label: 'Subscription', baseType: 'subscription' },
+    { value: 'deadline', label: 'Deadline', baseType: 'deadline' },
+  ])
   const [attachments, setAttachments] = useState<LifeAdminAttachment[]>([])
   const [attachmentUrls, setAttachmentUrls] = useState<Record<string, string>>({})
   const [composerOpen, setComposerOpen] = useState(false)
@@ -180,6 +184,9 @@ export function LifeAdminPage() {
   const [responsibleProfileId, setResponsibleProfileId] = useState('')
   const [notes, setNotes] = useState('')
   const [addToCalendar, setAddToCalendar] = useState(false)
+  const [flowType, setFlowType] = useState<FinanceFlow>('expense')
+  const [includeInFinance, setIncludeInFinance] = useState(false)
+  const [syncTask, setSyncTask] = useState(false)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -187,10 +194,10 @@ export function LifeAdminPage() {
   async function load() {
     setError('')
 
-    const [itemResult, attachmentResult] = await Promise.all([
+    const [itemResult, attachmentResult, typeResult] = await Promise.all([
       supabase
         .from('life_admin_items')
-        .select('id,item_type,title,provider,reference_number,start_date,due_date,renewal_date,expiry_date,amount,currency,frequency,auto_renew,cancellation_notice_days,responsible_profile_id,notes,add_to_calendar,linked_event_id,status,archived_at,created_at')
+        .select('id,item_type,title,provider,reference_number,start_date,due_date,renewal_date,expiry_date,amount,currency,frequency,auto_renew,cancellation_notice_days,responsible_profile_id,notes,add_to_calendar,linked_event_id,flow_type,include_in_finance,household_cost_id,sync_task,linked_task_id,status,archived_at,created_at')
         .eq('household_id', household.id)
         .order('created_at', { ascending: false }),
       supabase
@@ -198,10 +205,30 @@ export function LifeAdminPage() {
         .select('id,life_admin_item_id,file_name,storage_path,mime_type,file_size')
         .eq('household_id', household.id)
         .order('created_at'),
+      supabase
+        .from('household_module_types')
+        .select('type_key,label,base_type,sort_order')
+        .eq('household_id', household.id)
+        .eq('module_code', 'life_admin')
+        .eq('group_code', 'item_type')
+        .eq('active', true)
+        .order('sort_order')
+        .order('label'),
     ])
 
     if (itemResult.error) setError(itemResult.error.message)
     else setItems((itemResult.data ?? []) as LifeAdminItem[])
+
+    if (typeResult.error) {
+      setError((current) => current || typeResult.error.message)
+    } else {
+      const options = (typeResult.data ?? []).map((row) => ({
+        value: row.type_key,
+        label: row.label,
+        baseType: (row.base_type ?? 'document') as LifeAdminBaseType,
+      }))
+      if (options.length) setTypeOptions(options)
+    }
 
     if (attachmentResult.error) {
       setError((current) => current || attachmentResult.error.message)
@@ -227,6 +254,18 @@ export function LifeAdminPage() {
     () => new Map(profiles.map((profile) => [profile.id, profile])),
     [profiles],
   )
+
+  const typeByKey = useMemo(
+    () => new Map(typeOptions.map((option) => [option.value, option])),
+    [typeOptions],
+  )
+
+  function baseTypeOf(item: LifeAdminItem): LifeAdminBaseType {
+    return typeByKey.get(item.item_type)?.baseType
+      ?? (['document','contract','insurance','subscription','deadline'].includes(item.item_type)
+        ? item.item_type as LifeAdminBaseType
+        : 'document')
+  }
 
   const profileOptions = useMemo(
     () => [
@@ -284,17 +323,17 @@ export function LifeAdminPage() {
 
   const subscriptionMonthly = useMemo(
     () => activeItems
-      .filter((item) => item.item_type === 'subscription')
+      .filter((item) => baseTypeOf(item) === 'subscription' && item.flow_type !== 'income')
       .reduce((sum, item) => sum + monthlyEquivalent(item), 0),
-    [activeItems],
+    [activeItems,typeOptions],
   )
 
   function rowsForTab() {
-    if (tab === 'documents') return activeItems.filter((item) => item.item_type === 'document')
-    if (tab === 'contracts') return activeItems.filter((item) => item.item_type === 'contract')
+    if (tab === 'documents') return activeItems.filter((item) => baseTypeOf(item) === 'document')
+    if (tab === 'contracts') return activeItems.filter((item) => baseTypeOf(item) === 'contract')
     if (tab === 'renewals') return renewals
-    if (tab === 'insurance') return activeItems.filter((item) => item.item_type === 'insurance')
-    if (tab === 'subscriptions') return activeItems.filter((item) => item.item_type === 'subscription')
+    if (tab === 'insurance') return activeItems.filter((item) => baseTypeOf(item) === 'insurance')
+    if (tab === 'subscriptions') return activeItems.filter((item) => baseTypeOf(item) === 'subscription')
     if (tab === 'deadlines') return deadlines
     if (tab === 'archive') return archivedItems
     return []
@@ -302,7 +341,7 @@ export function LifeAdminPage() {
 
   function resetComposer() {
     setEditingId(null)
-    setItemType('document')
+    setItemType(typeOptions[0]?.value ?? 'document')
     setTitle('')
     setProvider('')
     setReferenceNumber('')
@@ -318,6 +357,9 @@ export function LifeAdminPage() {
     setResponsibleProfileId('')
     setNotes('')
     setAddToCalendar(false)
+    setFlowType('expense')
+    setIncludeInFinance(false)
+    setSyncTask(false)
     setPendingFile(null)
     setError('')
   }
@@ -346,6 +388,9 @@ export function LifeAdminPage() {
     setResponsibleProfileId(item.responsible_profile_id ?? '')
     setNotes(item.notes ?? '')
     setAddToCalendar(item.add_to_calendar)
+    setFlowType(item.flow_type ?? 'expense')
+    setIncludeInFinance(Boolean(item.include_in_finance))
+    setSyncTask(Boolean(item.sync_task))
     setPendingFile(null)
     setError('')
     setComposerOpen(true)
@@ -422,7 +467,7 @@ export function LifeAdminPage() {
     setSaving(true)
     setError('')
 
-    const result = await supabase.rpc('save_life_admin_item_v1', {
+    const result = await supabase.rpc('save_life_admin_item_v2', {
       p_id: editingId,
       p_household_id: household.id,
       p_item_type: itemType,
@@ -441,6 +486,9 @@ export function LifeAdminPage() {
       p_responsible_profile_id: responsibleProfileId || null,
       p_notes: notes.trim() || null,
       p_add_to_calendar: addToCalendar,
+      p_flow_type: flowType,
+      p_include_in_finance: includeInFinance,
+      p_sync_task: syncTask,
     })
 
     if (result.error || !result.data) {
@@ -517,18 +565,19 @@ export function LifeAdminPage() {
   }
 
   function renderItem(item: LifeAdminItem, archived = false) {
-    const Icon = typeIcon(item.item_type)
+    const baseType = baseTypeOf(item)
+    const Icon = typeIcon(baseType)
     const actionDate = nextActionDate(item)
     const overdue = Boolean(actionDate && actionDate < todayKey())
 
     return (
       <article className="list-card life-admin-item-card" key={item.id}>
-        <span className={'life-admin-type-icon type-' + item.item_type}><Icon size={17} /></span>
+        <span className={'life-admin-type-icon type-' + baseType}><Icon size={17} /></span>
 
         <div className="life-admin-item-main">
           <div className="life-admin-item-title-row">
             <div>
-              <span className="life-admin-item-type">{typeLabel(item.item_type)}</span>
+              <span className="life-admin-item-type">{typeByKey.get(item.item_type)?.label ?? item.item_type}</span>
               <h3>{item.title}</h3>
             </div>
 
@@ -542,10 +591,12 @@ export function LifeAdminPage() {
           <div className="life-admin-item-meta">
             {item.provider && <span>{item.provider}</span>}
             {item.reference_number && <span>Ref. {item.reference_number}</span>}
-            {item.amount != null && <span><Receipt size={11} />{money(item.amount,item.currency)}{item.frequency !== 'none' ? ' · ' + frequencyLabel(item.frequency) : ''}</span>}
+            {item.amount != null && <span><Receipt size={11} />{item.flow_type === 'income' ? 'Income · ' : 'Cost · '}{money(item.amount,item.currency)}{item.frequency !== 'none' ? ' · ' + frequencyLabel(item.frequency) : ''}</span>}
             {item.auto_renew && <span><RefreshCw size={11} />Auto-renew</span>}
             {renderResponsible(item)}
             {item.linked_event_id && <span><CalendarDays size={11} />Calendar</span>}
+            {item.linked_task_id && <span><Clock3 size={11} />Task</span>}
+            {item.household_cost_id && <span><Receipt size={11} />Household Costs</span>}
           </div>
 
           <div className="life-admin-date-strip">
@@ -619,9 +670,13 @@ export function LifeAdminPage() {
           <section className="life-admin-summary-grid">
             <article className="life-admin-summary-card tone-1" onClick={() => setTab('documents')}>
               <span><FileText size={18} /></span>
-              <div><small>DOCUMENTS</small><strong>{activeItems.filter((item) => item.item_type === 'document').length}</strong><em>stored records</em></div>
+              <div><small>DOCUMENTS</small><strong>{activeItems.filter((item) => baseTypeOf(item) === 'document').length}</strong><em>stored records</em></div>
             </article>
-            <article className="life-admin-summary-card tone-2" onClick={() => setTab('renewals')}>
+            <article className="life-admin-summary-card tone-2" onClick={() => setTab('contracts')}>
+              <span><FileLock2 size={18} /></span>
+              <div><small>CONTRACTS</small><strong>{activeItems.filter((item) => baseTypeOf(item) === 'contract').length}</strong><em>active records</em></div>
+            </article>
+            <article className="life-admin-summary-card tone-6" onClick={() => setTab('renewals')}>
               <span><RefreshCw size={18} /></span>
               <div><small>RENEWALS</small><strong>{renewalsSoon.length}</strong><em>within 60 days</em></div>
             </article>
@@ -631,7 +686,7 @@ export function LifeAdminPage() {
             </article>
             <article className="life-admin-summary-card tone-4" onClick={() => setTab('insurance')}>
               <span><ShieldCheck size={18} /></span>
-              <div><small>INSURANCE</small><strong>{activeItems.filter((item) => item.item_type === 'insurance').length}</strong><em>active records</em></div>
+              <div><small>INSURANCE</small><strong>{activeItems.filter((item) => baseTypeOf(item) === 'insurance').length}</strong><em>active records</em></div>
             </article>
             <article className="life-admin-summary-card tone-5" onClick={() => setTab('subscriptions')}>
               <span><CreditCard size={18} /></span>
@@ -727,7 +782,7 @@ export function LifeAdminPage() {
             </header>
 
             <div className="composer-grid-two aligned-field-row">
-              <label>Type<Select value={itemType} onChange={(value) => setItemType(value as LifeAdminType)} options={typeOptions} ariaLabel="Choose Life Admin item type" /></label>
+              <label>Type<Select value={itemType} onChange={setItemType} options={typeOptions.map(({ value,label }) => ({ value,label }))} ariaLabel="Choose Life Admin item type" /></label>
               <label>Title<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Home insurance" autoFocus required /></label>
             </div>
 
@@ -779,6 +834,27 @@ export function LifeAdminPage() {
             </div>
 
             <div className="composer-grid-two aligned-field-row">
+              <label>Amount direction
+                <Select
+                  value={flowType}
+                  onChange={(value) => setFlowType(value as FinanceFlow)}
+                  options={[
+                    { value: 'expense', label: 'Cost / expense' },
+                    { value: 'income', label: 'Income' },
+                  ]}
+                  ariaLabel="Choose whether the amount is a cost or income"
+                />
+                <small className="field-hint">Controls how this amount is shown in Household Costs.</small>
+              </label>
+              <div className="life-admin-finance-option">
+                <label className="composer-option">
+                  <input type="checkbox" checked={includeInFinance} disabled={!costsCanWrite} onChange={(event) => setIncludeInFinance(event.target.checked)} />
+                  <span><span>Include in Household Costs</span><small>{costsCanWrite ? 'Keeps the amount and frequency synchronized with Household Costs.' : 'Household Costs write access is required.'}</small></span>
+                </label>
+              </div>
+            </div>
+
+            <div className="composer-grid-two aligned-field-row">
               <label>Cancellation notice (days)<input type="number" min="0" max="3650" value={cancellationNotice} onChange={(event) => setCancellationNotice(event.target.value)} placeholder="Optional" /></label>
               <label>Responsible person<Select value={responsibleProfileId} onChange={setResponsibleProfileId} options={profileOptions} ariaLabel="Choose responsible person" /></label>
             </div>
@@ -796,13 +872,22 @@ export function LifeAdminPage() {
               <small>{pendingFile ? pendingFile.name : 'Optional. JPG, PNG, WebP or PDF up to 15 MB.'}</small>
             </label>
 
-            <label className="composer-option">
-              <input type="checkbox" checked={addToCalendar} disabled={!canSyncCalendar} onChange={(event) => setAddToCalendar(event.target.checked)} />
-              <span>
-                <span>Add next date to Calendar</span>
-                <small>{canSyncCalendar ? 'Uses the due date first, then renewal or expiry date.' : 'Calendar write access is required.'}</small>
-              </span>
-            </label>
+            <div className="composer-option-list">
+              <label className="composer-option">
+                <input type="checkbox" checked={addToCalendar} disabled={!canSyncCalendar} onChange={(event) => setAddToCalendar(event.target.checked)} />
+                <span>
+                  <span>Add next date to Calendar</span>
+                  <small>{canSyncCalendar ? 'Uses the due date first, then renewal, expiry or start date.' : 'Calendar write access is required.'}</small>
+                </span>
+              </label>
+              <label className="composer-option">
+                <input type="checkbox" checked={syncTask} disabled={!canSyncTasks} onChange={(event) => setSyncTask(event.target.checked)} />
+                <span>
+                  <span>Create linked Task</span>
+                  <small>{canSyncTasks ? 'Makes this Life Admin responsibility visible in the Tasks module as well.' : 'Tasks write access is required.'}</small>
+                </span>
+              </label>
+            </div>
 
             {error && <div className="form-message error">{error}</div>}
             <button className="primary-button" disabled={saving}>{saving ? 'Saving…' : editingId ? 'Save changes' : 'Add item'}</button>
