@@ -4624,3 +4624,272 @@ b {
     grid-row: 1 / span 2;
   }
 }
+
+
+/* =========================================================
+   School & Kita
+   ========================================================= */
+
+.school-summary-grid {
+  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.school-summary-card {
+  min-height: 82px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.school-summary-card.active {
+  border-color: #c9b4d5;
+  box-shadow: 0 10px 26px rgba(85, 54, 95, .08);
+}
+
+.school-summary-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #7a5988;
+  background: #f1eaf4;
+}
+
+.school-summary-card > div {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.school-summary-card > div > span {
+  color: #7e7183;
+  font-size: 9px;
+}
+
+.school-summary-card > div > strong {
+  color: #4e4352;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.school-summary-card > div > small {
+  color: #9a8e9d;
+  font-size: 8px;
+}
+
+.school-entry-section {
+  display: grid;
+  gap: 10px;
+}
+
+.school-section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.school-section-head h2 {
+  margin: 3px 0 0;
+  color: #504454;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.school-child-filter {
+  min-width: 160px;
+}
+
+.school-entry-list {
+  display: grid;
+  gap: 9px;
+}
+
+.school-entry-card {
+  min-height: 92px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.school-entry-date {
+  width: 50px;
+  min-height: 62px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0;
+  color: #765282;
+  background: #f2ebf4;
+}
+
+.school-entry-date strong {
+  font-size: 19px;
+  line-height: 1;
+}
+
+.school-entry-date span {
+  margin-top: 4px;
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.school-entry-main {
+  min-width: 0;
+}
+
+.school-entry-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.school-entry-title-row h3 {
+  margin: 0;
+  color: #4f4453;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.school-entry-meta {
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  color: #918494;
+  font-size: 8px;
+}
+
+.school-entry-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.school-child-label .profile-avatar {
+  width: 22px;
+  height: 22px;
+}
+
+.school-entry-main > p {
+  margin: 8px 0 0;
+  color: #706474;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.school-attachment-list {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.school-attachment-list a {
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid #e4d9e7;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #755287;
+  background: #fbf9fc;
+  font-size: 8px;
+  text-decoration: none;
+}
+
+.school-attachment-list a:hover {
+  background: #f5eef7;
+}
+
+.school-empty {
+  min-height: 190px;
+}
+
+.school-composer {
+  width: min(760px, 100%);
+}
+
+.school-all-day-control {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px;
+  color: #66596a;
+  background: #fbf9fc;
+  font-size: 10px;
+}
+
+.school-all-day-control input {
+  width: 15px !important;
+  height: 15px;
+  margin: 0;
+  accent-color: #7d4ac1;
+}
+
+.school-upload-field {
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px dashed #d9cede;
+  border-radius: 11px;
+  display: grid !important;
+  gap: 6px !important;
+  background: #fbf9fc;
+}
+
+.school-upload-field > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #65586a;
+  font-size: 10px;
+  font-weight: 550;
+}
+
+.school-upload-field input {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 9px;
+}
+
+.school-upload-field small {
+  color: #9a8e9e;
+  font-size: 8px;
+}
+
+@media (max-width: 700px) {
+  .school-section-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .school-child-filter {
+    width: 100%;
+  }
+
+  .school-entry-card {
+    grid-template-columns: 46px minmax(0, 1fr);
+  }
+
+  .school-entry-date {
+    width: 44px;
+  }
+}
