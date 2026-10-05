@@ -54,6 +54,7 @@ export function HomePage() {
   const [taskCount, setTaskCount] = useState(0)
   const [checklistCount, setChecklistCount] = useState(0)
   const [shoppingCount, setShoppingCount] = useState(0)
+  const [costMonthTotal, setCostMonthTotal] = useState(0)
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10)
@@ -61,6 +62,7 @@ export function HomePage() {
     const tasksModule = modules.find((module) => module.code === 'tasks')
     const checklistsModule = modules.find((module) => module.code === 'checklists')
     const shoppingModule = modules.find((module) => module.code === 'shopping')
+    const costsModule = modules.find((module) => module.code === 'costs')
 
     const calendarRequest = calendarModule?.enabled
       ? supabase.rpc('calendar_occurrences_v1', {
@@ -95,11 +97,27 @@ export function HomePage() {
           .eq('status', 'active')
       : Promise.resolve({ count: 0, error: null })
 
-    void Promise.all([calendarRequest, tasksRequest, checklistsRequest, shoppingRequest]).then(([events, tasks, lists, shopping]) => {
+    const monthStart = today.slice(0, 8) + '01'
+    const monthEndDate = new Date(Number(today.slice(0, 4)), Number(today.slice(5, 7)), 0)
+    const monthEnd = monthEndDate.toISOString().slice(0, 10)
+
+    const costsRequest = costsModule?.enabled
+      ? supabase
+          .from('household_costs')
+          .select('amount')
+          .eq('household_id', household.id)
+          .gte('cost_date', monthStart)
+          .lte('cost_date', monthEnd)
+      : Promise.resolve({ data: [], error: null })
+
+    void Promise.all([calendarRequest, tasksRequest, checklistsRequest, shoppingRequest, costsRequest]).then(([events, tasks, lists, shopping, costs]) => {
       setEventCount(Array.isArray(events.data) ? events.data.length : 0)
       setTaskCount(tasks.count ?? 0)
       setChecklistCount(lists.count ?? 0)
       setShoppingCount(shopping.count ?? 0)
+      setCostMonthTotal(Array.isArray(costs.data)
+        ? costs.data.reduce((sum, row) => sum + Number(row.amount ?? 0), 0)
+        : 0)
     })
   }, [household.id, modules])
 
@@ -108,6 +126,7 @@ export function HomePage() {
     tasks: `${taskCount} open`,
     checklists: `${checklistCount} active`,
     shopping: `${shoppingCount} active lists`,
+    costs: new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR' }).format(costMonthTotal) + ' this month',
   }
 
   const enabledModules = modules.filter((module) => module.enabled)
