@@ -23,6 +23,8 @@ type SchoolEntry = {
   location_text: string | null
   notes: string | null
   linked_event_id: string | null
+  sync_task: boolean
+  linked_task_id: string | null
   status: 'active' | 'archived'
   created_at: string
 }
@@ -48,6 +50,7 @@ export function SchoolPage() {
   const { household, modules, profiles } = useHousehold()
   const access = modules.find((module) => module.code === 'school')
   const canWrite = Boolean(access?.can_write)
+  const canSyncTasks = Boolean(modules.find((module) => module.code === 'tasks')?.can_write)
 
   const [entries, setEntries] = useState<SchoolEntry[]>([])
   const [categories, setCategories] = useState<EventCategory[]>([])
@@ -66,6 +69,7 @@ export function SchoolPage() {
   const [locationText, setLocationText] = useState('')
   const [notes, setNotes] = useState('')
   const [addToCalendar, setAddToCalendar] = useState(true)
+  const [syncTask, setSyncTask] = useState(false)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -81,7 +85,7 @@ export function SchoolPage() {
     const [entryResult, categoryResult, availabilityResult, attachmentResult] = await Promise.all([
       supabase
         .from('school_entries')
-        .select('id,title,category_id,child_profile_id,entry_date,all_day,start_time,end_time,location_text,notes,linked_event_id,status,created_at')
+        .select('id,title,category_id,child_profile_id,entry_date,all_day,start_time,end_time,location_text,notes,linked_event_id,sync_task,linked_task_id,status,created_at')
         .eq('household_id', household.id)
         .eq('status', 'active')
         .order('entry_date')
@@ -167,6 +171,7 @@ export function SchoolPage() {
     setLocationText('')
     setNotes('')
     setAddToCalendar(true)
+    setSyncTask(false)
     setPendingFile(null)
     setError('')
   }
@@ -188,6 +193,7 @@ export function SchoolPage() {
     setLocationText(entry.location_text ?? '')
     setNotes(entry.notes ?? '')
     setAddToCalendar(Boolean(entry.linked_event_id))
+    setSyncTask(Boolean(entry.sync_task))
     setPendingFile(null)
     setError('')
     setComposerOpen(true)
@@ -245,7 +251,7 @@ export function SchoolPage() {
     setSaving(true)
     setError('')
 
-    const result = await supabase.rpc('save_school_entry_v1', {
+    const result = await supabase.rpc('save_school_entry_v2', {
       p_entry_id: editingId,
       p_household_id: household.id,
       p_title: title.trim(),
@@ -258,6 +264,7 @@ export function SchoolPage() {
       p_location_text: locationText.trim() || null,
       p_notes: notes.trim() || null,
       p_add_to_calendar: addToCalendar,
+      p_sync_task: syncTask,
     })
 
     if (result.error || !result.data) {
@@ -546,13 +553,23 @@ export function SchoolPage() {
               <small>{pendingFile ? pendingFile.name : 'Optional. Photo, scan or PDF up to 10 MB.'}</small>
             </label>
 
-            <label className="composer-option">
-              <input type="checkbox" checked={addToCalendar} onChange={(event) => setAddToCalendar(event.target.checked)} />
-              <span>
-                <span>Add to shared Calendar</span>
-                <small>Creates or updates the linked Calendar event with the same date, category, child and location.</small>
-              </span>
-            </label>
+            <div className="composer-option-list">
+              <label className="composer-option">
+                <input type="checkbox" checked={addToCalendar} onChange={(event) => setAddToCalendar(event.target.checked)} />
+                <span>
+                  <span>Add to shared Calendar</span>
+                  <small>Creates or updates the linked Calendar event with the same date, category, child and location.</small>
+                </span>
+              </label>
+
+              <label className="composer-option">
+                <input type="checkbox" checked={syncTask} disabled={!canSyncTasks || !categoryId} onChange={(event) => setSyncTask(event.target.checked)} />
+                <span>
+                  <span>Show in Tasks</span>
+                  <small>{canSyncTasks ? 'Creates or updates one linked household Task. A category is required.' : 'Tasks write access is required.'}</small>
+                </span>
+              </label>
+            </div>
 
             {error && <div className="form-message error">{error}</div>}
 
