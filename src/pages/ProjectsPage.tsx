@@ -328,7 +328,7 @@ export function ProjectsPage() {
   const existingTaskOptions = useMemo(() => {
     const alreadyLinked = new Set(items.filter((item) => item.status !== 'archived').map((item) => item.linked_task_id).filter(Boolean))
     return tasks
-      .filter((task) => !alreadyLinked.has(task.id))
+      .filter((task) => !alreadyLinked.has(task.id) && Boolean(task.category_id && categoryById.has(task.category_id)))
       .map((task) => ({
         value:task.id,
         label:task.title + (task.due_date ? ' · ' + prettyDate(task.due_date) : ' · no date'),
@@ -337,8 +337,10 @@ export function ProjectsPage() {
   }, [tasks,items,categoryById])
 
   const templateOptions = useMemo(
-    () => templates.map((template) => ({ value:template.id,label:template.name })),
-    [templates],
+    () => templates
+      .filter((template) => !template.category_id || categoryById.has(template.category_id))
+      .map((template) => ({ value:template.id,label:template.name })),
+    [templates,categoryById],
   )
 
   const openProjectItems = useMemo(
