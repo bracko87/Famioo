@@ -1,5 +1,6 @@
-import { Archive, ArchiveRestore, CalendarDays, ClipboardList, Pencil, Plus, X } from 'lucide-react'
+import { Archive, CalendarDays, ClipboardList, Pencil, Plus, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { DatePicker } from '../components/ui/DatePicker'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
@@ -64,7 +65,6 @@ export function ChecklistsPage() {
   const [taskParticipants, setTaskParticipants] = useState<{ task_id: string; profile_id: string }[]>([])
   const [itemDrafts, setItemDrafts] = useState<Record<string, string>>({})
   const [composerOpen, setComposerOpen] = useState(false)
-  const [archiveOpen, setArchiveOpen] = useState(false)
   const [editingChecklistId, setEditingChecklistId] = useState<string | null>(null)
   const [sourceType, setSourceType] = useState<SourceType>('standalone')
   const [templateId, setTemplateId] = useState('')
@@ -223,10 +223,8 @@ export function ChecklistsPage() {
     [lists, shoppingCategoryIds],
   )
 
-  const archivedLists = useMemo(
-    () => lists
-      .filter((list) => list.status === 'archived' && (!list.category_id || !shoppingCategoryIds.has(list.category_id)))
-      .sort((a, b) => (b.archived_at ?? b.created_at).localeCompare(a.archived_at ?? a.created_at)),
+  const archivedCount = useMemo(
+    () => lists.filter((list) => list.status === 'archived' && (!list.category_id || !shoppingCategoryIds.has(list.category_id))).length,
     [lists, shoppingCategoryIds],
   )
 
@@ -421,7 +419,7 @@ export function ChecklistsPage() {
     else await load()
   }
 
-  function ChecklistCard({ list, archived = false }: { list: Checklist; archived?: boolean }) {
+  function renderChecklistCard(list: Checklist) {
     const listItems = items.filter((item) => item.checklist_id === list.id)
     const category = list.category_id ? categoryById.get(list.category_id) : undefined
     const shoppingLegacy = Boolean(list.category_id && shoppingCategoryIds.has(list.category_id))
@@ -431,7 +429,7 @@ export function ChecklistsPage() {
       .filter(Boolean)
 
     return (
-      <article className={'list-card checklist-card ' + (archived ? 'archived' : '')} key={list.id}>
+      <article className="list-card checklist-card" key={list.id}>
         <header>
           <div>
             <h2>{list.title}</h2>
@@ -445,7 +443,7 @@ export function ChecklistsPage() {
           </div>
 
           <div className="checklist-card-controls">
-            {!archived && canWrite && (
+            {canWrite && (
               <>
                 <button type="button" className="icon-button compact-icon" aria-label={'Edit ' + list.title} onClick={() => openEdit(list)}>
                   <Pencil size={14} />
@@ -455,17 +453,11 @@ export function ChecklistsPage() {
                 </button>
               </>
             )}
-            {archived && canWrite && (
-              <button type="button" className="secondary-button compact" onClick={() => void setArchived(list, false)}>
-                <ArchiveRestore size={14} />
-                Restore
-              </button>
-            )}
             <small>{listItems.filter((item) => item.checked).length}/{listItems.length}</small>
           </div>
         </header>
 
-        {shoppingLegacy && !archived && (
+        {shoppingLegacy && (
           <div className="checklist-shopping-warning">
             This older checklist uses the Shopping category. Shopping items now belong in the Shopping module. Edit this checklist and choose another category, or archive it.
           </div>
@@ -482,8 +474,7 @@ export function ChecklistsPage() {
           </div>
         )}
 
-        {!archived && (
-          <>
+        <>
             <div className="checklist-items">
               {listItems.map((item) => (
                 <button
@@ -513,8 +504,7 @@ export function ChecklistsPage() {
                 <button className="secondary-button compact" onClick={() => void addItem(list.id)}>Add item</button>
               </div>
             )}
-          </>
-        )}
+        </>
       </article>
     )
   }
@@ -545,66 +535,19 @@ export function ChecklistsPage() {
             <span className="empty-state-title">No active checklists.</span>
             <span>{canWrite ? 'Create the first shared checklist.' : 'There are no checklists to show.'}</span>
           </div>
-        ) : activeLists.map((list) => <ChecklistCard list={list} key={list.id} />)}
+        ) : activeLists.map((list) => renderChecklistCard(list))}
       </section>
 
       <div className="archive-repository-bar">
-        <button
-          type="button"
-          className="secondary-button archive-repository-button"
-          onClick={() => setArchiveOpen(true)}
+        <Link
+          className="secondary-button compact archive-repository-button"
+          to="/app/checklists/archive"
         >
-          <Archive size={15} />
+          <Archive size={14} />
           Archived checklists
-          <span>{archivedLists.length}</span>
-        </button>
+          <span>{archivedCount}</span>
+        </Link>
       </div>
-
-      {archiveOpen && (
-        <div
-          className="modal-backdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.currentTarget === event.target) setArchiveOpen(false)
-          }}
-        >
-          <section className="modal-card archive-repository-modal">
-            <header>
-              <div>
-                <span className="eyebrow">CHECKLIST ARCHIVE</span>
-                <h2>Archived checklists</h2>
-              </div>
-              <button type="button" className="icon-button" aria-label="Close checklist archive" onClick={() => setArchiveOpen(false)}>
-                <X size={18} />
-              </button>
-            </header>
-
-            {archivedLists.length === 0 ? (
-              <div className="archive-empty-state">No archived checklists yet.</div>
-            ) : (
-              <div className="archive-repository-list">
-                {archivedLists.map((list) => {
-                  const listItems = items.filter((item) => item.checklist_id === list.id)
-                  return (
-                    <div className="archive-repository-row" key={list.id}>
-                      <div>
-                        <strong>{list.title}</strong>
-                        <small>{listItems.length} items</small>
-                      </div>
-                      {canWrite && (
-                        <button className="secondary-button compact" type="button" onClick={() => void setArchived(list, false)}>
-                          <ArchiveRestore size={14} />
-                          Restore
-                        </button>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </section>
-        </div>
-      )}
 
       {composerOpen && canWrite && (
         <div
