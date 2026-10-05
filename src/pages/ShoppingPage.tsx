@@ -288,7 +288,7 @@ export function ShoppingPage() {
     else await load()
   }
 
-  function ShoppingCard({ list }: { list: ShoppingList }) {
+  function renderShoppingCard(list: ShoppingList) {
     const listItems = items.filter((item) => item.shopping_list_id === list.id)
     const completed = listItems.filter((item) => item.checked).length
     const category = list.category_id ? categoryById.get(list.category_id) : undefined
@@ -392,7 +392,7 @@ export function ShoppingPage() {
             <span className="empty-state-title">No active shopping lists.</span>
             <span>{canWrite ? 'Create the first shared shopping list.' : 'There are no shopping lists to show.'}</span>
           </div>
-        ) : activeLists.map((list) => <ShoppingCard list={list} key={list.id} />)}
+        ) : activeLists.map((list) => renderShoppingCard(list))}
       </section>
 
       <div className="archive-repository-bar">
