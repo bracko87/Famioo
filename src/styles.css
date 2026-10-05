@@ -3842,3 +3842,51 @@ b {
     flex-direction: column;
   }
 }
+
+
+/* Keep paired composer controls level and archive repositories at page bottom. */
+.composer-grid-two > label {
+  display: grid;
+  grid-template-rows: auto 42px auto;
+  gap: 7px;
+}
+
+.composer-grid-two > label > input,
+.composer-grid-two > label > .custom-select,
+.composer-grid-two > label > .date-picker,
+.composer-grid-two > label > .money-input {
+  min-height: 42px;
+}
+
+.checklists-page,
+.shopping-page {
+  min-height: calc(100vh - var(--header) - var(--footer));
+  display: flex;
+  flex-direction: column;
+}
+
+.checklists-page > .archive-repository-bar,
+.shopping-page > .archive-repository-bar {
+  margin-top: auto;
+  padding-top: 28px;
+}
+
+.checklist-card > header > .checklist-card-controls {
+  display: flex !important;
+  grid-template-columns: none !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 900px) {
+  .checklists-page,
+  .shopping-page {
+    min-height: calc(100vh - var(--header) - 70px);
+  }
+}
+
+@media (max-width: 700px) {
+  .composer-grid-two > label {
+    grid-template-rows: auto 42px auto;
+  }
+}
