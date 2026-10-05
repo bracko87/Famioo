@@ -254,7 +254,9 @@ export function TasksPage() {
     setEditingTaskId(task.id)
     setTemplateId('')
     setTitle(task.title)
-    setCategoryId(task.category_id ?? categories[0]?.id ?? '')
+    setCategoryId(task.category_id && categories.some((category) => category.id === task.category_id)
+      ? task.category_id
+      : categories[0]?.id ?? '')
     setDueDate(task.due_date ?? '')
     setLocationText(task.location_text ?? '')
     setCostAmount(task.cost_amount != null ? String(task.cost_amount) : '')
