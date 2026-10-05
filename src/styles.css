@@ -4901,3 +4901,126 @@ b {
   font-size: 8px;
   line-height: 1.4;
 }
+
+
+/* =========================================================
+   Collapsible desktop sidebar
+   ========================================================= */
+
+.app-layout {
+  transition: grid-template-columns .2s ease;
+}
+
+.sidebar-collapsed {
+  --sidebar: 76px;
+}
+
+.app-sidebar {
+  transition: width .2s ease, transform .2s ease;
+}
+
+.desktop-sidebar-toggle {
+  position: absolute;
+  top: 17px;
+  right: -15px;
+  width: 30px;
+  height: 30px;
+  z-index: 2;
+  border: 1px solid rgba(104, 67, 121, .22);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #714480;
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 5px 16px rgba(50, 28, 59, .14);
+}
+
+.desktop-sidebar-toggle:hover {
+  color: #5e326e;
+  background: #fff;
+}
+
+.app-sidebar.collapsed {
+  padding-left: 11px;
+  padding-right: 11px;
+}
+
+.app-sidebar.collapsed .sidebar-top {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.app-sidebar.collapsed .brand {
+  justify-content: center;
+}
+
+.app-sidebar.collapsed .brand-copy,
+.app-sidebar.collapsed .nav-text,
+.app-sidebar.collapsed .nav-label {
+  display: none;
+}
+
+.app-sidebar.collapsed .side-nav {
+  justify-items: center;
+}
+
+.app-sidebar.collapsed .side-nav a,
+.app-sidebar.collapsed .side-nav button {
+  width: 48px;
+  padding: 0;
+  justify-content: center;
+  gap: 0;
+}
+
+.app-sidebar.collapsed .side-nav-bottom {
+  width: 100%;
+}
+
+.app-sidebar.collapsed .brand-mark {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+}
+
+@media (max-width: 900px) {
+  .sidebar-collapsed {
+    --sidebar: 246px;
+  }
+
+  .app-sidebar.collapsed {
+    width: min(310px,86vw);
+    padding: 24px 17px 20px;
+  }
+
+  .app-sidebar.collapsed .sidebar-top {
+    justify-content: space-between;
+    padding: 0 5px 23px;
+  }
+
+  .app-sidebar.collapsed .brand-copy,
+  .app-sidebar.collapsed .nav-text,
+  .app-sidebar.collapsed .nav-label {
+    display: initial;
+  }
+
+  .app-sidebar.collapsed .brand-copy {
+    display: grid;
+  }
+
+  .app-sidebar.collapsed .side-nav {
+    justify-items: stretch;
+  }
+
+  .app-sidebar.collapsed .side-nav a,
+  .app-sidebar.collapsed .side-nav button {
+    width: auto;
+    padding: 0 12px;
+    justify-content: flex-start;
+    gap: 11px;
+  }
+
+  .desktop-sidebar-toggle {
+    display: none;
+  }
+}
