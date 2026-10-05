@@ -10,6 +10,8 @@ import {
   House,
   LogOut,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Receipt,
   Settings,
   ShoppingBag,
@@ -61,6 +63,13 @@ type HeaderNotification = {
 export function AppShell() {
   const { household, households, modules, profiles, user, switchHousehold } = useHousehold()
   const [mobileMenu, setMobileMenu] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return window.localStorage.getItem('famioo.sidebar.collapsed') === '1'
+    } catch {
+      return false
+    }
+  })
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [notifications, setNotifications] = useState<HeaderNotification[]>([])
   const [profileAvatarUrl, setProfileAvatarUrl] = useState('')
@@ -73,6 +82,18 @@ export function AppShell() {
     ?? 'Profile'
   const profileMark = currentProfile?.avatar_emoji ?? profileName.slice(0, 1).toUpperCase()
   const unreadCount = notifications.filter((item) => item.status === 'sent').length
+
+  function toggleSidebar() {
+    setSidebarCollapsed((current) => {
+      const next = !current
+      try {
+        window.localStorage.setItem('famioo.sidebar.collapsed', next ? '1' : '0')
+      } catch {
+        // The preference is optional; the sidebar still works without storage.
+      }
+      return next
+    })
+  }
 
   async function loadNotifications() {
     const result = await supabase
@@ -129,8 +150,12 @@ export function AppShell() {
   }
 
   return (
-    <div className="app-layout">
-      <aside className={mobileMenu ? 'app-sidebar open' : 'app-sidebar'}>
+    <div className={sidebarCollapsed ? 'app-layout sidebar-collapsed' : 'app-layout'}>
+      <aside className={[
+        'app-sidebar',
+        mobileMenu ? 'open' : '',
+        sidebarCollapsed ? 'collapsed' : '',
+      ].filter(Boolean).join(' ')}>
         <div className="sidebar-top">
           <Brand />
           <button className="icon-button mobile-sidebar-close" onClick={() => setMobileMenu(false)} aria-label="Close menu">
@@ -138,25 +163,35 @@ export function AppShell() {
           </button>
         </div>
 
+        <button
+          className="desktop-sidebar-toggle"
+          type="button"
+          onClick={toggleSidebar}
+          aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+        </button>
+
         <nav className="side-nav" aria-label="Main navigation">
           <span className="nav-label">PLAN</span>
-          <NavLink to="/app" end onClick={() => setMobileMenu(false)}><Home size={18} />Home</NavLink>
-          <NavLink to="/app/calendar" onClick={() => setMobileMenu(false)}><CalendarDays size={18} />Calendar</NavLink>
-          <NavLink to="/app/tasks" onClick={() => setMobileMenu(false)}><ClipboardList size={18} />Tasks</NavLink>
-          <NavLink to="/app/checklists" onClick={() => setMobileMenu(false)}><CheckSquare size={18} />Checklists</NavLink>
+          <NavLink to="/app" end onClick={() => setMobileMenu(false)} title="Home"><Home size={18} /><span className="nav-text">Home</span></NavLink>
+          <NavLink to="/app/calendar" onClick={() => setMobileMenu(false)} title="Calendar"><CalendarDays size={18} /><span className="nav-text">Calendar</span></NavLink>
+          <NavLink to="/app/tasks" onClick={() => setMobileMenu(false)} title="Tasks"><ClipboardList size={18} /><span className="nav-text">Tasks</span></NavLink>
+          <NavLink to="/app/checklists" onClick={() => setMobileMenu(false)} title="Checklists"><CheckSquare size={18} /><span className="nav-text">Checklists</span></NavLink>
 
           {enabledPaid.length > 0 && <span className="nav-label nav-label-spaced">HOUSEHOLD</span>}
           {enabledPaid.map((module) => {
             const Icon = iconByModule[module.code] ?? Sparkles
             const route = routeByModule[module.code]
             if (!route) return null
-            return <NavLink to={route} key={module.code} onClick={() => setMobileMenu(false)}><Icon size={18} />{module.name}</NavLink>
+            return <NavLink to={route} key={module.code} onClick={() => setMobileMenu(false)} title={module.name}><Icon size={18} /><span className="nav-text">{module.name}</span></NavLink>
           })}
         </nav>
 
         <nav className="side-nav side-nav-bottom">
-          <NavLink to="/app/settings" onClick={() => setMobileMenu(false)}><Settings size={18} />Settings</NavLink>
-          <button onClick={() => void supabase.auth.signOut()}><LogOut size={18} />Sign out</button>
+          <NavLink to="/app/settings" onClick={() => setMobileMenu(false)} title="Settings"><Settings size={18} /><span className="nav-text">Settings</span></NavLink>
+          <button onClick={() => void supabase.auth.signOut()} title="Sign out"><LogOut size={18} /><span className="nav-text">Sign out</span></button>
         </nav>
       </aside>
 
