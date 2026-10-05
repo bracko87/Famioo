@@ -104,7 +104,7 @@ function eventTime(event: CalendarOccurrence, timeFormat: '24h' | '12h') {
 }
 
 export function CalendarPage() {
-  const { household, profiles, modules } = useHousehold()
+  const { household, profiles, modules, user } = useHousehold()
   const calendarAccess = modules.find((module) => module.code === 'calendar')
   const canWrite = Boolean(calendarAccess?.can_write)
   const mondayFirst = household.week_starts_on === 1
@@ -123,6 +123,8 @@ export function CalendarPage() {
   const [endTime, setEndTime] = useState('19:00')
   const [categoryId, setCategoryId] = useState('')
   const [participantIds, setParticipantIds] = useState<string[]>([])
+  const [notificationEnabled, setNotificationEnabled] = useState(true)
+  const [reminderValue, setReminderValue] = useState<'morning' | '0' | '10' | '30' | '60' | '1440'>('60')
   const [locationText, setLocationText] = useState('')
   const [repeatType, setRepeatType] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none')
   const [repeatInterval, setRepeatInterval] = useState('1')
@@ -135,6 +137,11 @@ export function CalendarPage() {
   const range = useMemo(
     () => rangeFor(view, anchor, mondayFirst),
     [view, anchor, mondayFirst],
+  )
+
+  const currentUserProfile = useMemo(
+    () => profiles.find((profile) => profile.linked_user_id === user.id),
+    [profiles, user.id],
   )
 
   async function load() {
@@ -258,7 +265,9 @@ export function CalendarPage() {
     setAllDay(!timedStart)
     setStartTime(defaultStart)
     setEndTime(addMinutesToTime(defaultStart, 60))
-    setParticipantIds([])
+    setParticipantIds(currentUserProfile ? [currentUserProfile.id] : [])
+    setNotificationEnabled(true)
+    setReminderValue(timedStart ? '60' : 'morning')
     setLocationText('')
     setRepeatType('none')
     setRepeatInterval('1')
@@ -354,6 +363,28 @@ export function CalendarPage() {
       rrule = parts.join(';')
     }
 
+    const reminders = notificationEnabled
+      ? participantIds.map((profileId) => reminderValue === 'morning'
+        ? {
+            profile_id: profileId,
+            reminder_kind: 'morning_of',
+            offset_minutes: null,
+            exact_at: null,
+            morning_time: '08:00:00',
+            delivery_channel: 'push',
+            enabled: true,
+          }
+        : {
+            profile_id: profileId,
+            reminder_kind: 'offset',
+            offset_minutes: Number(reminderValue),
+            exact_at: null,
+            morning_time: null,
+            delivery_channel: 'push',
+            enabled: true,
+          })
+      : []
+
     const result = await supabase.rpc('save_event_v1', {
       p_event_id: null,
       p_household_id: household.id,
@@ -375,7 +406,7 @@ export function CalendarPage() {
         can_edit: false,
       })),
       p_rrule: rrule,
-      p_reminders: [],
+      p_reminders: reminders,
     })
 
     setSaving(false)
@@ -765,6 +796,45 @@ export function CalendarPage() {
                 <small className="field-hint">Optional. Leave blank for no end date.</small>
               </label>
             )}
+
+            <fieldset className="calendar-reminder-fieldset">
+              <legend>Notification</legend>
+
+              <label className="composer-option">
+                <input
+                  type="checkbox"
+                  checked={notificationEnabled}
+                  onChange={(event) => setNotificationEnabled(event.target.checked)}
+                />
+                <span>
+                  <span>Notify participants</span>
+                  <small>Send a push reminder to selected participants who have Famioo login access and push notifications enabled.</small>
+                </span>
+              </label>
+
+              {notificationEnabled && (
+                <label className="calendar-reminder-select">
+                  Remind
+                  <Select
+                    value={reminderValue}
+                    onChange={(value) => setReminderValue(value as typeof reminderValue)}
+                    options={[
+                      { value: 'morning', label: 'Morning of event · 08:00' },
+                      { value: '0', label: 'At event time' },
+                      { value: '10', label: '10 minutes before' },
+                      { value: '30', label: '30 minutes before' },
+                      { value: '60', label: '1 hour before' },
+                      { value: '1440', label: '1 day before' },
+                    ]}
+                    ariaLabel="Choose calendar reminder time"
+                  />
+                </label>
+              )}
+
+              {notificationEnabled && participantIds.length === 0 && (
+                <small className="field-hint">Choose at least one participant to receive this reminder.</small>
+              )}
+            </fieldset>
 
             <fieldset className="participant-fieldset">
               <legend>Participants</legend>
