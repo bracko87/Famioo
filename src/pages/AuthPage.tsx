@@ -1,3 +1,4 @@
+import { Fingerprint } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Brand } from '../components/Brand'
 import { supabase } from '../lib/supabase'
@@ -9,6 +10,19 @@ export function AuthPage() {
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+
+  async function signInWithPasskey() {
+    setBusy(true)
+    setMessage('')
+
+    const result = await supabase.auth.signInWithPasskey()
+
+    setBusy(false)
+
+    if (result.error) {
+      setMessage(result.error.message)
+    }
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -81,6 +95,18 @@ export function AuthPage() {
 
           {message && <div className="form-message">{message}</div>}
           <button className="primary-button" disabled={busy}>{busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}</button>
+
+          {mode === 'signin' && (
+            <button
+              className="secondary-button auth-passkey-button"
+              disabled={busy}
+              type="button"
+              onClick={() => void signInWithPasskey()}
+            >
+              <Fingerprint size={17} />
+              Use Face ID / Touch ID / device lock
+            </button>
+          )}
 
           <button
             type="button"
