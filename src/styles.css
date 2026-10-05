@@ -8857,3 +8857,134 @@ b {
     width: 100%;
   }
 }
+
+
+/* =========================================================
+   Scrollable month cells, editable events & event actions
+   ========================================================= */
+
+.calendar-day {
+  min-height: 145px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.calendar-day.read-only {
+  cursor: default;
+}
+
+.calendar-day-events {
+  width: 100%;
+  min-height: 0;
+  max-height: 102px;
+  padding-right: 2px;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  scrollbar-width: thin;
+}
+
+.calendar-day-events::-webkit-scrollbar {
+  width: 4px;
+}
+
+.calendar-day-events::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #d8cddd;
+}
+
+.calendar-event-pill,
+.calendar-event-detail {
+  width: 100%;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.calendar-event-pill {
+  border-radius: 6px;
+}
+
+.calendar-event-detail {
+  color: inherit;
+}
+
+.calendar-event-pill:not(:disabled):hover,
+.calendar-event-detail:not(:disabled):hover {
+  background: #f4eef7;
+}
+
+.calendar-event-pill:disabled,
+.calendar-event-detail:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.event-composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.event-composer-actions .danger-button {
+  margin-right: auto;
+}
+
+.danger-button {
+  color: #ad5563;
+  border-color: #ead2d7;
+  background: #fff8f9;
+}
+
+.danger-button:hover:not(:disabled) {
+  color: #984654;
+  border-color: #dfbcc4;
+  background: #fff2f4;
+}
+
+@media (max-width: 900px) {
+  .calendar-day {
+    min-height: 92px;
+  }
+
+  .calendar-day-events {
+    max-height: 58px;
+  }
+}
+
+@media (max-width: 560px) {
+  .calendar-day {
+    min-height: 80px;
+    padding: 6px;
+    gap: 4px;
+  }
+
+  .calendar-day-number {
+    width: 22px;
+    height: 22px;
+  }
+
+  .calendar-day-events {
+    max-height: 48px;
+  }
+
+  .event-composer-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .event-composer-actions .primary-button,
+  .event-composer-actions .secondary-button {
+    width: 100%;
+  }
+
+  .event-composer-actions .danger-button {
+    margin-right: 0;
+  }
+}
