@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, FolderKanban, Plus, Trash2, WalletCards, X } from 'lucide-react'
+import { Archive, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, EyeOff, FolderKanban, Pencil, Plus, Settings2, Trash2, WalletCards, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
@@ -63,6 +63,18 @@ type SeriesRule = {
 }
 
 type DeleteScope='one'|'future'|'all'
+
+const calendarColorOptions=[
+  { value:'purple',label:'Purple' },
+  { value:'pink',label:'Pink' },
+  { value:'blue',label:'Blue' },
+  { value:'teal',label:'Teal' },
+  { value:'green',label:'Green' },
+  { value:'orange',label:'Orange' },
+  { value:'rose',label:'Rose' },
+  { value:'indigo',label:'Indigo' },
+  { value:'slate',label:'Slate' },
+]
 
 function currentTimeInZone(timezone: string) {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -272,6 +284,12 @@ export function CalendarPage() {
   const [editingBaseStartDate,setEditingBaseStartDate] = useState('')
   const [editingBaseEndDate,setEditingBaseEndDate] = useState('')
   const [editingOccurrenceInitialDate,setEditingOccurrenceInitialDate] = useState('')
+  const [hiddenCalendarIds,setHiddenCalendarIds] = useState<string[]>([])
+  const [calendarManagerOpen,setCalendarManagerOpen] = useState(false)
+  const [calendarEditingId,setCalendarEditingId] = useState<string|null>(null)
+  const [calendarName,setCalendarName] = useState('')
+  const [calendarColorKey,setCalendarColorKey] = useState('purple')
+  const [calendarSaving,setCalendarSaving] = useState(false)
 
   const range = useMemo(
     () => rangeFor(view, anchor, mondayFirst),
@@ -348,10 +366,20 @@ export function CalendarPage() {
     [categories],
   )
 
+  const calendarsById = useMemo(
+    () => new Map(calendars.map((calendar) => [calendar.id, calendar])),
+    [calendars],
+  )
+
+  const visibleEvents = useMemo(
+    () => events.filter((event) => !hiddenCalendarIds.includes(event.calendar_id)),
+    [events, hiddenCalendarIds],
+  )
+
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarOccurrence[]>()
 
-    for (const event of events) {
+    for (const event of visibleEvents) {
       const key = occurrenceDayKey(event)
       if (!key) continue
       map.set(key, [...(map.get(key) ?? []), event])
@@ -365,7 +393,7 @@ export function CalendarPage() {
     }
 
     return map
-  }, [events])
+  }, [visibleEvents])
 
   const monthGrid = useMemo(() => {
     const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
@@ -424,7 +452,7 @@ export function CalendarPage() {
 
     const defaultStart = timedStart ?? currentTimeInZone(household.timezone)
     setEditingEventId(null)
-    setEditingCalendarId(null)
+    setEditingCalendarId(calendars.find((item) => item.is_default)?.id ?? calendars[0]?.id ?? null)
     setComposerDate(day)
     setEndDate(day)
     setTemplateId('')
@@ -619,6 +647,86 @@ export function CalendarPage() {
 
     setEventCostTitle(row.title + ' cost')
     setEventCostAmount('')
+  }
+
+  function resetCalendarEditor() {
+    setCalendarEditingId(null)
+    setCalendarName('')
+    setCalendarColorKey('purple')
+  }
+
+  function editCalendar(calendar:CalendarRow) {
+    setCalendarEditingId(calendar.id)
+    setCalendarName(calendar.name)
+    setCalendarColorKey(calendar.color_key)
+  }
+
+  async function saveManagedCalendar(event:FormEvent) {
+    event.preventDefault()
+    if(!canWrite || !calendarName.trim() || calendarSaving) return
+
+    setCalendarSaving(true)
+    setError('')
+
+    const result=await supabase.rpc('save_calendar_v1',{
+      p_calendar_id:calendarEditingId,
+      p_household_id:household.id,
+      p_name:calendarName.trim(),
+      p_color_key:calendarColorKey,
+    })
+
+    setCalendarSaving(false)
+
+    if(result.error){
+      setError(result.error.message)
+      return
+    }
+
+    resetCalendarEditor()
+    await load()
+  }
+
+  async function makeDefaultCalendar(calendarId:string) {
+    if(!canWrite || calendarSaving) return
+    setCalendarSaving(true)
+    setError('')
+
+    const result=await supabase.rpc('set_default_calendar_v1',{
+      p_household_id:household.id,
+      p_calendar_id:calendarId,
+    })
+
+    setCalendarSaving(false)
+
+    if(result.error){
+      setError(result.error.message)
+      return
+    }
+
+    setEditingCalendarId((current)=>current ?? calendarId)
+    await load()
+  }
+
+  async function archiveManagedCalendar(calendarId:string) {
+    if(!canWrite || calendarSaving) return
+    setCalendarSaving(true)
+    setError('')
+
+    const result=await supabase.rpc('archive_calendar_v1',{
+      p_household_id:household.id,
+      p_calendar_id:calendarId,
+    })
+
+    setCalendarSaving(false)
+
+    if(result.error){
+      setError(result.error.message)
+      return
+    }
+
+    setHiddenCalendarIds((current)=>current.filter((id)=>id!==calendarId))
+    if(calendarEditingId===calendarId) resetCalendarEditor()
+    await load()
   }
 
   async function deleteEvent(scope: DeleteScope = 'all') {
@@ -950,7 +1058,8 @@ export function CalendarPage() {
 
   function EventPill({ item, detailed = false }: { item: CalendarOccurrence; detailed?: boolean }) {
     const category = item.category_id ? categoriesById.get(item.category_id) : undefined
-    const color = categoryColor(category?.color_key ?? 'slate')
+    const calendar = calendarsById.get(item.calendar_id)
+    const color = categoryColor(calendar?.color_key ?? category?.color_key ?? 'slate')
 
     return (
       <div
@@ -975,7 +1084,7 @@ export function CalendarPage() {
         <span className="calendar-event-dot" style={{ backgroundColor: color }} />
         <span className="calendar-event-text">
           <strong>{item.title}</strong>
-          {detailed && <small>{eventTime(item, household.time_format)}{category ? ' · ' + category.name : ''}</small>}
+          {detailed && <small>{eventTime(item, household.time_format)}{calendar ? ' · ' + calendar.name : ''}{category ? ' · ' + category.name : ''}</small>}
           {detailed && item.location_text && (
             <GoogleMapsLink location={item.location_text} className="calendar-location-link" />
           )}
@@ -1026,6 +1135,35 @@ export function CalendarPage() {
           </button>
         ) : (
           <span className="read-only-chip">Read only</span>
+        )}
+      </section>
+
+      <section className="calendar-layer-bar" aria-label="Calendar visibility">
+        <div className="calendar-layer-list">
+          {calendars.map((calendar)=> {
+            const visible=!hiddenCalendarIds.includes(calendar.id)
+            return (
+              <button
+                type="button"
+                className={visible ? 'calendar-layer-chip active' : 'calendar-layer-chip'}
+                key={calendar.id}
+                onClick={()=>setHiddenCalendarIds((current)=>
+                  visible ? [...current,calendar.id] : current.filter((id)=>id!==calendar.id)
+                )}
+                aria-pressed={visible}
+              >
+                {visible ? <Eye size={13}/> : <EyeOff size={13}/>}
+                <span className="calendar-layer-dot" style={{ backgroundColor:categoryColor(calendar.color_key) }}/>
+                <span>{calendar.name}</span>
+                {calendar.is_default && <small>Default</small>}
+              </button>
+            )
+          })}
+        </div>
+        {canWrite && (
+          <button type="button" className="secondary-button compact calendar-manage-button" onClick={()=>setCalendarManagerOpen(true)}>
+            <Settings2 size={14}/>Manage calendars
+          </button>
         )}
       </section>
 
@@ -1134,7 +1272,7 @@ export function CalendarPage() {
 
       {view === 'upcoming' && (
         <section className="upcoming-calendar">
-          {events.length === 0 ? (
+          {visibleEvents.length === 0 ? (
             <div className="empty-state"><strong>No upcoming events.</strong><span>Nothing is planned in the next 60 days.</span></div>
           ) : Array.from(eventsByDay.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([key, dayEvents]) => {
             const day = new Date(key + 'T12:00:00')
@@ -1228,6 +1366,20 @@ export function CalendarPage() {
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder="Optional details"
+              />
+            </label>
+
+            <label>
+              Calendar
+              <Select
+                value={editingCalendarId ?? calendars.find((item)=>item.is_default)?.id ?? calendars[0]?.id ?? ''}
+                onChange={setEditingCalendarId}
+                options={calendars.map((item)=>({
+                  value:item.id,
+                  label:item.name + (item.is_default ? ' · Default' : ''),
+                  dotColor:categoryColor(item.color_key),
+                }))}
+                ariaLabel="Choose calendar"
               />
             </label>
 
@@ -1570,6 +1722,91 @@ export function CalendarPage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {calendarManagerOpen && canWrite && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onMouseDown={(event)=>{
+            if(event.currentTarget===event.target && !calendarSaving){
+              setCalendarManagerOpen(false)
+              resetCalendarEditor()
+            }
+          }}
+        >
+          <section className="modal-card calendar-manager-modal">
+            <header>
+              <div>
+                <span className="eyebrow">CALENDARS</span>
+                <h2>Manage calendars</h2>
+              </div>
+              <button type="button" className="icon-button" aria-label="Close Calendar manager" onClick={()=>{
+                setCalendarManagerOpen(false)
+                resetCalendarEditor()
+              }}>
+                <X size={18}/>
+              </button>
+            </header>
+
+            <div className="calendar-manager-list">
+              {calendars.map((calendar)=>(
+                <div className="calendar-manager-row" key={calendar.id}>
+                  <span className="calendar-manager-color" style={{ backgroundColor:categoryColor(calendar.color_key) }}/>
+                  <div>
+                    <strong>{calendar.name}</strong>
+                    <small>{calendar.is_default ? 'Default calendar' : 'Household calendar'}</small>
+                  </div>
+                  <div className="calendar-manager-actions">
+                    {!calendar.is_default && (
+                      <button type="button" className="secondary-button compact" disabled={calendarSaving} onClick={()=>void makeDefaultCalendar(calendar.id)}>
+                        Make default
+                      </button>
+                    )}
+                    <button type="button" className="icon-button compact-icon" onClick={()=>editCalendar(calendar)} aria-label={'Edit '+calendar.name}>
+                      <Pencil size={14}/>
+                    </button>
+                    {!calendar.is_default && calendars.length>1 && (
+                      <button type="button" className="icon-button compact-icon danger-icon-button" disabled={calendarSaving} onClick={()=>void archiveManagedCalendar(calendar.id)} aria-label={'Archive '+calendar.name}>
+                        <Archive size={14}/>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <form className="calendar-manager-form" onSubmit={saveManagedCalendar}>
+              <span className="eyebrow">{calendarEditingId ? 'EDIT CALENDAR' : 'NEW CALENDAR'}</span>
+              <div className="composer-grid-two aligned-field-row">
+                <label>
+                  Name
+                  <input value={calendarName} onChange={(event)=>setCalendarName(event.target.value)} placeholder="e.g. Work" required/>
+                </label>
+                <label>
+                  Color
+                  <Select
+                    value={calendarColorKey}
+                    onChange={setCalendarColorKey}
+                    options={calendarColorOptions.map((item)=>({
+                      ...item,
+                      dotColor:categoryColor(item.value),
+                    }))}
+                    ariaLabel="Choose calendar color"
+                  />
+                </label>
+              </div>
+              <div className="calendar-manager-form-actions">
+                {calendarEditingId && (
+                  <button type="button" className="secondary-button compact" onClick={resetCalendarEditor}>Cancel edit</button>
+                )}
+                <button className="primary-button compact" disabled={calendarSaving || !calendarName.trim()}>
+                  {calendarSaving?'Saving…':calendarEditingId?'Save calendar':'Add calendar'}
+                </button>
+              </div>
+            </form>
+          </section>
         </div>
       )}
 
