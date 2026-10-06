@@ -127,6 +127,44 @@ function normalizeIngredient(value:string){
   return value.trim().toLocaleLowerCase().replace(/\s+/g,' ')
 }
 
+
+function stripRecipeLine(value:string){
+  return value
+    .replace(/^[-•·▪◦]+\s*/,'')
+    .replace(/^\d+[.)]\s*/,'')
+    .trim()
+}
+
+function parsePastedRecipeText(value:string){
+  const lines=value
+    .replace(/\r/g,'')
+    .split('\n')
+    .map((line)=>line.trim())
+    .filter(Boolean)
+
+  const ingredientHeading=lines.findIndex((line)=>/^(ingredients?|zutaten(?:liste)?)(\s*:)?$/i.test(line))
+  const instructionHeading=lines.findIndex((line)=>/^(directions?|instructions?|method|zubereitung|zubereitungsschritte|anleitung)(\s*:)?$/i.test(line))
+
+  if(ingredientHeading<0 || instructionHeading<0 || instructionHeading<=ingredientHeading){
+    return null
+  }
+
+  const titleCandidates=lines.slice(0,ingredientHeading)
+    .filter((line)=>!/^(prep|cook|total|servings?|portionen?|zubereitungszeit|arbeitszeit)\b/i.test(line))
+
+  const title=stripRecipeLine(titleCandidates[0]||'Imported recipe')
+  const ingredients=lines.slice(ingredientHeading+1,instructionHeading)
+    .map(stripRecipeLine)
+    .filter(Boolean)
+
+  const instructions=lines.slice(instructionHeading+1)
+    .map(stripRecipeLine)
+    .filter(Boolean)
+
+  if(ingredients.length<2 || instructions.length<1) return null
+  return { title,ingredients,instructions }
+}
+
 export function MealsPage(){
   const { household,modules }=useHousehold()
   const access=modules.find((module)=>module.code==='meals')
@@ -164,6 +202,8 @@ export function MealsPage(){
   const [importOpen,setImportOpen]=useState(false)
   const [importUrl,setImportUrl]=useState('')
   const [importBusy,setImportBusy]=useState(false)
+  const [importFallback,setImportFallback]=useState<'paste'|'collection'|null>(null)
+  const [importPasteText,setImportPasteText]=useState('')
 
   const [mealOpen,setMealOpen]=useState(false)
   const [editingMealId,setEditingMealId]=useState<string|null>(null)
@@ -381,6 +421,7 @@ export function MealsPage(){
     setImportBusy(true)
     setError('')
     setMessage('')
+    setImportFallback(null)
 
     const result=await supabase.functions.invoke('import-recipe-url',{
       body:{
@@ -393,15 +434,18 @@ export function MealsPage(){
 
     if(result.error || result.data?.error){
       let detail=result.data?.error || result.error?.message || 'Recipe import failed.'
+      let fallback=(result.data?.fallback ?? null) as 'paste'|'collection'|null
       const context=(result.error as { context?:Response }|null)?.context
       if(context){
         try{
-          const payload=await context.clone().json() as { error?:string }
+          const payload=await context.clone().json() as { error?:string;fallback?:'paste'|'collection' }
           if(payload.error) detail=payload.error
+          if(payload.fallback) fallback=payload.fallback
         } catch {
           // Keep the normal function error.
         }
       }
+      setImportFallback(fallback)
       setError(detail)
       return
     }
@@ -428,6 +472,31 @@ export function MealsPage(){
     setRecipeImportedAt(new Date().toISOString())
     setImportOpen(false)
     setImportUrl('')
+    setRecipeOpen(true)
+  }
+
+  function usePastedRecipe(){
+    const parsed=parsePastedRecipeText(importPasteText)
+    if(!parsed){
+      setError('Famioo could not separate ingredients and instructions. Copy the recipe card including its Ingredients/Zutaten and Directions/Zubereitung headings.')
+      return
+    }
+
+    let sourceSite=''
+    try{ sourceSite=new URL(importUrl.trim()).hostname.replace(/^www\./,'') } catch { /* optional source */ }
+
+    resetRecipe()
+    setRecipeTitle(parsed.title)
+    setRecipeIngredients(parsed.ingredients.map(importedIngredientForEditor).join('\n'))
+    setRecipeInstructions(parsed.instructions.join('\n\n'))
+    setRecipeSourceType('imported')
+    setRecipeSourceUrl(importUrl.trim())
+    setRecipeSourceSite(sourceSite)
+    setRecipeImportedAt(new Date().toISOString())
+    setImportOpen(false)
+    setImportFallback(null)
+    setImportPasteText('')
+    setError('')
     setRecipeOpen(true)
   }
 
@@ -1023,6 +1092,31 @@ export function MealsPage(){
 
             <small className="field-hint">Famioo does not bypass logins or paywalls. The original source link is kept with every imported recipe.</small>
             {error && <div className="form-message error">{error}</div>}
+
+            {importFallback==='collection' && (
+              <div className="recipe-import-help">
+                <strong>This is a collection page</strong>
+                <span>Open one individual recipe from that page, then copy the individual recipe URL and try again.</span>
+              </div>
+            )}
+
+            {importFallback==='paste' && (
+              <div className="recipe-import-paste">
+                <div>
+                  <strong>Import this recipe without the website connection</strong>
+                  <span>Copy the recipe card from the website, including the Ingredients/Zutaten and Directions/Zubereitung headings, then paste it here.</span>
+                </div>
+                <textarea
+                  rows={8}
+                  value={importPasteText}
+                  onChange={(event)=>setImportPasteText(event.target.value)}
+                  placeholder={'Recipe title\n\nIngredients\n2 onions\n400 g tomatoes\n\nDirections\n1. Prepare…'}
+                />
+                <button type="button" className="secondary-button compact" disabled={!importPasteText.trim()} onClick={usePastedRecipe}>
+                  Use pasted recipe
+                </button>
+              </div>
+            )}
 
             <div className="composer-footer-right">
               <button className="primary-button compact" disabled={importBusy || !importUrl.trim()}>
