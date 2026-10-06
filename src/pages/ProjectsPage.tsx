@@ -607,6 +607,15 @@ export function ProjectsPage() {
     if (taskId) {
       const task=tasks.find((row) => row.id === taskId)
       if (!task) return
+
+      const linked=items.find((row) => row.linked_task_id === taskId && row.status !== 'archived')
+      if (linked) {
+        setTab(linked.item_kind === 'chore' ? 'chores' : 'projects')
+        openItem(linked.item_kind,linked.project_id ?? '',linked)
+        setExternalSourceHandled(true)
+        return
+      }
+
       resetItem(kind)
       setItemKind(kind)
       setItemSource('task')
@@ -919,8 +928,10 @@ export function ProjectsPage() {
   }
 
   const importedEdit = Boolean(editingItemId && items.find((item) => item.id === editingItemId)?.task_link_origin === 'imported')
-  const sourceFieldsLocked = (itemSource === 'task' && !editingItemId) || Boolean(sourceEventId)
-  const assignmentLocked = itemSource === 'task' && !editingItemId
+  const taskSourceLocked = itemSource === 'task' && !editingItemId
+  const eventSourceLocked = Boolean(sourceEventId)
+  const sourceFieldsLocked = taskSourceLocked || eventSourceLocked
+  const assignmentLocked = taskSourceLocked
 
   return (
     <div className="page projects-page">
@@ -1167,16 +1178,41 @@ export function ProjectsPage() {
 
             <div className="composer-option-list">
               <label className="composer-option">
-                <input type="checkbox" checked={itemSyncTask || importedEdit || sourceFieldsLocked} disabled={!canSyncTasks || importedEdit || sourceFieldsLocked} onChange={(event) => setItemSyncTask(event.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={eventSourceLocked ? false : itemSyncTask || importedEdit || taskSourceLocked}
+                  disabled={!canSyncTasks || importedEdit || taskSourceLocked || eventSourceLocked}
+                  onChange={(event) => setItemSyncTask(event.target.checked)}
+                />
                 <span>
-                  <span>{sourceFieldsLocked || importedEdit ? 'Linked to existing Task' : 'Show in Tasks'}</span>
-                  <small>{sourceFieldsLocked || importedEdit ? 'Imported Tasks remain linked, so completion in Tasks also awards or removes Projects & Chores points.' : canSyncTasks ? 'Creates or updates one linked household Task.' : 'Tasks write access is required.'}</small>
+                  <span>{eventSourceLocked ? 'Points-only child of Calendar event' : taskSourceLocked || importedEdit ? 'Linked to existing Task' : 'Show in Tasks'}</span>
+                  <small>
+                    {eventSourceLocked
+                      ? 'The Calendar event stays the main item. No duplicate Task is created.'
+                      : taskSourceLocked || importedEdit
+                        ? 'Imported Tasks remain linked, so completion in Tasks also awards or removes Projects & Chores points.'
+                        : canSyncTasks ? 'Creates or updates one linked household Task.' : 'Tasks write access is required.'}
+                  </small>
                 </span>
               </label>
 
               <label className="composer-option">
-                <input type="checkbox" checked={itemSyncCalendar} disabled={!canSyncCalendar || sourceFieldsLocked} onChange={(event) => setItemSyncCalendar(event.target.checked)} />
-                <span><span>Add to Calendar</span><small>{sourceFieldsLocked ? 'The imported Task keeps its existing Calendar link.' : canSyncCalendar ? 'A due date is required. If Tasks is also selected, the same Task owns the Calendar entry.' : 'Calendar write access is required.'}</small></span>
+                <input
+                  type="checkbox"
+                  checked={eventSourceLocked ? true : itemSyncCalendar}
+                  disabled={!canSyncCalendar || taskSourceLocked || eventSourceLocked}
+                  onChange={(event) => setItemSyncCalendar(event.target.checked)}
+                />
+                <span>
+                  <span>{eventSourceLocked ? 'Linked to existing Calendar event' : 'Add to Calendar'}</span>
+                  <small>
+                    {eventSourceLocked
+                      ? 'This responsibility remains connected to the original Calendar event.'
+                      : taskSourceLocked
+                        ? 'The imported Task keeps its existing Calendar link.'
+                        : canSyncCalendar ? 'A due date is required. If Tasks is also selected, the same Task owns the Calendar entry.' : 'Calendar write access is required.'}
+                  </small>
+                </span>
               </label>
 
               {!editingItemId && itemSource !== 'task' && (
