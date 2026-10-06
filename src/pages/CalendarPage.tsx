@@ -1163,12 +1163,10 @@ export function CalendarPage() {
           Today
         </button>
 
-        {modules.find((module)=>module.code==='calendar_connections')?.enabled && (
-          <button className="secondary-button compact" onClick={() => routeNavigate('/app/calendar/connections')}>
-            <CalendarSync size={15}/>
-            Connections
-          </button>
-        )}
+        <button className="secondary-button compact" onClick={() => routeNavigate('/app/calendar/connections')}>
+          <CalendarSync size={15}/>
+          Work import
+        </button>
 
         {canWrite ? (
           <button className="primary-button compact" onClick={() => openComposer(dateKey(new Date()))}>
