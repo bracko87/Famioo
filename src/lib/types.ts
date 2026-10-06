@@ -21,6 +21,7 @@ export type FamilyProfile = {
   color_key: string
   avatar_emoji: string | null
   avatar_path: string | null
+  birth_date: string | null
 }
 
 export type ModuleCode =
@@ -37,6 +38,7 @@ export type ModuleCode =
   | 'meals'
   | 'files'
   | 'assistant'
+  | 'vaccinations'
 
 export type ModuleAccess = {
   code: ModuleCode
