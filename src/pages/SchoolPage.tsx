@@ -5,6 +5,7 @@ import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { Select } from '../components/ui/Select'
 import { TimePicker } from '../components/ui/TimePicker'
+import { PrivacyNotice } from '../components/PrivacyNotice'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
 import { firstName } from '../lib/personName'
@@ -311,6 +312,8 @@ export function SchoolPage() {
           </button>
         )}
       </div>
+
+      <PrivacyNotice compact />
 
       {!access?.enabled && <div className="module-access-note">School & Kita is not enabled for this household.</div>}
       {access?.enabled && !canWrite && <div className="module-access-note">Read-only access</div>}
