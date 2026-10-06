@@ -1,5 +1,6 @@
-import { ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, FolderKanban, Plus, Trash2, WalletCards, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
 import { supabase } from '../lib/supabase'
@@ -22,6 +23,34 @@ type EventTemplate = {
   start_time: string | null
   end_time: string | null
   location_text: string | null
+}
+
+type LinkedChecklistItem = {
+  id: string
+  checklist_id: string
+  item_text: string
+  checked: boolean
+}
+
+type LinkedChecklist = {
+  id: string
+  title: string
+  status: 'active' | 'archived'
+  items: LinkedChecklistItem[]
+}
+
+type EventCost = {
+  id: string
+  title: string
+  amount: number
+  currency: string
+  cost_date: string
+}
+
+type LinkedWorkItem = {
+  id: string
+  item_kind: 'project_task' | 'chore'
+  status: 'open' | 'done' | 'archived'
 }
 
 function currentTimeInZone(timezone: string) {
@@ -165,9 +194,16 @@ function parseRrule(rrule: string | null) {
 
 export function CalendarPage() {
   const { household, profiles, modules, user } = useHousehold()
+  const navigate = useNavigate()
   const calendarAccess = modules.find((module) => module.code === 'calendar')
   const canWrite = Boolean(calendarAccess?.can_write)
   const mondayFirst = household.week_starts_on === 1
+  const checklistAccess = modules.find((module) => module.code === 'checklists')
+  const costsAccess = modules.find((module) => module.code === 'costs')
+  const projectsAccess = modules.find((module) => module.code === 'projects')
+  const canWriteChecklists = Boolean(checklistAccess?.enabled && checklistAccess?.can_write)
+  const canWriteCosts = Boolean(costsAccess?.enabled && costsAccess?.can_write)
+  const canWriteProjects = Boolean(projectsAccess?.enabled && projectsAccess?.can_write)
 
   const [view, setView] = useState<CalendarView>('month')
   const [anchor, setAnchor] = useState(() => new Date())
@@ -198,6 +234,15 @@ export function CalendarPage() {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
+  const [editingOccurrence, setEditingOccurrence] = useState<CalendarOccurrence | null>(null)
+  const [editingRecurring, setEditingRecurring] = useState(false)
+  const [deleteOptionsOpen, setDeleteOptionsOpen] = useState(false)
+  const [linkedChecklists, setLinkedChecklists] = useState<LinkedChecklist[]>([])
+  const [linkedCosts, setLinkedCosts] = useState<EventCost[]>([])
+  const [linkedWorkItems, setLinkedWorkItems] = useState<LinkedWorkItem[]>([])
+  const [eventCostTitle, setEventCostTitle] = useState('')
+  const [eventCostAmount, setEventCostAmount] = useState('')
+  const [eventCostSaving, setEventCostSaving] = useState(false)
 
   const range = useMemo(
     () => rangeFor(view, anchor, mondayFirst),
@@ -328,6 +373,14 @@ export function CalendarPage() {
     setTemplateId('')
     setDescription('')
     setSaveTemplate(false)
+    setEditingOccurrence(null)
+    setEditingRecurring(false)
+    setDeleteOptionsOpen(false)
+    setLinkedChecklists([])
+    setLinkedCosts([])
+    setLinkedWorkItems([])
+    setEventCostTitle('')
+    setEventCostAmount('')
     setError('')
   }
 
@@ -411,6 +464,9 @@ export function CalendarPage() {
 
     setEditingEventId(row.id)
     setEditingCalendarId(row.calendar_id)
+    setEditingOccurrence(item)
+    setEditingRecurring(Boolean(ruleResult.data?.rrule))
+    setDeleteOptionsOpen(false)
     setComposerDate(eventDate)
     setEndDate(eventEndDate)
     setTemplateId('')
@@ -439,18 +495,94 @@ export function CalendarPage() {
     if (participantResult.error) setError(participantResult.error.message)
     else if (ruleResult.error) setError(ruleResult.error.message)
     else if (reminderResult.error) setError(reminderResult.error.message)
+
+    const [checklistResult,costResult,workResult] = await Promise.all([
+      checklistAccess?.enabled
+        ? supabase
+            .from('checklists')
+            .select('id,title,status')
+            .eq('household_id',household.id)
+            .eq('linked_event_id',item.event_id)
+            .neq('status','archived')
+            .order('created_at')
+        : Promise.resolve({ data:[],error:null }),
+      costsAccess?.enabled
+        ? supabase
+            .from('household_costs')
+            .select('id,title,amount,currency,cost_date')
+            .eq('household_id',household.id)
+            .eq('source_event_id',item.event_id)
+            .order('cost_date')
+            .order('created_at')
+        : Promise.resolve({ data:[],error:null }),
+      projectsAccess?.enabled
+        ? supabase
+            .from('project_work_items')
+            .select('id,item_kind,status')
+            .eq('household_id',household.id)
+            .eq('linked_event_id',item.event_id)
+            .neq('status','archived')
+        : Promise.resolve({ data:[],error:null }),
+    ])
+
+    if (checklistResult.error) {
+      setError((current) => current || checklistResult.error?.message || '')
+    } else {
+      const lists=(checklistResult.data ?? []) as Omit<LinkedChecklist,'items'>[]
+      let checklistItems:LinkedChecklistItem[]=[]
+      if (lists.length) {
+        const itemResult=await supabase
+          .from('checklist_items')
+          .select('id,checklist_id,item_text,checked')
+          .eq('household_id',household.id)
+          .in('checklist_id',lists.map((list) => list.id))
+          .order('sort_order')
+
+        if (itemResult.error) setError((current) => current || itemResult.error.message)
+        else checklistItems=(itemResult.data ?? []) as LinkedChecklistItem[]
+      }
+
+      setLinkedChecklists(lists.map((list) => ({
+        ...list,
+        items:checklistItems.filter((entry) => entry.checklist_id === list.id),
+      })))
+    }
+
+    if (costResult.error) setError((current) => current || costResult.error?.message || '')
+    else setLinkedCosts((costResult.data ?? []) as EventCost[])
+
+    if (workResult.error) setError((current) => current || workResult.error?.message || '')
+    else setLinkedWorkItems((workResult.data ?? []) as LinkedWorkItem[])
+
+    setEventCostTitle(row.title + ' cost')
+    setEventCostAmount('')
   }
 
-  async function deleteEvent() {
+  async function deleteEvent(scope: 'one' | 'future' | 'all' = 'all') {
     if (!editingEventId || !canWrite || deleting) return
-    if (!window.confirm('Delete this calendar event?')) return
+
+    const confirmation = scope === 'one'
+      ? 'Delete only this occurrence?'
+      : scope === 'future'
+        ? 'Delete this occurrence and all future occurrences?'
+        : editingRecurring
+          ? 'Delete every occurrence in this repeating event?'
+          : 'Delete this calendar event?'
+
+    if (!window.confirm(confirmation)) return
 
     setDeleting(true)
     setError('')
 
-    const result = await supabase.rpc('delete_event_v1', {
+    const result = await supabase.rpc('delete_event_occurrences_v1', {
       p_event_id: editingEventId,
       p_household_id: household.id,
+      p_scope: scope,
+      p_occurrence_date: editingOccurrence?.occurrence_start_date
+        ?? (editingOccurrence?.occurrence_start_at
+          ? dateInZone(editingOccurrence.occurrence_start_at, editingOccurrence.event_timezone)
+          : composerDate),
+      p_occurrence_at: editingOccurrence?.occurrence_start_at ?? null,
     })
 
     setDeleting(false)
@@ -462,6 +594,81 @@ export function CalendarPage() {
 
     closeComposer()
     await load()
+  }
+
+  async function toggleLinkedChecklistItem(item: LinkedChecklistItem) {
+    if (!canWriteChecklists) return
+
+    const result=await supabase
+      .from('checklist_items')
+      .update({ checked:!item.checked })
+      .eq('id',item.id)
+      .eq('household_id',household.id)
+
+    if (result.error) {
+      setError(result.error.message)
+      return
+    }
+
+    setLinkedChecklists((current) => current.map((list) => ({
+      ...list,
+      items:list.items.map((entry) => entry.id === item.id
+        ? { ...entry,checked:!entry.checked }
+        : entry),
+    })))
+  }
+
+  async function addEventCost() {
+    if (!editingEventId || !canWriteCosts || !eventCostAmount.trim()) return
+
+    const amount=Number(eventCostAmount.replace(',','.'))
+    if (!Number.isFinite(amount) || amount < 0) {
+      setError('Enter a valid Household Cost amount.')
+      return
+    }
+
+    setEventCostSaving(true)
+    setError('')
+
+    const result=await supabase
+      .from('household_costs')
+      .insert({
+        household_id:household.id,
+        title:eventCostTitle.trim() || title.trim() || 'Calendar event cost',
+        amount,
+        currency:'EUR',
+        cost_date:composerDate,
+        cost_kind:'additional',
+        source_type:'calendar_event',
+        source_event_id:editingEventId,
+        schedule_type:'one_time',
+        flow_type:'expense',
+      })
+      .select('id,title,amount,currency,cost_date')
+      .single()
+
+    setEventCostSaving(false)
+
+    if (result.error) {
+      setError(result.error.message)
+      return
+    }
+
+    setLinkedCosts((current) => [...current,result.data as EventCost])
+    setEventCostAmount('')
+  }
+
+  function openProjectsConnection(kind: 'project_task' | 'chore') {
+    if (!editingEventId) return
+    const existing=linkedWorkItems.find((item) => item.item_kind === kind)
+    const tab=kind === 'chore' ? 'chores' : 'projects'
+    const params=new URLSearchParams({ tab })
+    if (existing) params.set('editItem',existing.id)
+    else {
+      params.set('event',editingEventId)
+      params.set('kind',kind)
+    }
+    navigate('/app/projects?' + params.toString())
   }
 
   function applyTemplate(nextTemplateId: string) {
@@ -1082,6 +1289,89 @@ export function CalendarPage() {
               )}
             </fieldset>
 
+            {editingEventId && (
+              <div className="event-module-connections">
+                {projectsAccess?.enabled && (
+                  <section className="event-connection-card">
+                    <div className="event-connection-head">
+                      <span><FolderKanban size={15} /><strong>Projects & Chores</strong></span>
+                      <small>Keep this Calendar event as the main item and add a points-only linked responsibility.</small>
+                    </div>
+                    <div className="event-connection-actions">
+                      <button type="button" className="secondary-button compact" disabled={!canWriteProjects} onClick={() => openProjectsConnection('project_task')}>
+                        {linkedWorkItems.some((item) => item.item_kind === 'project_task') ? 'Edit as project' : 'Add as project'}
+                      </button>
+                      <button type="button" className="secondary-button compact" disabled={!canWriteProjects} onClick={() => openProjectsConnection('chore')}>
+                        {linkedWorkItems.some((item) => item.item_kind === 'chore') ? 'Edit as chore' : 'Add as chore'}
+                      </button>
+                    </div>
+                  </section>
+                )}
+
+                {checklistAccess?.enabled && (
+                  <details className="event-linked-details">
+                    <summary>
+                      <span><ClipboardCheck size={15} />Checklists</span>
+                      <span>{linkedChecklists.length}<ChevronDown size={14} /></span>
+                    </summary>
+                    <div className="event-linked-details-body">
+                      {linkedChecklists.length ? linkedChecklists.map((list) => (
+                        <div className="event-linked-checklist" key={list.id}>
+                          <strong>{list.title}</strong>
+                          {list.items.length ? list.items.map((item) => (
+                            <button
+                              type="button"
+                              className={'event-linked-check-item ' + (item.checked ? 'checked' : '')}
+                              key={item.id}
+                              disabled={!canWriteChecklists}
+                              onClick={() => void toggleLinkedChecklistItem(item)}
+                            >
+                              <span>{item.checked ? '✓' : ''}</span>
+                              {item.item_text}
+                            </button>
+                          )) : <small>No checklist items yet.</small>}
+                        </div>
+                      )) : <small>No checklist is linked to this event.</small>}
+                    </div>
+                  </details>
+                )}
+
+                {costsAccess?.enabled && (
+                  <details className="event-linked-details">
+                    <summary>
+                      <span><WalletCards size={15} />Household costs</span>
+                      <span>
+                        {linkedCosts.length
+                          ? '€' + linkedCosts.reduce((sum,row) => sum + Number(row.amount),0).toFixed(2)
+                          : 'None'}
+                        <ChevronDown size={14} />
+                      </span>
+                    </summary>
+                    <div className="event-linked-details-body">
+                      {linkedCosts.map((cost) => (
+                        <div className="event-cost-row" key={cost.id}>
+                          <span>{cost.title}</span>
+                          <strong>€{Number(cost.amount).toFixed(2)}</strong>
+                        </div>
+                      ))}
+                      {canWriteCosts && (
+                        <div className="event-cost-add">
+                          <input value={eventCostTitle} onChange={(event) => setEventCostTitle(event.target.value)} placeholder="Cost name" />
+                          <div className="money-input">
+                            <span>€</span>
+                            <input inputMode="decimal" value={eventCostAmount} onChange={(event) => setEventCostAmount(event.target.value)} placeholder="0.00" />
+                          </div>
+                          <button type="button" className="secondary-button compact" disabled={eventCostSaving || !eventCostAmount.trim()} onClick={() => void addEventCost()}>
+                            {eventCostSaving ? 'Adding…' : 'Add cost'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                )}
+              </div>
+            )}
+
             <fieldset className="participant-fieldset">
               <legend>Participants</legend>
               <div className="profile-choice-grid">
@@ -1121,20 +1411,31 @@ export function CalendarPage() {
 
             {error && <div className="form-message error">{error}</div>}
 
+            {editingEventId && deleteOptionsOpen && editingRecurring && (
+              <div className="event-delete-options">
+                <strong>Which occurrence should be deleted?</strong>
+                <div>
+                  <button type="button" className="secondary-button compact danger-button" disabled={deleting} onClick={() => void deleteEvent('one')}>Only this occurrence</button>
+                  <button type="button" className="secondary-button compact danger-button" disabled={deleting} onClick={() => void deleteEvent('future')}>This & future</button>
+                  <button type="button" className="secondary-button compact danger-button" disabled={deleting} onClick={() => void deleteEvent('all')}>All occurrences</button>
+                </div>
+              </div>
+            )}
+
             <div className="event-composer-actions">
               {editingEventId && (
                 <button
                   type="button"
-                  className="secondary-button danger-button"
+                  className="secondary-button compact danger-button event-delete-button"
                   disabled={saving || deleting}
-                  onClick={() => void deleteEvent()}
+                  onClick={() => editingRecurring ? setDeleteOptionsOpen((current) => !current) : void deleteEvent('all')}
                 >
-                  <Trash2 size={15} />
-                  {deleting ? 'Deleting…' : 'Delete event'}
+                  <Trash2 size={14} />
+                  {deleting ? 'Deleting…' : 'Delete'}
                 </button>
               )}
 
-              <button className="primary-button" disabled={saving || deleting}>
+              <button className="primary-button compact event-save-button" disabled={saving || deleting}>
                 {saving ? 'Saving…' : editingEventId ? 'Save changes' : 'Save event'}
               </button>
             </div>
