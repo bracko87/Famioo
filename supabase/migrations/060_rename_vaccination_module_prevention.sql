@@ -3,8 +3,7 @@
 
 update public.modules
 set name='Prevention',
-    description='German child preventive health planner for vaccinations and U/J examinations',
-    updated_at=now()
+    description='German child preventive health planner for vaccinations and U/J examinations'
 where code='vaccinations';
 
 update public.billing_products
