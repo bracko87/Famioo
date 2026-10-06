@@ -13,7 +13,7 @@ const allowedHosts=[
   "lecker.de","www.lecker.de",
   "essen-und-trinken.de","www.essen-und-trinken.de",
   "bbcgoodfood.com","www.bbcgoodfood.com",
-  "allrecipes.com","www.allrecipes.com",
+  "loveandlemons.com","www.loveandlemons.com",
 ]
 
 function json(body:unknown,status=200){
@@ -337,7 +337,7 @@ Deno.serve(async(req:Request)=>{
   if(!allowedHosts.includes(url.hostname.toLowerCase())){
     return json({
       error:"This recipe website is not supported yet.",
-      supported:["Chefkoch","LECKER","essen & trinken","BBC Good Food","Allrecipes"],
+      supported:["Chefkoch","LECKER","essen & trinken","BBC Good Food","Love & Lemons"],
     },400)
   }
 
