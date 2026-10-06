@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "npm:@supabase/supabase-js@2"
+import { load as loadHtml } from "npm:cheerio@1.1.2"
 
 const corsHeaders={
   "Access-Control-Allow-Origin":"*",
@@ -130,6 +131,152 @@ function mealType(value:unknown){
   return "dinner"
 }
 
+
+function uniqueLines(values:string[]){
+  const seen=new Set<string>()
+  const result:string[]=[]
+  for(const raw of values){
+    const value=cleanText(raw)
+    const key=value.toLowerCase()
+    if(!value || seen.has(key)) continue
+    seen.add(key)
+    result.push(value)
+  }
+  return result
+}
+
+function fallbackRecipeFromHtml(html:string,url:string):Record<string,unknown>|null{
+  const $=loadHtml(html)
+
+  const recipeRoot=$('[itemtype*="schema.org/Recipe"],[itemtype*="schema.org%2FRecipe"]').first()
+  const title=cleanText(
+    recipeRoot.find('[itemprop="name"]').first().text()
+      || $('h1').first().text()
+      || $('meta[property="og:title"]').attr('content')
+      || $('title').text(),
+  )
+
+  const ingredientSelectors=[
+    '[itemprop="recipeIngredient"]',
+    '[itemprop="ingredients"]',
+    '[data-ingredient-name]',
+    '[data-ingredient]',
+    '[data-testid*="ingredient"]',
+    '.recipe-ingredients li',
+    '.ingredients li',
+    '[class*="ingredient"] li',
+  ]
+  const ingredientValues:string[]=[]
+  for(const selector of ingredientSelectors){
+    $(selector).each((_index,element)=>{
+      const el=$(element)
+      ingredientValues.push(
+        el.attr('content')
+          || el.attr('data-ingredient-name')
+          || el.attr('data-ingredient')
+          || el.text(),
+      )
+    })
+    if(uniqueLines(ingredientValues).length>=2) break
+  }
+
+  const instructionSelectors=[
+    '[itemprop="recipeInstructions"]',
+    '[data-testid*="instruction"]',
+    '.recipe-instructions li',
+    '.instructions li',
+    '.method-steps li',
+    '.recipe-method li',
+    '[class*="instruction"] li',
+    '[class*="method"] li',
+  ]
+  const instructionValues:string[]=[]
+  for(const selector of instructionSelectors){
+    $(selector).each((_index,element)=>{
+      const el=$(element)
+      instructionValues.push(el.attr('content') || el.text())
+    })
+    if(uniqueLines(instructionValues).length>=1) break
+  }
+
+  const ingredients=uniqueLines(ingredientValues)
+    .filter((line)=>line.length<500)
+    .slice(0,120)
+  const instructions=uniqueLines(instructionValues)
+    .filter((line)=>line.length<4000)
+    .slice(0,80)
+
+  if(!title || ingredients.length<2 || instructions.length<1) return null
+
+  const description=cleanText(
+    recipeRoot.find('[itemprop="description"]').attr('content')
+      || recipeRoot.find('[itemprop="description"]').first().text()
+      || $('meta[name="description"]').attr('content')
+      || $('meta[property="og:description"]').attr('content'),
+  )
+
+  const image=recipeRoot.find('[itemprop="image"]').attr('content')
+    || recipeRoot.find('[itemprop="image"]').attr('src')
+    || $('meta[property="og:image"]').attr('content')
+    || ''
+
+  const prepText=recipeRoot.find('[itemprop="prepTime"]').attr('content') || ''
+  const totalText=recipeRoot.find('[itemprop="totalTime"]').attr('content') || ''
+  const yieldText=recipeRoot.find('[itemprop="recipeYield"]').attr('content')
+    || recipeRoot.find('[itemprop="recipeYield"]').text()
+    || ''
+
+  return {
+    name:title,
+    description,
+    recipeIngredient:ingredients,
+    recipeInstructions:instructions,
+    prepTime:prepText,
+    totalTime:totalText,
+    recipeYield:yieldText,
+    image,
+    url,
+  }
+}
+
+function looksLikeRecipeCollection(html:string){
+  const $=loadHtml(html)
+  const collectionTypes=$('script[type="application/ld+json"]').text().toLowerCase()
+  if(collectionTypes.includes('"@type":"collectionpage"') || collectionTypes.includes('"@type":"itemlist"')) return true
+
+  let recipeLinkCount=0
+  $('a').each((_index,element)=>{
+    const text=cleanText($(element).text()).toLowerCase()
+    const href=String($(element).attr('href')||'').toLowerCase()
+    if((text.includes('zum rezept') || text.includes('view recipe') || text==='recipe') && /rezept|recipe/.test(href)){
+      recipeLinkCount+=1
+    }
+  })
+  return recipeLinkCount>=3
+}
+
+function parsedRecipePayload(recipe:Record<string,unknown>,sourceUrl:string){
+  const ingredients=ingredientLines(recipe.recipeIngredient || recipe.ingredients)
+  const instructions=flattenInstructions(recipe.recipeInstructions || recipe.step)
+  const prep=durationMinutes(recipe.prepTime)
+  const total=durationMinutes(recipe.totalTime)
+  const cook=durationMinutes(recipe.cookTime)
+
+  return {
+    title:cleanText(recipe.name)||"Imported recipe",
+    description:cleanText(recipe.description),
+    meal_type:mealType(recipe.recipeCategory),
+    prep_minutes:prep ?? (total!=null && cook!=null ? Math.max(0,total-cook) : total),
+    servings:numericYield(recipe.recipeYield || recipe.yield),
+    ingredients,
+    instructions:instructions.join("\n\n"),
+    source_url:sourceUrl,
+    source_site:new URL(sourceUrl).hostname.replace(/^www\./,""),
+    source_author:authorName(recipe.author),
+    source_image_url:imageUrl(recipe.image),
+  }
+}
+
 Deno.serve(async(req:Request)=>{
   if(req.method==="OPTIONS") return new Response("ok",{headers:corsHeaders})
   if(req.method!=="POST") return json({error:"Method not allowed."},405)
@@ -199,16 +346,30 @@ Deno.serve(async(req:Request)=>{
     response=await fetch(url.toString(),{
       redirect:"follow",
       headers:{
-        "User-Agent":"Famioo Recipe Importer/1.0",
-        "Accept":"text/html,application/xhtml+xml",
-        "Accept-Language":"de-DE,de;q=0.9,en;q=0.8",
+        // A normal browser-compatible request avoids sites rejecting the old
+        // custom bot-looking Famioo user agent while still identifying Famioo.
+        "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36 Famioo/1.0",
+        "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language":"de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
       },
     })
   } catch {
-    return json({error:"Famioo could not reach that recipe page."},400)
+    return json({
+      error:"Famioo could not reach that recipe page.",
+      fallback:"paste",
+    },400)
   }
 
-  if(!response.ok) return json({error:"The recipe page returned HTTP "+response.status+"."},400)
+  if(!response.ok){
+    const blocked=response.status===401 || response.status===403 || response.status===429
+    return json({
+      error:blocked
+        ? "This recipe website is blocking direct server imports (HTTP "+response.status+"). You can still import it by copying the recipe card text and using Famioo's paste fallback."
+        : "The recipe page returned HTTP "+response.status+".",
+      fallback:blocked ? "paste" : null,
+      upstream_status:response.status,
+    },400)
+  }
   const contentType=response.headers.get("content-type")||""
   if(!contentType.includes("text/html")&&!contentType.includes("application/xhtml+xml")){
     return json({error:"That link is not an HTML recipe page."},400)
@@ -233,31 +394,25 @@ Deno.serve(async(req:Request)=>{
   }
 
   if(!recipe){
+    recipe=fallbackRecipeFromHtml(html,response.url || url.toString())
+  }
+
+  if(!recipe){
+    if(looksLikeRecipeCollection(html)){
+      return json({
+        error:"This link is a recipe collection or category page, not one recipe. Open the specific recipe you want and paste that recipe's URL into Famioo.",
+        fallback:"collection",
+      },422)
+    }
+
     return json({
-      error:"No structured recipe data was found on this page. Famioo imports only recipe pages that publish Schema.org Recipe data.",
+      error:"Famioo could read the page, but could not identify the ingredients and instructions automatically. Use the paste fallback for this recipe.",
+      fallback:"paste",
     },422)
   }
 
-  const ingredients=ingredientLines(recipe.recipeIngredient || recipe.ingredients)
-  const instructions=flattenInstructions(recipe.recipeInstructions || recipe.step)
-  const prep=durationMinutes(recipe.prepTime)
-  const total=durationMinutes(recipe.totalTime)
-  const cook=durationMinutes(recipe.cookTime)
-
   return json({
     ok:true,
-    recipe:{
-      title:cleanText(recipe.name)||"Imported recipe",
-      description:cleanText(recipe.description),
-      meal_type:mealType(recipe.recipeCategory),
-      prep_minutes:prep ?? (total!=null && cook!=null ? Math.max(0,total-cook) : total),
-      servings:numericYield(recipe.recipeYield || recipe.yield),
-      ingredients,
-      instructions:instructions.join("\n\n"),
-      source_url:response.url || url.toString(),
-      source_site:new URL(response.url || url.toString()).hostname.replace(/^www\./,""),
-      source_author:authorName(recipe.author),
-      source_image_url:imageUrl(recipe.image),
-    },
+    recipe:parsedRecipePayload(recipe,response.url || url.toString()),
   })
 })
