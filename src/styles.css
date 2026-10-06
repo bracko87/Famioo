@@ -9967,3 +9967,282 @@ b {
 .calendar-reminder-fieldset .custom-select-trigger {
   min-height: 34px;
 }
+
+
+/* =========================================================
+   Recipe book, website import and Shopping export
+   ========================================================= */
+
+.meals-tabs button span {
+  margin-left: 5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #7b6487;
+  background: #f0e8f4;
+  font-size: 7px;
+}
+
+.meals-tabs button.active span {
+  color: #fff;
+  background: #9b68b4;
+}
+
+.recipe-source-row {
+  margin-top: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+}
+
+.recipe-source {
+  min-height: 23px;
+  padding: 0 7px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #7b6b80;
+  background: #f3eef5;
+  font-size: 8px;
+}
+
+.recipe-source.imported {
+  color: #476d7a;
+  background: #eaf4f5;
+}
+
+.recipe-source-row a,
+.recipe-import-source a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #7a5291;
+  font-size: 8px;
+  text-decoration: none;
+}
+
+.recipe-source-row a:hover,
+.recipe-import-source a:hover {
+  text-decoration: underline;
+}
+
+.recipe-instructions > div {
+  display: block;
+}
+
+.recipe-instructions p {
+  margin: 0;
+  white-space: pre-wrap;
+  color: #6f6373;
+  font-size: 8.5px;
+  line-height: 1.55;
+}
+
+.recipe-import-composer,
+.recipe-shopping-composer {
+  width: min(640px,100%);
+}
+
+.recipe-import-copy {
+  margin: 0;
+  color: #756a79;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.recipe-supported-sites {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.recipe-supported-sites > span {
+  margin-right: 2px;
+  color: #95889a;
+  font-size: 8px;
+}
+
+.recipe-supported-sites > b {
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  color: #705480;
+  background: #f1eaf5;
+  font-size: 8px;
+  font-weight: 600;
+}
+
+.recipe-import-source {
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 1px solid #dce9eb;
+  border-radius: 11px;
+  display: grid;
+  grid-template-columns: 24px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 8px;
+  color: #55737b;
+  background: #f5fbfb;
+}
+
+.recipe-import-source > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.recipe-import-source strong {
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.recipe-import-source small {
+  color: #899ca1;
+  font-size: 7.5px;
+}
+
+.shopping-export-mode {
+  padding: 3px;
+  border-radius: 10px;
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 3px;
+  background: #f1ebf4;
+}
+
+.shopping-export-mode button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  color: #82758a;
+  background: transparent;
+  font-size: 9px;
+}
+
+.shopping-export-mode button.active {
+  color: #724397;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(70,45,84,.07);
+}
+
+.shopping-export-mode button:disabled {
+  opacity: .45;
+}
+
+.shopping-export-ingredients {
+  max-height: 310px;
+  overflow-y: auto;
+  border: 1px solid #e8dfea;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.shopping-export-ingredients > header {
+  min-height: 39px;
+  padding: 0 11px;
+  border-bottom: 1px solid #eee8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.shopping-export-ingredients > header strong {
+  color: #65596a;
+  font-size: 9px;
+}
+
+.shopping-export-ingredients > header small {
+  color: #9a8e9e;
+  font-size: 7.5px;
+}
+
+.shopping-export-ingredients > label {
+  min-height: 43px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #f0ebf2;
+  display: grid;
+  grid-template-columns: 18px minmax(0,1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.shopping-export-ingredients > label:last-child {
+  border-bottom: 0;
+}
+
+.shopping-export-ingredients input {
+  width: 15px;
+  height: 15px;
+}
+
+.shopping-export-ingredients label > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.shopping-export-ingredients label strong {
+  color: #625668;
+  font-size: 9px;
+  font-weight: 550;
+}
+
+.shopping-export-ingredients label small {
+  color: #b27782;
+  font-size: 7.5px;
+}
+
+.recipe-shopping-footer {
+  padding-top: 10px;
+  border-top: 1px solid #eee8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.recipe-shopping-footer > span {
+  color: #928596;
+  font-size: 8px;
+}
+
+.recipe-archive-grid .recipe-card {
+  opacity: .94;
+}
+
+@media (max-width: 700px) {
+  .meals-heading-actions {
+    flex-wrap: wrap;
+  }
+
+  .meals-heading-actions > button {
+    min-width: calc(50% - 4px);
+  }
+
+  .meals-heading-actions > button:last-child {
+    width: 100%;
+    flex-basis: 100%;
+  }
+
+  .recipe-import-source {
+    grid-template-columns: 24px minmax(0,1fr);
+  }
+
+  .recipe-import-source a {
+    grid-column: 2;
+  }
+
+  .shopping-export-mode {
+    grid-template-columns: 1fr;
+  }
+}
