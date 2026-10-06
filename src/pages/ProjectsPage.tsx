@@ -17,6 +17,7 @@ import { DatePicker } from '../components/ui/DatePicker'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { Select } from '../components/ui/Select'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
 import { firstName } from '../lib/personName'
@@ -65,6 +66,8 @@ type WorkItem = {
   status: 'open' | 'done' | 'archived'
   completed_at: string | null
   completed_by_profile_id: string | null
+  source_event_occurrence_key: string | null
+  source_event_series_rule_id: string | null
   created_at: string
 }
 
@@ -248,11 +251,22 @@ export function ProjectsPage() {
   const [sourceEventId,setSourceEventId] = useState('')
   const [archiveCount,setArchiveCount] = useState(0)
   const [externalSourceHandled,setExternalSourceHandled] = useState(false)
+  const [sourceEventScope,setSourceEventScope] = useState<'one'|'series'>('one')
+  const [sourceOccurrenceKey,setSourceOccurrenceKey] = useState('')
+  const [sourceOccurrenceDate,setSourceOccurrenceDate] = useState('')
+  const [editingSeriesRuleId,setEditingSeriesRuleId] = useState<string|null>(null)
+  const [confirmAction,setConfirmAction] = useState<
+    | { kind:'project';id:string;title:string }
+    | { kind:'item';id:string;title:string }
+    | { kind:'series';id:string;title:string }
+    | null
+  >(null)
 
   async function load() {
     setError('')
 
     if (canWrite) {
+      void supabase.rpc('sync_project_event_series_rules_v1',{ p_household_id:household.id })
       const cleanupResult = await supabase.rpc('archive_expired_projects_chores_v1', {
         p_household_id: household.id,
       })
@@ -271,7 +285,7 @@ export function ProjectsPage() {
         .order('created_at',{ ascending:false }),
       supabase
         .from('project_work_items')
-        .select('id,project_id,item_kind,title,category_id,due_date,location_text,assigned_profile_id,points,notes,sync_task,sync_calendar,linked_task_id,linked_event_id,task_link_origin,score_duration,score_effort,score_execution,score_responsibility,status,completed_at,completed_by_profile_id,created_at')
+        .select('id,project_id,item_kind,title,category_id,due_date,location_text,assigned_profile_id,points,notes,sync_task,sync_calendar,linked_task_id,linked_event_id,task_link_origin,score_duration,score_effort,score_execution,score_responsibility,status,completed_at,completed_by_profile_id,source_event_occurrence_key,source_event_series_rule_id,created_at')
         .eq('household_id',household.id)
         .neq('status','archived')
         .order('due_date',{ ascending:true, nullsFirst:false })
@@ -512,6 +526,10 @@ export function ProjectsPage() {
     setItemSource('new')
     setExistingTaskId('')
     setSourceEventId('')
+    setSourceEventScope('one')
+    setSourceOccurrenceKey('')
+    setSourceOccurrenceDate('')
+    setEditingSeriesRuleId(null)
     setItemTemplateId('')
     setItemKind(kind)
     setItemProject(projectId)
@@ -595,11 +613,70 @@ export function ProjectsPage() {
       setTab(requestedTab)
     }
 
+    const seriesRuleId=searchParams.get('seriesRule')
+    if(seriesRuleId){
+      void (async()=>{
+        const ruleResult=await supabase
+          .from('project_event_series_rules')
+          .select('id,event_id,project_id,item_kind,assigned_profile_id,notes,score_duration,score_effort,score_execution,score_responsibility,active')
+          .eq('id',seriesRuleId)
+          .eq('household_id',household.id)
+          .single()
+
+        if(ruleResult.error || !ruleResult.data){
+          setError(ruleResult.error?.message??'Recurring Projects & Chores rule not found.')
+          setExternalSourceHandled(true)
+          return
+        }
+
+        const eventResult=await supabase
+          .from('calendar_events')
+          .select('id,title,category_id,location_text')
+          .eq('id',ruleResult.data.event_id)
+          .eq('household_id',household.id)
+          .single()
+
+        if(eventResult.error || !eventResult.data){
+          setError(eventResult.error?.message??'Calendar event not found.')
+          setExternalSourceHandled(true)
+          return
+        }
+
+        resetItem(ruleResult.data.item_kind as 'project_task'|'chore',ruleResult.data.project_id??'')
+        setEditingSeriesRuleId(ruleResult.data.id)
+        setItemSource('event')
+        setSourceEventId(ruleResult.data.event_id)
+        setSourceEventScope('series')
+        setItemKind(ruleResult.data.item_kind as 'project_task'|'chore')
+        setItemProject(ruleResult.data.project_id??'')
+        setItemTitle(eventResult.data.title)
+        setItemCategory(eventResult.data.category_id??categories[0]?.id??'')
+        setItemLocation(eventResult.data.location_text??'')
+        setItemAssignee(ruleResult.data.assigned_profile_id??'')
+        setItemNotes(ruleResult.data.notes??'')
+        setItemSyncTask(false)
+        setItemSyncCalendar(true)
+        setScoreDuration(ruleResult.data.score_duration as DurationScore)
+        setScoreEffort(ruleResult.data.score_effort as EffortScore)
+        setScoreExecution(ruleResult.data.score_execution as ExecutionScore)
+        setScoreResponsibility(ruleResult.data.score_responsibility as ResponsibilityScore)
+        setItemOpen(true)
+        setExternalSourceHandled(true)
+      })()
+      return
+    }
+
     const editItemId=searchParams.get('editItem')
     if (editItemId) {
       const item=items.find((row) => row.id === editItemId)
       if (!item) return
       openItem(item.item_kind,item.project_id ?? '',item)
+      if(item.linked_event_id && item.source_event_occurrence_key){
+        setSourceEventId(item.linked_event_id)
+        setSourceEventScope(item.source_event_series_rule_id ? 'series' : 'one')
+        setSourceOccurrenceKey(item.source_event_occurrence_key)
+        setSourceOccurrenceDate(item.due_date??'')
+      }
       setExternalSourceHandled(true)
       return
     }
@@ -671,6 +748,9 @@ export function ProjectsPage() {
       setItemKind(kind)
       setItemSource('event')
       setSourceEventId(eventId)
+      setSourceEventScope(searchParams.get('scope')==='series' ? 'series' : 'one')
+      setSourceOccurrenceKey(searchParams.get('occurrenceKey')??'')
+      setSourceOccurrenceDate(searchParams.get('occurrenceDate')??due)
       setItemTitle(row.title)
       setItemCategory(row.category_id ?? categories[0]?.id ?? '')
       setItemDue(due)
@@ -699,19 +779,49 @@ export function ProjectsPage() {
     const editingItem=editingItemId ? items.find((item) => item.id === editingItemId) : undefined
 
     const result = sourceEventId
-      ? await supabase.rpc('save_event_project_work_item_v1',{
-          p_id:editingItemId,
-          p_household_id:household.id,
-          p_event_id:sourceEventId,
-          p_project_id:itemKind === 'project_task' ? (itemProject || null) : null,
-          p_item_kind:itemKind,
-          p_assigned_profile_id:itemAssignee || null,
-          p_notes:itemNotes.trim() || null,
-          p_score_duration:scoreDuration,
-          p_score_effort:scoreEffort,
-          p_score_execution:scoreExecution,
-          p_score_responsibility:scoreResponsibility,
-        })
+      ? sourceEventScope==='series'
+        ? await supabase.rpc('save_project_event_series_rule_v1',{
+            p_id:editingSeriesRuleId,
+            p_household_id:household.id,
+            p_event_id:sourceEventId,
+            p_project_id:itemKind==='project_task' ? (itemProject||null) : null,
+            p_item_kind:itemKind,
+            p_assigned_profile_id:itemAssignee||null,
+            p_notes:itemNotes.trim()||null,
+            p_score_duration:scoreDuration,
+            p_score_effort:scoreEffort,
+            p_score_execution:scoreExecution,
+            p_score_responsibility:scoreResponsibility,
+          })
+        : sourceOccurrenceKey && sourceOccurrenceDate
+          ? await supabase.rpc('save_event_project_work_occurrence_v1',{
+              p_id:editingItemId,
+              p_household_id:household.id,
+              p_event_id:sourceEventId,
+              p_occurrence_key:sourceOccurrenceKey,
+              p_occurrence_date:sourceOccurrenceDate,
+              p_project_id:itemKind==='project_task' ? (itemProject||null) : null,
+              p_item_kind:itemKind,
+              p_assigned_profile_id:itemAssignee||null,
+              p_notes:itemNotes.trim()||null,
+              p_score_duration:scoreDuration,
+              p_score_effort:scoreEffort,
+              p_score_execution:scoreExecution,
+              p_score_responsibility:scoreResponsibility,
+            })
+          : await supabase.rpc('save_event_project_work_item_v1',{
+              p_id:editingItemId,
+              p_household_id:household.id,
+              p_event_id:sourceEventId,
+              p_project_id:itemKind==='project_task' ? (itemProject||null) : null,
+              p_item_kind:itemKind,
+              p_assigned_profile_id:itemAssignee||null,
+              p_notes:itemNotes.trim()||null,
+              p_score_duration:scoreDuration,
+              p_score_effort:scoreEffort,
+              p_score_execution:scoreExecution,
+              p_score_responsibility:scoreResponsibility,
+            })
       : editingItem?.status === 'done'
         ? await supabase.rpc('save_completed_project_work_item_v1',{
             p_id:editingItemId,
@@ -832,7 +942,6 @@ export function ProjectsPage() {
 
   async function deleteProject(project: ProjectRow) {
     if (!canWrite) return
-    if (!window.confirm('Permanently delete project "' + project.title + '"? Linked Tasks and Calendar events will stay.')) return
 
     const result=await supabase.rpc('delete_household_project_v1',{
       p_project_id:project.id,
@@ -844,7 +953,6 @@ export function ProjectsPage() {
 
   async function deleteItem(item: WorkItem) {
     if (!canWrite) return
-    if (!window.confirm('Permanently delete responsibility "' + item.title + '"? Linked Tasks and Calendar events will stay.')) return
 
     const result=await supabase.rpc('delete_project_work_item_v1',{
       p_item_id:item.id,
@@ -903,7 +1011,7 @@ export function ProjectsPage() {
             <button type="button" className="icon-button compact-icon" aria-label={'Archive ' + item.title} onClick={() => void archiveItem(item)}>
               <Archive size={14} />
             </button>
-            <button type="button" className="icon-button compact-icon danger-icon-button" aria-label={'Delete ' + item.title} onClick={() => void deleteItem(item)}>
+            <button type="button" className="icon-button compact-icon danger-icon-button" aria-label={'Delete ' + item.title} onClick={() => setConfirmAction({ kind:'item',id:item.id,title:item.title })}>
               <Trash2 size={14} />
             </button>
           </div>
@@ -934,7 +1042,7 @@ export function ProjectsPage() {
             <div className="project-card-actions">
               <button type="button" className="icon-button compact-icon" aria-label={'Edit ' + project.title} onClick={() => openProject(project)}><Pencil size={14} /></button>
               <button type="button" className="icon-button compact-icon" aria-label={'Archive ' + project.title} onClick={() => void archiveProject(project)}><Archive size={14} /></button>
-              <button type="button" className="icon-button compact-icon danger-icon-button" aria-label={'Delete ' + project.title} onClick={() => void deleteProject(project)}><Trash2 size={14} /></button>
+              <button type="button" className="icon-button compact-icon danger-icon-button" aria-label={'Delete ' + project.title} onClick={() => setConfirmAction({ kind:'project',id:project.id,title:project.title })}><Trash2 size={14} /></button>
               <button type="button" className="secondary-button compact" onClick={() => openItem('project_task',project.id)}><Plus size={14} />Task</button>
             </div>
           )}
@@ -1143,7 +1251,18 @@ export function ProjectsPage() {
             </header>
 
             {sourceEventId && (
-              <div className="module-access-note">Linked from Calendar. The Calendar event remains the main item; this responsibility is only used for Projects & Chores points.</div>
+              <div className="module-access-note event-source-note">
+                Linked from Calendar · {sourceEventScope==='series' ? 'All recurring occurrences' : 'Only this occurrence'}.
+                The Calendar event remains the main item; Projects & Chores is used for points.
+              </div>
+            )}
+
+            {sourceEventId && !editingSeriesRuleId && (
+              <div className="event-scope-choice">
+                <span>Apply points to</span>
+                <button type="button" className={sourceEventScope==='one'?'active':''} onClick={()=>setSourceEventScope('one')}>Only this occurrence</button>
+                <button type="button" className={sourceEventScope==='series'?'active':''} onClick={()=>setSourceEventScope('series')}>All occurrences</button>
+              </div>
             )}
 
             {!editingItemId && !sourceEventId && (
@@ -1276,12 +1395,59 @@ export function ProjectsPage() {
             </div>
 
             {error && <div className="form-message error">{error}</div>}
-            <button className="primary-button" disabled={saving || (itemSource === 'task' && !existingTaskId)}>
-              {saving ? 'Saving…' : editingItemId ? 'Save changes' : itemSource === 'task' ? 'Import Task & add points' : 'Create responsibility'}
-            </button>
+
+            <div className="projects-composer-footer">
+              {editingSeriesRuleId && (
+                <button
+                  type="button"
+                  className="secondary-button compact danger-button"
+                  onClick={()=>setConfirmAction({ kind:'series',id:editingSeriesRuleId,title:itemTitle })}
+                  disabled={saving}
+                >
+                  Stop recurring rule
+                </button>
+              )}
+              <button className="primary-button compact" disabled={saving || (itemSource === 'task' && !existingTaskId)}>
+              {saving ? 'Saving…' : editingSeriesRuleId ? 'Save recurring rule' : editingItemId ? 'Save changes' : itemSource === 'task' ? 'Import Task & add points' : 'Create responsibility'}
+              </button>
+            </div>
           </form>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmAction)}
+        title={confirmAction?.kind==='project' ? 'Delete project?' : confirmAction?.kind==='series' ? 'Stop recurring rule?' : 'Delete responsibility?'}
+        message={confirmAction?.kind==='series'
+          ? 'Future occurrences will stop receiving Projects & Chores points. Already completed history stays.'
+          : 'This Projects & Chores record will be permanently removed. Linked Tasks and Calendar events stay unchanged.'}
+        confirmLabel={confirmAction?.kind==='series' ? 'Stop rule' : 'Delete'}
+        danger
+        busy={saving}
+        onCancel={()=>setConfirmAction(null)}
+        onConfirm={()=>void (async()=>{
+          if(!confirmAction) return
+          setSaving(true)
+          if(confirmAction.kind==='project'){
+            await deleteProject(projects.find((row)=>row.id===confirmAction.id)!)
+          } else if(confirmAction.kind==='item'){
+            await deleteItem(items.find((row)=>row.id===confirmAction.id)!)
+          } else {
+            const result=await supabase.rpc('stop_project_event_series_rule_v1',{
+              p_id:confirmAction.id,
+              p_household_id:household.id,
+            })
+            if(result.error) setError(result.error.message)
+            else {
+              setItemOpen(false)
+              resetItem()
+              await load()
+            }
+          }
+          setSaving(false)
+          setConfirmAction(null)
+        })()}
+      />
     </div>
   )
 }
