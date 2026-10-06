@@ -24,6 +24,7 @@ import { ProjectsPage } from './pages/ProjectsPage'
 import { ProjectsArchivePage } from './pages/ProjectsArchivePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { ModulePlaceholderPage } from './pages/ModulePlaceholderPage'
+import { MealsPage } from './pages/MealsPage'
 
 function LoadingScreen() {
   return (
@@ -150,7 +151,7 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Route path="life-admin" element={<LifeAdminPage />} />
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="projects/archive" element={<ProjectsArchivePage />} />
-          <Route path="meals" element={<ModulePlaceholderPage />} />
+          <Route path="meals" element={<MealsPage />} />
           <Route path="files" element={<ModulePlaceholderPage />} />
           <Route path="assistant" element={<ModulePlaceholderPage />} />
         </Route>
