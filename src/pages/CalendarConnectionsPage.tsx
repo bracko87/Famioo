@@ -1,4 +1,4 @@
-import { CalendarSync, Check, Cloud, Link2, Pause, Play, RefreshCw, Trash2 } from 'lucide-react'
+import { CalendarSync, Check, Cloud, FileUp, Link2, Pause, Play, RefreshCw, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
@@ -10,7 +10,7 @@ import type { CalendarRow } from '../lib/types'
 
 type Connection={
   id:string
-  provider:'ics'|'microsoft'|'google'
+  provider:'ics'|'file'|'microsoft'|'google'
   display_name:string
   target_calendar_id:string
   import_mode:'busy'|'title'|'full'
@@ -55,7 +55,12 @@ export function CalendarConnectionsPage(){
   const [deleteConnection,setDeleteConnection]=useState<Connection|null>(null)
   const [error,setError]=useState('')
   const [message,setMessage]=useState('')
+  const [localFile,setLocalFile]=useState<File|null>(null)
+  const [localImportName,setLocalImportName]=useState('')
+  const [replaceFileConnectionId,setReplaceFileConnectionId]=useState<string|null>(null)
   const icsFormRef=useRef<HTMLDivElement|null>(null)
+  const localFileInputRef=useRef<HTMLInputElement|null>(null)
+  const replaceFileInputRef=useRef<HTMLInputElement|null>(null)
 
   const calendarById=useMemo(
     ()=>new Map(calendars.map((calendar)=>[calendar.id,calendar])),
@@ -96,14 +101,14 @@ export function CalendarConnectionsPage(){
 
   useEffect(()=>{ void load() },[household.id])
 
-  async function syncConnection(connectionId:string,showSuccess=true){
+  async function syncConnection(connectionId:string,showSuccess=true,icsText?:string){
     if(syncingId) return
     setSyncingId(connectionId)
     setError('')
     setMessage('')
 
     const result=await supabase.functions.invoke('sync-calendar-connection',{
-      body:{ connection_id:connectionId },
+      body:{ connection_id:connectionId, ...(icsText ? { ics_text:icsText } : {}) },
     })
 
     setSyncingId(null)
@@ -165,6 +170,76 @@ export function CalendarConnectionsPage(){
     setImportMode('busy')
     await load()
     await syncConnection(connectionId,true)
+  }
+
+  async function importLocalCalendarFile(event:FormEvent){
+    event.preventDefault()
+    if(!canWrite||saving||!localFile||!targetCalendarId) return
+
+    setSaving(true)
+    setError('')
+    setMessage('')
+
+    let textValue=''
+    try{
+      textValue=await localFile.text()
+    }catch{
+      setSaving(false)
+      setError('Famioo could not read the selected calendar file.')
+      return
+    }
+
+    const displayName=(localImportName.trim()||localFile.name.replace(/\.ics$/i,'').trim()||'Imported calendar').slice(0,120)
+    const result=await supabase.rpc('create_calendar_file_import_v1',{
+      p_household_id:household.id,
+      p_display_name:displayName,
+      p_target_calendar_id:targetCalendarId,
+      p_import_mode:importMode,
+    })
+
+    if(result.error){
+      setSaving(false)
+      setError(result.error.message)
+      return
+    }
+
+    const connectionId=String(result.data)
+    const synced=await syncConnection(connectionId,false,textValue)
+    setSaving(false)
+
+    if(!synced){
+      await supabase.rpc('delete_calendar_connection_v1',{
+        p_household_id:household.id,
+        p_connection_id:connectionId,
+        p_remove_imported_events:true,
+      })
+      await load()
+      return
+    }
+
+    setLocalFile(null)
+    setLocalImportName('')
+    if(localFileInputRef.current) localFileInputRef.current.value=''
+    setMessage('Calendar file imported successfully. Re-upload an updated file later to refresh this calendar.')
+    await load()
+  }
+
+  async function replaceLocalCalendarFile(file:File,connectionId:string){
+    setSyncingId(connectionId)
+    setError('')
+    setMessage('')
+
+    let textValue=''
+    try{
+      textValue=await file.text()
+    }catch{
+      setSyncingId(null)
+      setError('Famioo could not read the selected calendar file.')
+      return
+    }
+
+    setSyncingId(null)
+    await syncConnection(connectionId,true,textValue)
   }
 
   async function toggleConnection(connection:Connection){
@@ -261,6 +336,19 @@ export function CalendarConnectionsPage(){
           <button type="button" className="secondary-button compact" disabled>Connect Google Calendar</button>
         </article>
 
+        <article className="calendar-provider-card ready local-file">
+          <span className="calendar-provider-icon file"><FileUp size={20}/></span>
+          <div>
+            <span className="eyebrow">BEST FOR WORK CALENDARS</span>
+            <h2>Local .ics file</h2>
+            <p>Import an Outlook, Google or other calendar file without publishing the calendar or connecting a company account.</p>
+          </div>
+          <span className="calendar-provider-status connected"><Check size={12}/>Available now</span>
+          <button type="button" className="primary-button compact" onClick={()=>localFileInputRef.current?.scrollIntoView({behavior:'smooth',block:'center'})}>
+            Import calendar file
+          </button>
+        </article>
+
         <article className="calendar-provider-card ready">
           <span className="calendar-provider-icon ics"><Link2 size={20}/></span>
           <div>
@@ -303,7 +391,7 @@ export function CalendarConnectionsPage(){
           <div className="empty-state compact-empty">
             <CalendarSync size={22}/>
             <strong>No external calendar is connected.</strong>
-            <span>Add an ICS feed below. Microsoft and Google automatic OAuth connections are prepared as the next step.</span>
+            <span>Import a local .ics file or add an ICS feed below. Microsoft and Google automatic connections remain optional.</span>
           </div>
         ) : (
           <div className="calendar-connection-rows">
@@ -312,48 +400,72 @@ export function CalendarConnectionsPage(){
               return (
                 <article className="calendar-connection-row" key={connection.id}>
                   <span className="calendar-connection-provider">
-                    {connection.provider==='ics'?<Link2 size={16}/>:<Cloud size={16}/>}
+                    {connection.provider==='ics'
+                      ? <Link2 size={16}/>
+                      : connection.provider==='file'
+                        ? <FileUp size={16}/>
+                        : <Cloud size={16}/>}
                   </span>
                   <div className="calendar-connection-main">
                     <strong>{connection.display_name}</strong>
                     <small>
-                      {connection.provider.toUpperCase()}
+                      {connection.provider==='file' ? 'LOCAL FILE' : connection.provider.toUpperCase()}
                       {' · '}
                       {connection.import_mode==='busy'?'Busy only':connection.import_mode==='title'?'Title + time':'Full details'}
                       {target?' · '+target.name:''}
                     </small>
                     {connection.last_synced_at&&(
-                      <small>Last synced {new Date(connection.last_synced_at).toLocaleString()}</small>
+                      <small>{connection.provider==='file' ? 'Last imported ' : 'Last synced '}{new Date(connection.last_synced_at).toLocaleString()}</small>
                     )}
                     {connection.last_error&&<small className="connection-error">{connection.last_error}</small>}
                   </div>
                   <span className={'calendar-provider-status '+(
-                    connection.status==='connected'&&connection.sync_enabled?'connected':
-                    connection.status==='error'?'error':'paused'
+                    connection.status==='error'?'error':
+                    connection.provider==='file'?'connected':
+                    connection.status==='connected'&&connection.sync_enabled?'connected':'paused'
                   )}>
-                    {connection.status==='connected'&&connection.sync_enabled?'Connected':
-                     connection.status==='error'?'Needs attention':'Paused'}
+                    {connection.status==='error'?'Needs attention':
+                     connection.provider==='file'?'Imported':
+                     connection.status==='connected'&&connection.sync_enabled?'Connected':'Paused'}
                   </span>
                   <div className="calendar-connection-actions">
-                    <button
-                      type="button"
-                      className="icon-button compact-icon"
-                      title="Sync now"
-                      aria-label={'Sync '+connection.display_name}
-                      disabled={syncingId===connection.id||!connection.sync_enabled}
-                      onClick={()=>void syncConnection(connection.id)}
-                    >
-                      <RefreshCw size={14} className={syncingId===connection.id?'spin':''}/>
-                    </button>
-                    <button
-                      type="button"
-                      className="icon-button compact-icon"
-                      title={connection.sync_enabled?'Pause sync':'Resume sync'}
-                      aria-label={(connection.sync_enabled?'Pause ':'Resume ')+connection.display_name}
-                      onClick={()=>void toggleConnection(connection)}
-                    >
-                      {connection.sync_enabled?<Pause size={14}/>:<Play size={14}/>}
-                    </button>
+                    {connection.provider==='file' ? (
+                      <button
+                        type="button"
+                        className="icon-button compact-icon"
+                        title="Import updated .ics file"
+                        aria-label={'Update '+connection.display_name+' from file'}
+                        disabled={syncingId===connection.id}
+                        onClick={()=>{
+                          setReplaceFileConnectionId(connection.id)
+                          replaceFileInputRef.current?.click()
+                        }}
+                      >
+                        <FileUp size={14} className={syncingId===connection.id?'spin':''}/>
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="icon-button compact-icon"
+                          title="Sync now"
+                          aria-label={'Sync '+connection.display_name}
+                          disabled={syncingId===connection.id||!connection.sync_enabled}
+                          onClick={()=>void syncConnection(connection.id)}
+                        >
+                          <RefreshCw size={14} className={syncingId===connection.id?'spin':''}/>
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-button compact-icon"
+                          title={connection.sync_enabled?'Pause sync':'Resume sync'}
+                          aria-label={(connection.sync_enabled?'Pause ':'Resume ')+connection.display_name}
+                          onClick={()=>void toggleConnection(connection)}
+                        >
+                          {connection.sync_enabled?<Pause size={14}/>:<Play size={14}/>}
+                        </button>
+                      </>
+                    )}
                     <button
                       type="button"
                       className="icon-button compact-icon danger-icon-button"
@@ -369,6 +481,98 @@ export function CalendarConnectionsPage(){
             })}
           </div>
         )}
+      </section>
+
+      <input
+        ref={replaceFileInputRef}
+        type="file"
+        accept=".ics,text/calendar"
+        hidden
+        onChange={(event)=>{
+          const file=event.target.files?.[0]
+          const connectionId=replaceFileConnectionId
+          event.currentTarget.value=''
+          setReplaceFileConnectionId(null)
+          if(file&&connectionId) void replaceLocalCalendarFile(file,connectionId)
+        }}
+      />
+
+      <section className="calendar-file-import list-card">
+        <header>
+          <div>
+            <span className="eyebrow">LOCAL CALENDAR FILE</span>
+            <h2>Import a work calendar without sharing it publicly</h2>
+            <p>Choose an .ics file exported from Outlook, Google Calendar or another calendar app. Famioo imports it read-only and can hide meeting details with Busy-only mode.</p>
+          </div>
+        </header>
+
+        <form onSubmit={importLocalCalendarFile}>
+          <div className="composer-grid-two">
+            <label>
+              Import name
+              <input
+                value={localImportName}
+                onChange={(event)=>setLocalImportName(event.target.value)}
+                placeholder="e.g. Aleks Work Calendar"
+              />
+            </label>
+            <label>
+              Import into Famioo calendar
+              <Select
+                value={targetCalendarId}
+                onChange={setTargetCalendarId}
+                options={calendars.map((calendar)=>({
+                  value:calendar.id,
+                  label:calendar.name+(calendar.is_default?' · Default':''),
+                  dotColor:categoryColor(calendar.color_key),
+                }))}
+                ariaLabel="Choose Famioo target calendar for local file"
+              />
+            </label>
+          </div>
+
+          <label>
+            Calendar file
+            <input
+              ref={localFileInputRef}
+              type="file"
+              accept=".ics,text/calendar"
+              onChange={(event)=>setLocalFile(event.target.files?.[0]??null)}
+              required
+            />
+            <small className="field-hint">
+              This is a snapshot import. If your work calendar changes, use the upload button beside the imported calendar to refresh it with a newer .ics file.
+            </small>
+          </label>
+
+          <fieldset className="calendar-connection-mode-fieldset">
+            <legend>Privacy mode</legend>
+            <div className="calendar-mode-buttons">
+              {importModes.map((mode)=>(
+                <button
+                  type="button"
+                  className={importMode===mode.value?'active':''}
+                  key={mode.value}
+                  onClick={()=>setImportMode(mode.value)}
+                >
+                  <strong>{mode.label}</strong>
+                  <small>{mode.description}</small>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          <div className="calendar-file-privacy-note">
+            <strong>Recommended for company calendars: Busy only</strong>
+            <span>Famioo stores only occupied time blocks as “Busy”; meeting subject, notes and location are discarded during import.</span>
+          </div>
+
+          <div className="composer-footer-right">
+            <button className="primary-button compact" disabled={saving||!targetCalendarId||!localFile}>
+              {saving?'Importing…':'Import .ics file'}
+            </button>
+          </div>
+        </form>
       </section>
 
       <section className="calendar-ics-form list-card" ref={icsFormRef}>
