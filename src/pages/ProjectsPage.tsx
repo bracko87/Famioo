@@ -7,6 +7,7 @@ import {
   MapPin,
   Pencil,
   Plus,
+  Trash2,
   Trophy,
   X,
 } from 'lucide-react'
@@ -296,7 +297,7 @@ export function ProjectsPage() {
         .from('tasks')
         .select('id,title,category_id,due_date,location_text,assigned_profile_id,linked_event_id,status')
         .eq('household_id',household.id)
-        .eq('status','open')
+        .in('status',['open','done'])
         .is('archived_at',null)
         .order('due_date',{ ascending:true, nullsFirst:false })
         .order('created_at',{ ascending:false }),
@@ -827,6 +828,30 @@ export function ProjectsPage() {
     else await load()
   }
 
+  async function deleteProject(project: ProjectRow) {
+    if (!canWrite) return
+    if (!window.confirm('Permanently delete project "' + project.title + '"? Linked Tasks and Calendar events will stay.')) return
+
+    const result=await supabase.rpc('delete_household_project_v1',{
+      p_project_id:project.id,
+      p_household_id:household.id,
+    })
+    if (result.error) setError(result.error.message)
+    else await load()
+  }
+
+  async function deleteItem(item: WorkItem) {
+    if (!canWrite) return
+    if (!window.confirm('Permanently delete responsibility "' + item.title + '"? Linked Tasks and Calendar events will stay.')) return
+
+    const result=await supabase.rpc('delete_project_work_item_v1',{
+      p_item_id:item.id,
+      p_household_id:household.id,
+    })
+    if (result.error) setError(result.error.message)
+    else await load()
+  }
+
   function renderWorkItem(item: WorkItem) {
     const profile = item.assigned_profile_id ? profileById.get(item.assigned_profile_id) : undefined
     const category = item.category_id ? categoryById.get(item.category_id) : undefined
@@ -876,6 +901,9 @@ export function ProjectsPage() {
             <button type="button" className="icon-button compact-icon" aria-label={'Archive ' + item.title} onClick={() => void archiveItem(item)}>
               <Archive size={14} />
             </button>
+            <button type="button" className="icon-button compact-icon danger-icon-button" aria-label={'Delete ' + item.title} onClick={() => void deleteItem(item)}>
+              <Trash2 size={14} />
+            </button>
           </div>
         )}
       </article>
@@ -904,6 +932,7 @@ export function ProjectsPage() {
             <div className="project-card-actions">
               <button type="button" className="icon-button compact-icon" aria-label={'Edit ' + project.title} onClick={() => openProject(project)}><Pencil size={14} /></button>
               <button type="button" className="icon-button compact-icon" aria-label={'Archive ' + project.title} onClick={() => void archiveProject(project)}><Archive size={14} /></button>
+              <button type="button" className="icon-button compact-icon danger-icon-button" aria-label={'Delete ' + project.title} onClick={() => void deleteProject(project)}><Trash2 size={14} /></button>
               <button type="button" className="secondary-button compact" onClick={() => openItem('project_task',project.id)}><Plus size={14} />Task</button>
             </div>
           )}
