@@ -4,6 +4,7 @@ import { useHousehold } from '../../context/HouseholdContext'
 import { supabase } from '../../lib/supabase'
 import type { HouseholdRole } from '../../lib/types'
 import { Select } from '../ui/Select'
+import { ConfirmDialog } from '../ui/ConfirmDialog'
 
 type HouseholdUser = {
   profile_id: string
@@ -37,6 +38,7 @@ export function UsersSettings() {
   const [busy, setBusy] = useState(false)
   const [avatarBusy, setAvatarBusy] = useState('')
   const [removingProfileId, setRemovingProfileId] = useState('')
+  const [removeConfirm,setRemoveConfirm] = useState<HouseholdUser|null>(null)
   const [message, setMessage] = useState('')
 
   const isOwner = household.role === 'owner'
@@ -188,12 +190,6 @@ export function UsersSettings() {
 
   async function removeMember(member: HouseholdUser) {
     if (!isOwner || member.role === 'owner') return
-
-    const confirmed = window.confirm(
-      `Remove ${member.display_name} from this household? They will lose household access and current assignments, while historical completed work and points remain preserved.`,
-    )
-
-    if (!confirmed) return
 
     setRemovingProfileId(member.profile_id)
     setMessage('')
@@ -378,7 +374,7 @@ export function UsersSettings() {
                       type="button"
                       className="remove-member-button"
                       disabled={removingProfileId === member.profile_id}
-                      onClick={() => void removeMember(member)}
+                      onClick={() => setRemoveConfirm(member)}
                       aria-label={'Remove ' + member.display_name + ' from household'}
                       title={'Remove ' + member.display_name}
                     >
@@ -495,6 +491,16 @@ export function UsersSettings() {
       )}
 
       {message && <div className="form-message users-message">{message}</div>}
+      <ConfirmDialog
+        open={Boolean(removeConfirm)}
+        title="Remove household member?"
+        message={removeConfirm ? 'Remove '+removeConfirm.display_name+' from this household? They will lose household access and current assignments, while historical completed work and points remain preserved.' : ''}
+        confirmLabel="Remove member"
+        danger
+        busy={Boolean(removingProfileId)}
+        onCancel={()=>setRemoveConfirm(null)}
+        onConfirm={()=>{ if(removeConfirm) void removeMember(removeConfirm).finally(()=>setRemoveConfirm(null)) }}
+      />
     </div>
   )
 }
