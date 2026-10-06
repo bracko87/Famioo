@@ -47,7 +47,7 @@ export function ModulesSettings() {
           </article>
           <article>
             <strong>Storage reward</strong>
-            <p>More than €3/month in qualifying paid modules unlocks 10 GB. If spending drops below €3, 10 GB can be kept for €0.49/month.</p>
+            <p>€3.00/month or more in qualifying paid modules unlocks 10 GB. If spending drops below €3.00, 10 GB can be kept for €0.49/month.</p>
           </article>
         </div>
       </div>
