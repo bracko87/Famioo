@@ -1,4 +1,5 @@
 import {
+  Archive,
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
@@ -10,6 +11,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { DatePicker } from '../components/ui/DatePicker'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
@@ -21,7 +23,7 @@ import { supabase } from '../lib/supabase'
 import type { EventCategory } from '../lib/types'
 
 type ProjectsTab = 'projects' | 'chores' | 'standing'
-type ItemSource = 'new' | 'task' | 'template'
+type ItemSource = 'new' | 'task' | 'template' | 'event'
 type DurationScore = 'under_15' | '15_30' | '30_45' | '45_60' | '1_2h' | '2_3h' | '3_5h' | 'over_5h'
 type EffortScore = 'very_low' | 'low' | 'medium' | 'high' | 'very_high' | 'extreme'
 type ExecutionScore = 'automated' | 'assisted' | 'mixed' | 'manual'
@@ -146,6 +148,40 @@ function prettyDate(value: string | null) {
   return new Date(value + 'T12:00:00').toLocaleDateString()
 }
 
+function addDateDays(value: Date, days: number) {
+  const next=new Date(value)
+  next.setDate(next.getDate()+days)
+  return next
+}
+
+function dateGroups<T extends { due_date:string | null; created_at:string }>(rows:T[]) {
+  const today=new Date()
+  today.setHours(12,0,0,0)
+  const start=todayKey()
+  const nearEnd=[
+    addDateDays(today,9).getFullYear(),
+    String(addDateDays(today,9).getMonth()+1).padStart(2,'0'),
+    String(addDateDays(today,9).getDate()).padStart(2,'0'),
+  ].join('-')
+  const laterEndDate=addDateDays(today,69)
+  const laterEnd=[
+    laterEndDate.getFullYear(),
+    String(laterEndDate.getMonth()+1).padStart(2,'0'),
+    String(laterEndDate.getDate()).padStart(2,'0'),
+  ].join('-')
+
+  const dated=rows
+    .filter((row) => row.due_date && row.due_date >= start)
+    .sort((a,b) => (a.due_date ?? '').localeCompare(b.due_date ?? '') || a.created_at.localeCompare(b.created_at))
+
+  return {
+    near:dated.filter((row) => (row.due_date ?? '') <= nearEnd),
+    later:dated.filter((row) => (row.due_date ?? '') > nearEnd && (row.due_date ?? '') <= laterEnd),
+    far:dated.filter((row) => (row.due_date ?? '') > laterEnd),
+    undated:rows.filter((row) => !row.due_date).sort((a,b) => a.created_at.localeCompare(b.created_at)),
+  }
+}
+
 function calculatePoints(
   duration: DurationScore,
   effort: EffortScore,
@@ -163,6 +199,7 @@ function calculatePoints(
 
 export function ProjectsPage() {
   const { household, modules, profiles } = useHousehold()
+  const [searchParams,setSearchParams] = useSearchParams()
   const access = modules.find((module) => module.code === 'projects')
   const canWrite = Boolean(access?.can_write)
   const canSyncTasks = Boolean(modules.find((module) => module.code === 'tasks')?.can_write)
@@ -207,12 +244,15 @@ export function ProjectsPage() {
   const [scoreResponsibility,setScoreResponsibility] = useState<ResponsibilityScore>('normal')
   const [saveAsTemplate,setSaveAsTemplate] = useState(false)
   const [saving,setSaving] = useState(false)
+  const [sourceEventId,setSourceEventId] = useState('')
+  const [archiveCount,setArchiveCount] = useState(0)
+  const [externalSourceHandled,setExternalSourceHandled] = useState(false)
 
   async function load() {
     setError('')
 
     if (canWrite) {
-      const cleanupResult = await supabase.rpc('archive_expired_project_work_items_v1', {
+      const cleanupResult = await supabase.rpc('archive_expired_projects_chores_v1', {
         p_household_id: household.id,
       })
 
@@ -221,7 +261,7 @@ export function ProjectsPage() {
       }
     }
 
-    const [projectResult,itemResult,pointsResult,categoryResult,availabilityResult,taskResult,templateResult] = await Promise.all([
+    const [projectResult,itemResult,pointsResult,categoryResult,availabilityResult,taskResult,templateResult,archivedProjectsResult,archivedItemsResult] = await Promise.all([
       supabase
         .from('household_projects')
         .select('id,title,description,category_id,start_date,due_date,owner_profile_id,status,created_at')
@@ -262,10 +302,20 @@ export function ProjectsPage() {
         .order('created_at',{ ascending:false }),
       supabase
         .from('project_work_templates')
-        .select('id,name,item_kind,title,category_id,location_text,default_assigned_profile_id,notes,score_duration,score_effort,score_execution,score_responsibility')
+        .select('id,name,item_kind,title,category_id,location_text,default_assigned_profile_id,notes,score_duration,score_effort,score_responsibility')
         .eq('household_id',household.id)
         .eq('active',true)
         .order('name'),
+      supabase
+        .from('household_projects')
+        .select('id',{ count:'exact',head:true })
+        .eq('household_id',household.id)
+        .eq('status','archived'),
+      supabase
+        .from('project_work_items')
+        .select('id',{ count:'exact',head:true })
+        .eq('household_id',household.id)
+        .eq('status','archived'),
     ])
 
     if (projectResult.error) setError(projectResult.error.message)
@@ -293,6 +343,8 @@ export function ProjectsPage() {
 
     if (templateResult.error) setError((current) => current || templateResult.error.message)
     else setTemplates((templateResult.data ?? []) as ProjectTemplate[])
+
+    setArchiveCount((archivedProjectsResult.count ?? 0) + (archivedItemsResult.count ?? 0))
   }
 
   useEffect(() => { void load() }, [household.id])
@@ -352,20 +404,10 @@ export function ProjectsPage() {
     [templates,categoryById],
   )
 
-  const currentItems = useMemo(() => {
-    const today = todayKey()
-
-    return items
-      .filter((item) => !item.due_date || item.due_date >= today)
-      .sort((a,b) => {
-        if (a.due_date && b.due_date) {
-          return a.due_date.localeCompare(b.due_date) || a.created_at.localeCompare(b.created_at)
-        }
-        if (a.due_date) return -1
-        if (b.due_date) return 1
-        return a.created_at.localeCompare(b.created_at)
-      })
-  }, [items])
+  const currentItems = useMemo(
+    () => items.filter((item) => item.status !== 'archived'),
+    [items],
+  )
 
   const openProjectItems = useMemo(
     () => currentItems.filter((item) => item.item_kind === 'project_task'),
@@ -375,6 +417,16 @@ export function ProjectsPage() {
   const chores = useMemo(
     () => currentItems.filter((item) => item.item_kind === 'chore'),
     [currentItems],
+  )
+
+  const projectGroups = useMemo(
+    () => dateGroups(projects.filter((project) => project.status === 'active')),
+    [projects],
+  )
+
+  const choreGroups = useMemo(
+    () => dateGroups(chores),
+    [chores],
   )
 
   const standing = useMemo(() => {
@@ -458,6 +510,7 @@ export function ProjectsPage() {
     setEditingItemId(null)
     setItemSource('new')
     setExistingTaskId('')
+    setSourceEventId('')
     setItemTemplateId('')
     setItemKind(kind)
     setItemProject(projectId)
@@ -541,25 +594,39 @@ export function ProjectsPage() {
     setSaving(true)
     setError('')
 
-    const result = await supabase.rpc('save_project_work_item_v2',{
-      p_id:editingItemId,
-      p_household_id:household.id,
-      p_project_id:itemKind === 'project_task' ? (itemProject || null) : null,
-      p_item_kind:itemKind,
-      p_title:itemTitle.trim() || 'Imported Task',
-      p_category_id:itemCategory || null,
-      p_due_date:itemDue || null,
-      p_location_text:itemLocation.trim() || null,
-      p_assigned_profile_id:itemAssignee || null,
-      p_notes:itemNotes.trim() || null,
-      p_sync_task:importedTask ? true : itemSyncTask,
-      p_sync_calendar:itemSyncCalendar,
-      p_score_duration:scoreDuration,
-      p_score_effort:scoreEffort,
-      p_score_execution:scoreExecution,
-      p_score_responsibility:scoreResponsibility,
-      p_existing_task_id:importedTask ? existingTaskId : null,
-    })
+    const result = sourceEventId
+      ? await supabase.rpc('save_event_project_work_item_v1',{
+          p_id:editingItemId,
+          p_household_id:household.id,
+          p_event_id:sourceEventId,
+          p_project_id:itemKind === 'project_task' ? (itemProject || null) : null,
+          p_item_kind:itemKind,
+          p_assigned_profile_id:itemAssignee || null,
+          p_notes:itemNotes.trim() || null,
+          p_score_duration:scoreDuration,
+          p_score_effort:scoreEffort,
+          p_score_execution:scoreExecution,
+          p_score_responsibility:scoreResponsibility,
+        })
+      : await supabase.rpc('save_project_work_item_v2',{
+          p_id:editingItemId,
+          p_household_id:household.id,
+          p_project_id:itemKind === 'project_task' ? (itemProject || null) : null,
+          p_item_kind:itemKind,
+          p_title:itemTitle.trim() || 'Imported Task',
+          p_category_id:itemCategory || null,
+          p_due_date:itemDue || null,
+          p_location_text:itemLocation.trim() || null,
+          p_assigned_profile_id:itemAssignee || null,
+          p_notes:itemNotes.trim() || null,
+          p_sync_task:importedTask ? true : itemSyncTask,
+          p_sync_calendar:itemSyncCalendar,
+          p_score_duration:scoreDuration,
+          p_score_effort:scoreEffort,
+          p_score_execution:scoreExecution,
+          p_score_responsibility:scoreResponsibility,
+          p_existing_task_id:importedTask ? existingTaskId : null,
+        })
 
     if (result.error) {
       setSaving(false)
@@ -617,6 +684,28 @@ export function ProjectsPage() {
     await load()
   }
 
+  async function archiveProject(project: ProjectRow) {
+    if (!canWrite) return
+    const result=await supabase.rpc('set_household_project_archived_v1',{
+      p_project_id:project.id,
+      p_household_id:household.id,
+      p_archived:true,
+    })
+    if (result.error) setError(result.error.message)
+    else await load()
+  }
+
+  async function archiveItem(item: WorkItem) {
+    if (!canWrite) return
+    const result=await supabase.rpc('set_project_work_item_archived_v1',{
+      p_item_id:item.id,
+      p_household_id:household.id,
+      p_archived:true,
+    })
+    if (result.error) setError(result.error.message)
+    else await load()
+  }
+
   function renderWorkItem(item: WorkItem) {
     const profile = item.assigned_profile_id ? profileById.get(item.assigned_profile_id) : undefined
     const category = item.category_id ? categoryById.get(item.category_id) : undefined
@@ -658,10 +747,15 @@ export function ProjectsPage() {
           {item.notes && <p>{item.notes}</p>}
         </div>
 
-        {canWrite && item.status !== 'done' && (
-          <button type="button" className="icon-button compact-icon" aria-label={'Edit ' + item.title} onClick={() => openItem(item.item_kind,item.project_id ?? '',item)}>
-            <Pencil size={14} />
-          </button>
+        {canWrite && (
+          <div className="project-work-actions">
+            <button type="button" className="icon-button compact-icon" aria-label={'Edit ' + item.title} onClick={() => openItem(item.item_kind,item.project_id ?? '',item)}>
+              <Pencil size={14} />
+            </button>
+            <button type="button" className="icon-button compact-icon" aria-label={'Archive ' + item.title} onClick={() => void archiveItem(item)}>
+              <Archive size={14} />
+            </button>
+          </div>
         )}
       </article>
     )
