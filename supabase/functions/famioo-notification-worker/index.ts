@@ -363,7 +363,7 @@ async function sendSystemEmails() {
           +'<div style="font-size:12px;letter-spacing:.12em;color:#a24e95">FAMIOO</div>'
           +'<h1 style="margin:6px 0 10px;color:#5f316f">Your Files storage benefit changed</h1>'
           +'<p>Your qualifying paid Famioo modules for <strong>'+escapeHtml(household.name)+'</strong> are now '
-          +'<strong>€'+paid.toFixed(2)+'/month</strong>, which is not above the €3.00 threshold for the included 10 GB Files tier.</p>'
+          +'<strong>€'+paid.toFixed(2)+'/month</strong>, which is below the €3.00 threshold for the included 10 GB Files tier.</p>'
           +'<p>Your free Files allowance is now <strong>1 GB</strong>. Existing files are not automatically deleted.</p>'
           +'<div style="margin:18px 0;padding:14px 16px;border-radius:12px;background:#f7f0f9">'
           +'<strong>Keep 10 GB for €'+addon.toFixed(2)+'/month</strong>'
