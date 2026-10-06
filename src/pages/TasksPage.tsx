@@ -1,6 +1,6 @@
-import { Archive, CalendarDays, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { Archive, CalendarDays, FolderKanban, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { DatePicker } from '../components/ui/DatePicker'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { Select } from '../components/ui/Select'
@@ -55,11 +55,13 @@ function TaskActions({
   task,
   canWrite,
   onEdit,
+  onArchive,
   onDelete,
 }: {
   task: Task
   canWrite: boolean
   onEdit: () => void
+  onArchive: () => void
   onDelete: () => void
 }) {
   const [open, setOpen] = useState(false)
@@ -107,6 +109,14 @@ function TaskActions({
             Edit task
           </button>
 
+          <button type="button" onClick={() => {
+            setOpen(false)
+            onArchive()
+          }}>
+            <Archive size={14} />
+            Move to archive
+          </button>
+
           {task.status === 'done' && (
             <button className="danger" type="button" onClick={() => {
               setOpen(false)
@@ -124,8 +134,10 @@ function TaskActions({
 
 export function TasksPage() {
   const { household, modules, profiles } = useHousehold()
+  const navigate = useNavigate()
   const canWrite = Boolean(modules.find((module) => module.code === 'tasks')?.can_write)
   const costsEnabled = Boolean(modules.find((module) => module.code === 'costs')?.enabled)
+  const projectsWritable = Boolean(modules.find((module) => module.code === 'projects')?.enabled && modules.find((module) => module.code === 'projects')?.can_write)
 
   const [tasks, setTasks] = useState<Task[]>([])
   const [categories, setCategories] = useState<EventCategory[]>([])
@@ -406,6 +418,20 @@ export function TasksPage() {
     else await load()
   }
 
+  async function archiveTask(task: Task) {
+    if (!canWrite) return
+    setError('')
+
+    const result=await supabase.rpc('set_task_archived_v1',{
+      p_task_id:task.id,
+      p_household_id:household.id,
+      p_archived:true,
+    })
+
+    if (result.error) setError(result.error.message)
+    else await load()
+  }
+
   function TaskRow({ task }: { task: Task }) {
     const category = task.category_id ? categoryById.get(task.category_id) : undefined
     const taskProfiles = participants
@@ -458,6 +484,7 @@ export function TasksPage() {
           task={task}
           canWrite={canWrite}
           onEdit={() => openEdit(task)}
+          onArchive={() => void archiveTask(task)}
           onDelete={() => void deleteTask(task)}
         />
       </div>
@@ -701,6 +728,33 @@ export function TasksPage() {
                 </label>
               )}
             </div>
+
+            {editingTaskId && projectsWritable && (
+              <section className="task-project-connection">
+                <div>
+                  <span className="eyebrow">PROJECTS & CHORES</span>
+                  <strong>Use this Task for household points</strong>
+                  <small>The Task stays here as the main item. Projects & Chores receives a linked points-only responsibility.</small>
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    className="secondary-button compact"
+                    onClick={() => navigate('/app/projects?tab=projects&task=' + editingTaskId + '&kind=project_task')}
+                  >
+                    <FolderKanban size={14} />
+                    Add/Edit as project
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-button compact"
+                    onClick={() => navigate('/app/projects?tab=chores&task=' + editingTaskId + '&kind=chore')}
+                  >
+                    Add/Edit as chore
+                  </button>
+                </div>
+              </section>
+            )}
 
             {error && <div className="form-message error">{error}</div>}
 
