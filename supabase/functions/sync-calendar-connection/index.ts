@@ -193,8 +193,7 @@ Deno.serve(async(req)=>{
 
   const supabaseUrl=Deno.env.get("SUPABASE_URL")
   const anonKey=Deno.env.get("SUPABASE_ANON_KEY")
-  const serviceRoleKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-  if(!supabaseUrl||!anonKey||!serviceRoleKey) return json({error:"Server configuration is incomplete."},500)
+  if(!supabaseUrl||!anonKey) return json({error:"Server configuration is incomplete."},500)
 
   const authorization=req.headers.get("Authorization")??""
   if(!authorization.startsWith("Bearer ")) return json({error:"Authentication required."},401)
@@ -207,10 +206,6 @@ Deno.serve(async(req)=>{
     global:{headers:{Authorization:authorization}},
     auth:{persistSession:false,autoRefreshToken:false},
   })
-  const admin=createClient(supabaseUrl,serviceRoleKey,{
-    auth:{persistSession:false,autoRefreshToken:false},
-  })
-
   const connectionResult=await userClient
     .from("calendar_connections")
     .select("id,household_id,provider,display_name,target_calendar_id,import_mode,feed_url,status,sync_enabled,created_by_user_id")
@@ -226,7 +221,7 @@ Deno.serve(async(req)=>{
   if(!connection.sync_enabled) return json({error:"This calendar connection is paused."},400)
   if(!connection.feed_url) return json({error:"This ICS connection has no feed URL."},400)
 
-  const householdResult=await admin
+  const householdResult=await userClient
     .from("households")
     .select("timezone")
     .eq("id",connection.household_id)
@@ -243,7 +238,7 @@ Deno.serve(async(req)=>{
       },
     })
   }catch{
-    await admin.from("calendar_connections").update({
+    await userClient.from("calendar_connections").update({
       status:"error",last_error:"Could not reach the calendar feed.",updated_at:new Date().toISOString(),
     }).eq("id",connection.id)
     return json({error:"Could not reach the calendar feed."},400)
@@ -251,7 +246,7 @@ Deno.serve(async(req)=>{
 
   if(!response.ok){
     const message="Calendar feed returned HTTP "+response.status+"."
-    await admin.from("calendar_connections").update({
+    await userClient.from("calendar_connections").update({
       status:"error",last_error:message,updated_at:new Date().toISOString(),
     }).eq("id",connection.id)
     return json({error:message},400)
@@ -264,7 +259,7 @@ Deno.serve(async(req)=>{
   const parsed=parseIcs(text)
   if(!parsed.length) return json({error:"No calendar events were found in this feed."},422)
 
-  const categoryResult=await admin
+  const categoryResult=await userClient
     .from("event_categories")
     .select("id,name")
     .eq("household_id",connection.household_id)
@@ -291,7 +286,7 @@ Deno.serve(async(req)=>{
     if(!start){ skipped+=1; continue }
 
     if(item.status==="CANCELLED"){
-      await admin
+      await userClient
         .from("calendar_events")
         .delete()
         .eq("external_connection_id",connection.id)
@@ -335,7 +330,7 @@ Deno.serve(async(req)=>{
       updated_at:new Date().toISOString(),
     }
 
-    const existing=await admin
+    const existing=await userClient
       .from("calendar_events")
       .select("id")
       .eq("external_connection_id",connection.id)
@@ -344,7 +339,7 @@ Deno.serve(async(req)=>{
 
     let eventId:string
     if(existing.data?.id){
-      const result=await admin
+      const result=await userClient
         .from("calendar_events")
         .update(eventRow)
         .eq("id",existing.data.id)
@@ -354,7 +349,7 @@ Deno.serve(async(req)=>{
       eventId=result.data.id
       updated+=1
     }else{
-      const result=await admin
+      const result=await userClient
         .from("calendar_events")
         .insert(eventRow)
         .select("id")
@@ -375,7 +370,7 @@ Deno.serve(async(req)=>{
 
     const rrule=normalizeRrule(item.rrule)
     if(rrule){
-      const existingRule=await admin
+      const existingRule=await userClient
         .from("event_recurrence_rules")
         .select("id")
         .eq("household_id",connection.household_id)
@@ -393,12 +388,12 @@ Deno.serve(async(req)=>{
       }
 
       if(existingRule.data?.id){
-        await admin.from("event_recurrence_rules").update(ruleRow).eq("id",existingRule.data.id)
+        await userClient.from("event_recurrence_rules").update(ruleRow).eq("id",existingRule.data.id)
       }else{
-        await admin.from("event_recurrence_rules").insert(ruleRow)
+        await userClient.from("event_recurrence_rules").insert(ruleRow)
       }
     }else{
-      await admin
+      await userClient
         .from("event_recurrence_rules")
         .delete()
         .eq("household_id",connection.household_id)
@@ -428,7 +423,7 @@ Deno.serve(async(req)=>{
         external_uid:overrideUid,
       }
 
-      const existingOverride=await admin
+      const existingOverride=await userClient
         .from("calendar_events")
         .select("id")
         .eq("external_connection_id",connection.id)
@@ -436,10 +431,10 @@ Deno.serve(async(req)=>{
         .maybeSingle()
 
       if(existingOverride.data?.id){
-        await admin.from("calendar_events").update(overrideRow).eq("id",existingOverride.data.id)
+        await userClient.from("calendar_events").update(overrideRow).eq("id",existingOverride.data.id)
         updated+=1
       }else{
-        await admin.from("calendar_events").insert(overrideRow)
+        await userClient.from("calendar_events").insert(overrideRow)
         imported+=1
       }
       seen.push(overrideUid)
@@ -447,7 +442,7 @@ Deno.serve(async(req)=>{
   }
 
   if(seen.length){
-    const existingRows=await admin
+    const existingRows=await userClient
       .from("calendar_events")
       .select("id,external_uid")
       .eq("external_connection_id",connection.id)
@@ -457,12 +452,12 @@ Deno.serve(async(req)=>{
       .map((row)=>row.id)
 
     if(stale.length){
-      await admin.from("calendar_events").delete().in("id",stale)
+      await userClient.from("calendar_events").delete().in("id",stale)
     }
   }
 
   const now=new Date().toISOString()
-  await admin.from("calendar_connections").update({
+  await userClient.from("calendar_connections").update({
     status:"connected",
     last_synced_at:now,
     last_error:null,
