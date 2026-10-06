@@ -584,6 +584,96 @@ export function ProjectsPage() {
     setItemOpen(true)
   }
 
+  useEffect(() => {
+    if (externalSourceHandled || !canWrite || !categories.length) return
+
+    const requestedTab=searchParams.get('tab')
+    if (requestedTab === 'projects' || requestedTab === 'chores' || requestedTab === 'standing') {
+      setTab(requestedTab)
+    }
+
+    const editItemId=searchParams.get('editItem')
+    if (editItemId) {
+      const item=items.find((row) => row.id === editItemId)
+      if (!item) return
+      openItem(item.item_kind,item.project_id ?? '',item)
+      setExternalSourceHandled(true)
+      return
+    }
+
+    const kind=searchParams.get('kind') === 'project_task' ? 'project_task' : 'chore'
+    const taskId=searchParams.get('task')
+
+    if (taskId) {
+      const task=tasks.find((row) => row.id === taskId)
+      if (!task) return
+      resetItem(kind)
+      setItemKind(kind)
+      setItemSource('task')
+      applyExistingTask(taskId)
+      setItemOpen(true)
+      setExternalSourceHandled(true)
+      return
+    }
+
+    const eventId=searchParams.get('event')
+    if (!eventId) {
+      setExternalSourceHandled(true)
+      return
+    }
+
+    void (async () => {
+      const [eventResult,participantResult]=await Promise.all([
+        supabase
+          .from('calendar_events')
+          .select('id,title,category_id,all_day,start_at,start_date,event_timezone,location_text')
+          .eq('id',eventId)
+          .eq('household_id',household.id)
+          .is('deleted_at',null)
+          .single(),
+        supabase
+          .from('event_participants')
+          .select('profile_id')
+          .eq('event_id',eventId)
+          .eq('household_id',household.id)
+          .limit(1),
+      ])
+
+      if (eventResult.error || !eventResult.data) {
+        setError(eventResult.error?.message ?? 'Could not open Calendar event.')
+        setExternalSourceHandled(true)
+        return
+      }
+
+      const row=eventResult.data
+      const due=row.all_day
+        ? row.start_date ?? ''
+        : row.start_at
+          ? new Intl.DateTimeFormat('en-CA',{
+              timeZone:row.event_timezone || household.timezone,
+              year:'numeric',month:'2-digit',day:'2-digit',
+            }).format(new Date(row.start_at))
+          : ''
+
+      resetItem(kind)
+      setItemKind(kind)
+      setItemSource('event')
+      setSourceEventId(eventId)
+      setItemTitle(row.title)
+      setItemCategory(row.category_id ?? categories[0]?.id ?? '')
+      setItemDue(due)
+      setItemLocation(row.location_text ?? '')
+      setItemAssignee(participantResult.data?.[0]?.profile_id ?? '')
+      setItemSyncTask(false)
+      setItemSyncCalendar(true)
+      setItemOpen(true)
+      setExternalSourceHandled(true)
+    })()
+  },[
+    externalSourceHandled,canWrite,categories,items,tasks,searchParams,
+    household.id,household.timezone,
+  ])
+
   async function saveItem(event: FormEvent) {
     event.preventDefault()
     const importedTask = itemSource === 'task' && !editingItemId
@@ -663,6 +753,7 @@ export function ProjectsPage() {
     setSaving(false)
     setItemOpen(false)
     resetItem()
+    setSearchParams({ tab:itemKind === 'chore' ? 'chores' : 'projects' })
     await load()
   }
 
@@ -761,8 +852,75 @@ export function ProjectsPage() {
     )
   }
 
+  function renderProjectCard(project: ProjectRow) {
+    const owner=project.owner_profile_id ? profileById.get(project.owner_profile_id) : undefined
+    const projectItems=openProjectItems.filter((item) => item.project_id === project.id)
+    const done=projectItems.filter((item) => item.status === 'done').length
+
+    return (
+      <article className="project-card list-card" key={project.id}>
+        <header>
+          <div>
+            <span className="eyebrow">HOUSEHOLD PROJECT</span>
+            <h2>{project.title}</h2>
+            <div className="project-card-meta">
+              {project.due_date && <span><CalendarDays size={11} />Due {prettyDate(project.due_date)}</span>}
+              {owner && <span className="project-owner"><ProfileAvatar avatarPath={owner.avatar_path} name={owner.display_name} size="sm" />{firstName(owner.display_name)}</span>}
+              <span>{done}/{projectItems.length} done</span>
+            </div>
+          </div>
+
+          {canWrite && (
+            <div className="project-card-actions">
+              <button type="button" className="icon-button compact-icon" aria-label={'Edit ' + project.title} onClick={() => openProject(project)}><Pencil size={14} /></button>
+              <button type="button" className="icon-button compact-icon" aria-label={'Archive ' + project.title} onClick={() => void archiveProject(project)}><Archive size={14} /></button>
+              <button type="button" className="secondary-button compact" onClick={() => openItem('project_task',project.id)}><Plus size={14} />Task</button>
+            </div>
+          )}
+        </header>
+
+        {project.description && <p>{project.description}</p>}
+
+        <div className="project-card-work">
+          {projectItems.length
+            ? projectItems.map(renderWorkItem)
+            : <div className="project-card-empty">No responsibilities in this project yet.</div>}
+        </div>
+      </article>
+    )
+  }
+
+  function ProjectDateSection({ title,subtitle,rows }: { title:string;subtitle:string;rows:ProjectRow[] }) {
+    return (
+      <section className="task-section projects-date-section">
+        <header className="task-section-head">
+          <div><h2>{title}</h2><p>{subtitle}</p></div>
+          <span>{rows.length}</span>
+        </header>
+        {rows.length
+          ? <div className="projects-date-list">{rows.map(renderProjectCard)}</div>
+          : <div className="task-section-empty">No projects in this section.</div>}
+      </section>
+    )
+  }
+
+  function ChoreDateSection({ title,subtitle,rows }: { title:string;subtitle:string;rows:WorkItem[] }) {
+    return (
+      <section className="task-section projects-date-section">
+        <header className="task-section-head">
+          <div><h2>{title}</h2><p>{subtitle}</p></div>
+          <span>{rows.length}</span>
+        </header>
+        {rows.length
+          ? <div className="chores-list">{rows.map(renderWorkItem)}</div>
+          : <div className="task-section-empty">No chores in this section.</div>}
+      </section>
+    )
+  }
+
   const importedEdit = Boolean(editingItemId && items.find((item) => item.id === editingItemId)?.task_link_origin === 'imported')
-  const sourceFieldsLocked = itemSource === 'task' && !editingItemId
+  const sourceFieldsLocked = (itemSource === 'task' && !editingItemId) || Boolean(sourceEventId)
+  const assignmentLocked = itemSource === 'task' && !editingItemId
 
   return (
     <div className="page projects-page">
@@ -799,52 +957,25 @@ export function ProjectsPage() {
 
       {tab === 'projects' && (
         <section className="projects-layout">
-          {projects.filter((project) => project.status === 'active').length === 0 ? (
-            <div className="list-card empty-state projects-empty">
-              <FolderKanban size={25} />
-              <span className="empty-state-title">No household projects yet.</span>
-              <span>Create a project, then add or import responsibilities with Tasks, Calendar links and calculated points.</span>
-            </div>
-          ) : projects.filter((project) => project.status === 'active').map((project) => {
-            const owner = project.owner_profile_id ? profileById.get(project.owner_profile_id) : undefined
-            const projectItems = openProjectItems.filter((item) => item.project_id === project.id)
-            const done = projectItems.filter((item) => item.status === 'done').length
-
-            return (
-              <article className="project-card list-card" key={project.id}>
-                <header>
-                  <div>
-                    <span className="eyebrow">HOUSEHOLD PROJECT</span>
-                    <h2>{project.title}</h2>
-                    <div className="project-card-meta">
-                      {project.due_date && <span><CalendarDays size={11} />Due {prettyDate(project.due_date)}</span>}
-                      {owner && <span className="project-owner"><ProfileAvatar avatarPath={owner.avatar_path} name={owner.display_name} size="sm" />{firstName(owner.display_name)}</span>}
-                      <span>{done}/{projectItems.length} done</span>
-                    </div>
-                  </div>
-
-                  {canWrite && (
-                    <div className="project-card-actions">
-                      <button type="button" className="icon-button compact-icon" aria-label={'Edit ' + project.title} onClick={() => openProject(project)}><Pencil size={14} /></button>
-                      <button type="button" className="secondary-button compact" onClick={() => openItem('project_task',project.id)}><Plus size={14} />Task</button>
-                    </div>
-                  )}
-                </header>
-
-                {project.description && <p>{project.description}</p>}
-
-                <div className="project-card-work">
-                  {projectItems.length
-                    ? projectItems.map(renderWorkItem)
-                    : <div className="project-card-empty">No responsibilities in this project yet.</div>}
-                </div>
-              </article>
-            )
-          })}
+          <ProjectDateSection
+            title="Next 10 days"
+            subtitle="Projects due today or within the next 10 days."
+            rows={projectGroups.near}
+          />
+          <ProjectDateSection
+            title="Later"
+            subtitle="Projects due after the next 10 days. The next 60 days are shown first."
+            rows={[...projectGroups.later,...projectGroups.far]}
+          />
+          <ProjectDateSection
+            title="Without date"
+            subtitle="Projects without a due date stay here until a date is added."
+            rows={projectGroups.undated}
+          />
 
           {openProjectItems.filter((item) => !item.project_id).length > 0 && (
             <article className="project-card list-card">
-              <header><div><span className="eyebrow">UNASSIGNED</span><h2>Project tasks without a project</h2></div></header>
+              <header><div><span className="eyebrow">UNASSIGNED</span><h2>Project responsibilities without a project</h2></div></header>
               <div className="project-card-work">
                 {openProjectItems.filter((item) => !item.project_id).map(renderWorkItem)}
               </div>
@@ -860,10 +991,32 @@ export function ProjectsPage() {
             {canWrite && <button type="button" className="primary-button compact" onClick={() => openItem('chore')}><Plus size={15} />Add chore</button>}
           </div>
 
-          {chores.length
-            ? <div className="chores-list">{chores.map(renderWorkItem)}</div>
-            : <div className="list-card empty-state projects-empty"><ClipboardCheck size={24} /><span className="empty-state-title">No chores yet.</span><span>Add a new responsibility or import one of your existing Tasks.</span></div>}
+          <ChoreDateSection
+            title="Next 10 days"
+            subtitle="Chores due today or within the next 10 days."
+            rows={choreGroups.near}
+          />
+          <ChoreDateSection
+            title="Later"
+            subtitle="Chores due after the next 10 days. The next 60 days are shown first."
+            rows={[...choreGroups.later,...choreGroups.far]}
+          />
+          <ChoreDateSection
+            title="Without date"
+            subtitle="Chores without a date remain available here."
+            rows={choreGroups.undated}
+          />
         </section>
+      )}
+
+      {(tab === 'projects' || tab === 'chores') && (
+        <div className="archive-repository-bar">
+          <Link className="secondary-button compact archive-repository-button" to="/app/projects/archive">
+            <Archive size={14} />
+            Projects & Chores archive
+            <span>{archiveCount}</span>
+          </Link>
+        </div>
       )}
 
       {tab === 'standing' && (
@@ -926,7 +1079,11 @@ export function ProjectsPage() {
               <button type="button" className="icon-button" onClick={() => { setItemOpen(false); resetItem() }} aria-label="Close responsibility form"><X size={18} /></button>
             </header>
 
-            {!editingItemId && (
+            {sourceEventId && (
+              <div className="module-access-note">Linked from Calendar. The Calendar event remains the main item; this responsibility is only used for Projects & Chores points.</div>
+            )}
+
+            {!editingItemId && !sourceEventId && (
               <div className="composer-grid-two aligned-field-row">
                 <label>Start from
                   <Select
@@ -970,7 +1127,7 @@ export function ProjectsPage() {
 
             <div className="composer-grid-two aligned-field-row">
               <label>Category<Select value={itemCategory} onChange={setItemCategory} options={categoryOptions} ariaLabel="Choose category" disabled={sourceFieldsLocked} /></label>
-              <label>Assigned to<Select value={itemAssignee} onChange={setItemAssignee} options={profileOptions} ariaLabel="Choose household member" disabled={sourceFieldsLocked} /></label>
+              <label>Assigned to<Select value={itemAssignee} onChange={setItemAssignee} options={profileOptions} ariaLabel="Choose household member" disabled={assignmentLocked} /></label>
             </div>
 
             <div className="composer-grid-two aligned-field-row">
