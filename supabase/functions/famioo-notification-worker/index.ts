@@ -302,6 +302,119 @@ async function sendSummaryEmails() {
   return { claimed:deliveries.length,sent,failed,configured:true }
 }
 
+
+async function sendSystemEmails() {
+  const resendKey=await secret('famioo_resend_api_key')
+  if (!resendKey) {
+    return { claimed:0,sent:0,failed:0,configured:false }
+  }
+
+  const deliveries=await sql.begin(async (tx)=> {
+    const rows=await tx<Array<{
+      id:string; household_id:string; user_id:string; kind:'storage_downgrade';
+      recipient_email:string; payload_json:Record<string,unknown>; attempts:number
+    }>>`
+      with candidates as (
+        select id
+        from public.system_email_deliveries
+        where status in ('pending','failed')
+          and scheduled_for<=now()
+          and scheduled_for>=now()-interval '7 days'
+          and attempts<5
+        order by scheduled_for,created_at
+        for update skip locked
+        limit 25
+      )
+      update public.system_email_deliveries d
+      set status='sending',attempts=d.attempts+1,last_attempt_at=now(),updated_at=now()
+      from candidates c
+      where d.id=c.id
+      returning d.id::text,d.household_id::text,d.user_id::text,d.kind,
+                d.recipient_email,d.payload_json,d.attempts
+    `
+    return rows
+  })
+
+  let sent=0
+  let failed=0
+
+  for (const delivery of deliveries) {
+    try {
+      const householdRows=await sql<Array<{ name:string }>>`
+        select name from public.households where id=${delivery.household_id}::uuid limit 1
+      `
+      const household=householdRows[0]
+      if (!household) throw new Error('Household not found')
+
+      let subject='Famioo account update'
+      let html=''
+
+      if (delivery.kind==='storage_downgrade') {
+        const paid=Number(delivery.payload_json?.paid_monthly_eur ?? 0)
+        const addon=Number(delivery.payload_json?.storage_addon_price_eur ?? 0.49)
+        const grace=String(delivery.payload_json?.grace_until ?? '')
+        const graceLabel=grace
+          ? new Date(grace).toLocaleDateString('en-GB',{ day:'numeric',month:'long',year:'numeric' })
+          : ''
+
+        subject='Famioo · Your Files storage changed to 1 GB'
+        html='<!doctype html><html><body style="font-family:Arial,sans-serif;color:#443a47;line-height:1.55">'
+          +'<div style="max-width:620px;margin:auto;padding:24px">'
+          +'<div style="font-size:12px;letter-spacing:.12em;color:#a24e95">FAMIOO</div>'
+          +'<h1 style="margin:6px 0 10px;color:#5f316f">Your Files storage benefit changed</h1>'
+          +'<p>Your qualifying paid Famioo modules for <strong>'+escapeHtml(household.name)+'</strong> are now '
+          +'<strong>€'+paid.toFixed(2)+'/month</strong>, which is not above the €3.00 threshold for the included 10 GB Files tier.</p>'
+          +'<p>Your free Files allowance is now <strong>1 GB</strong>. Existing files are not automatically deleted.</p>'
+          +'<div style="margin:18px 0;padding:14px 16px;border-radius:12px;background:#f7f0f9">'
+          +'<strong>Keep 10 GB for €'+addon.toFixed(2)+'/month</strong>'
+          +'<p style="margin:6px 0 0">You can keep the larger Files allowance as a storage add-on. '
+          +'If your existing usage is above 1 GB and you do not keep 10 GB, new uploads are paused until usage is reduced below the free allowance.</p>'
+          +(graceLabel ? '<p style="margin:6px 0 0;color:#7d7082">Current downgrade window: until '+escapeHtml(graceLabel)+'.</p>' : '')
+          +'</div>'
+          +'<p style="font-size:12px;color:#9b8fa0">This is a transactional storage/account notice from Famioo.</p>'
+          +'</div></body></html>'
+      }
+
+      const response=await fetch('https://api.resend.com/emails',{
+        method:'POST',
+        headers:{
+          'Authorization':'Bearer '+resendKey,
+          'Content-Type':'application/json',
+        },
+        body:JSON.stringify({
+          from:'Famioo <famioo@propelotonmanager.com>',
+          to:[delivery.recipient_email],
+          subject,
+          html,
+        }),
+      })
+
+      const responseText=await response.text()
+      if (!response.ok) throw new Error('Email provider '+response.status+': '+responseText.slice(0,500))
+
+      await sql`
+        update public.system_email_deliveries
+        set status='sent',provider_status=${response.status},
+            provider_response=${responseText || '{}'}::jsonb,
+            sent_at=now(),error_text=null,updated_at=now()
+        where id=${delivery.id}::uuid
+      `
+      sent+=1
+    } catch (error) {
+      const message=error instanceof Error ? error.message : String(error)
+      await sql`
+        update public.system_email_deliveries
+        set status=case when attempts>=5 then 'expired' else 'failed' end,
+            error_text=left(${message},1000),updated_at=now()
+        where id=${delivery.id}::uuid
+      `
+      failed+=1
+    }
+  }
+
+  return { claimed:deliveries.length,sent,failed,configured:true }
+}
+
 Deno.serve(async (req) => {
   if (req.method!=='POST') return json({ error:'Method not allowed' },405)
 
@@ -314,6 +427,7 @@ Deno.serve(async (req) => {
     const queuedSummaries=await sql`select private.queue_due_summary_emails(now()) as count`
     const pushes=await sendPushes()
     const emails=await sendSummaryEmails()
+    const systemEmails=await sendSystemEmails()
 
     return json({
       ok:true,
@@ -321,6 +435,7 @@ Deno.serve(async (req) => {
       queuedSummaries:Number(queuedSummaries[0]?.count ?? 0),
       pushes,
       emails,
+      systemEmails,
       checkedAt:new Date().toISOString(),
     })
   } catch (error) {
