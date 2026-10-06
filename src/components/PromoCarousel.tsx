@@ -27,6 +27,7 @@ const promoSlides: PromoSlide[] = [
 
 const routeByModule: Record<ModuleCode, string> = {
   calendar: '/app/calendar',
+  calendar_connections: '/app/calendar/connections',
   tasks: '/app/tasks',
   checklists: '/app/checklists',
   shopping: '/app/shopping',
