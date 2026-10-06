@@ -2,6 +2,7 @@ import { ArrowLeft, RotateCcw, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { supabase } from '../lib/supabase'
 
 type ArchivedProject = {
@@ -40,6 +41,12 @@ export function ProjectsArchivePage() {
   const [items,setItems]=useState<ArchivedItem[]>([])
   const [categories,setCategories]=useState<Category[]>([])
   const [error,setError]=useState('')
+  const [confirm,setConfirm]=useState<
+    | { kind:'project';id:string;title:string }
+    | { kind:'item';id:string;title:string }
+    | null
+  >(null)
+  const [busy,setBusy]=useState(false)
 
   async function load() {
     setError('')
@@ -90,7 +97,6 @@ export function ProjectsArchivePage() {
   }
 
   async function deleteProject(project:ArchivedProject) {
-    if (!window.confirm('Permanently delete archived project "'+project.title+'"?')) return
     const result=await supabase.rpc('delete_archived_household_project_v1',{
       p_project_id:project.id,p_household_id:household.id,
     })
@@ -107,7 +113,6 @@ export function ProjectsArchivePage() {
   }
 
   async function deleteItem(item:ArchivedItem) {
-    if (!window.confirm('Permanently delete archived responsibility "'+item.title+'"?')) return
     const result=await supabase.rpc('delete_archived_project_work_item_v1',{
       p_item_id:item.id,p_household_id:household.id,
     })
@@ -175,7 +180,7 @@ export function ProjectsArchivePage() {
           <span>{projects.length}</span>
         </header>
         {projects.length
-          ? <div className="list-card archive-page-list">{projects.map((project) => archiveRow(project,'Project',() => void restoreProject(project),() => void deleteProject(project)))}</div>
+          ? <div className="list-card archive-page-list">{projects.map((project) => archiveRow(project,'Project',() => void restoreProject(project),() => setConfirm({ kind:'project',id:project.id,title:project.title })))}</div>
           : <div className="task-section-empty">No archived projects.</div>}
       </section>
 
@@ -185,9 +190,32 @@ export function ProjectsArchivePage() {
           <span>{items.length}</span>
         </header>
         {items.length
-          ? <div className="list-card archive-page-list">{items.map((item) => archiveRow(item,item.item_kind === 'chore' ? 'Chore' : 'Project responsibility',() => void restoreItem(item),() => void deleteItem(item)))}</div>
+          ? <div className="list-card archive-page-list">{items.map((item) => archiveRow(item,item.item_kind === 'chore' ? 'Chore' : 'Project responsibility',() => void restoreItem(item),() => setConfirm({ kind:'item',id:item.id,title:item.title })))}</div>
           : <div className="task-section-empty">No archived responsibilities or chores.</div>}
       </section>
+
+      <ConfirmDialog
+        open={Boolean(confirm)}
+        title={confirm?.kind==='project' ? 'Permanently delete project?' : 'Permanently delete responsibility?'}
+        message="This archived Projects & Chores record will be permanently removed. Linked Calendar events and Tasks stay unchanged."
+        confirmLabel="Delete permanently"
+        danger
+        busy={busy}
+        onCancel={()=>setConfirm(null)}
+        onConfirm={()=>void (async()=>{
+          if(!confirm) return
+          setBusy(true)
+          if(confirm.kind==='project'){
+            const target=projects.find((row)=>row.id===confirm.id)
+            if(target) await deleteProject(target)
+          } else {
+            const target=items.find((row)=>row.id===confirm.id)
+            if(target) await deleteItem(target)
+          }
+          setBusy(false)
+          setConfirm(null)
+        })()}
+      />
     </div>
   )
 }
