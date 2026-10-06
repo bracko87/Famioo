@@ -198,7 +198,7 @@ Deno.serve(async(req)=>{
   const authorization=req.headers.get("Authorization")??""
   if(!authorization.startsWith("Bearer ")) return json({error:"Authentication required."},401)
 
-  let body:{connection_id?:string}
+  let body:{connection_id?:string;ics_text?:string}
   try{ body=await req.json() }catch{ return json({error:"Invalid request."},400) }
   if(!body.connection_id) return json({error:"Connection is required."},400)
 
@@ -217,9 +217,10 @@ Deno.serve(async(req)=>{
   }
 
   const connection=connectionResult.data
-  if(connection.provider!=="ics") return json({error:"This sync worker currently supports ICS connections."},400)
-  if(!connection.sync_enabled) return json({error:"This calendar connection is paused."},400)
-  if(!connection.feed_url) return json({error:"This ICS connection has no feed URL."},400)
+  if(!["ics","file"].includes(connection.provider)) return json({error:"This sync worker currently supports ICS feeds and local calendar files."},400)
+  if(connection.provider==="ics"&&!connection.sync_enabled) return json({error:"This calendar connection is paused."},400)
+  if(connection.provider==="ics"&&!connection.feed_url) return json({error:"This ICS connection has no feed URL."},400)
+  if(connection.provider==="file"&&!body.ics_text) return json({error:"Choose an .ics file to import."},400)
 
   const householdResult=await userClient
     .from("households")
@@ -228,33 +229,39 @@ Deno.serve(async(req)=>{
     .single()
   const householdTimezone=householdResult.data?.timezone||"Europe/Berlin"
 
-  let response:Response
-  try{
-    response=await fetch(connection.feed_url,{
-      redirect:"follow",
-      headers:{
-        "User-Agent":"Famioo Calendar Sync/1.0",
-        "Accept":"text/calendar,text/plain;q=0.9,*/*;q=0.5",
-      },
-    })
-  }catch{
-    await userClient.from("calendar_connections").update({
-      status:"error",last_error:"Could not reach the calendar feed.",updated_at:new Date().toISOString(),
-    }).eq("id",connection.id)
-    return json({error:"Could not reach the calendar feed."},400)
+  let text=""
+  if(connection.provider==="file"){
+    text=String(body.ics_text??"")
+  }else{
+    let response:Response
+    try{
+      response=await fetch(connection.feed_url,{
+        redirect:"follow",
+        headers:{
+          "User-Agent":"Famioo Calendar Sync/1.0",
+          "Accept":"text/calendar,text/plain;q=0.9,*/*;q=0.5",
+        },
+      })
+    }catch{
+      await userClient.from("calendar_connections").update({
+        status:"error",last_error:"Could not reach the calendar feed.",updated_at:new Date().toISOString(),
+      }).eq("id",connection.id)
+      return json({error:"Could not reach the calendar feed."},400)
+    }
+
+    if(!response.ok){
+      const message="Calendar feed returned HTTP "+response.status+"."
+      await userClient.from("calendar_connections").update({
+        status:"error",last_error:message,updated_at:new Date().toISOString(),
+      }).eq("id",connection.id)
+      return json({error:message},400)
+    }
+
+    text=await response.text()
   }
 
-  if(!response.ok){
-    const message="Calendar feed returned HTTP "+response.status+"."
-    await userClient.from("calendar_connections").update({
-      status:"error",last_error:message,updated_at:new Date().toISOString(),
-    }).eq("id",connection.id)
-    return json({error:message},400)
-  }
-
-  const text=await response.text()
-  if(text.length>6_000_000) return json({error:"Calendar feed is too large."},413)
-  if(!/BEGIN:VCALENDAR/i.test(text)) return json({error:"The URL did not return an ICS calendar."},422)
+  if(text.length>6_000_000) return json({error:"Calendar file/feed is too large."},413)
+  if(!/BEGIN:VCALENDAR/i.test(text)) return json({error:"The selected source is not a valid ICS calendar."},422)
 
   const parsed=parseIcs(text)
   if(!parsed.length) return json({error:"No calendar events were found in this feed."},422)
