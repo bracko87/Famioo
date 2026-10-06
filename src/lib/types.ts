@@ -39,6 +39,7 @@ export type ModuleCode =
   | 'files'
   | 'assistant'
   | 'vaccinations'
+  | 'tickets'
 
 export type ModuleAccess = {
   code: ModuleCode
