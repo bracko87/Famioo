@@ -11910,7 +11910,7 @@ b {
    Work Calendar import
    ========================================================= */
 .calendar-provider-grid.work-calendar-methods {
-  grid-template-columns: repeat(3,minmax(0,1fr));
+  grid-template-columns: repeat(4,minmax(0,1fr));
 }
 
 .calendar-provider-icon.screenshot {
@@ -11921,6 +11921,77 @@ b {
 .calendar-provider-icon.paste {
   color: #8a6a4e;
   background: #f7f0e9;
+}
+
+
+.calendar-provider-icon.manual {
+  color: #4f7d72;
+  background: #edf6f2;
+}
+
+.calendar-provider-status.locked {
+  color: #8b7e8f;
+  background: #eee9f0;
+}
+
+.calendar-provider-card.ai-locked {
+  border-color: #e3dde5;
+  background: #f7f5f7;
+  box-shadow: none;
+}
+
+.calendar-provider-card.ai-locked > *:not(a) {
+  opacity: .68;
+}
+
+.calendar-provider-card.ai-locked > a {
+  justify-self: start;
+}
+
+.work-import-card.ai-locked-panel {
+  border-color: #e4dee6;
+  background: #f8f7f8;
+}
+
+.work-import-card.ai-locked-panel > *:not(.work-calendar-ai-required) {
+  opacity: .62;
+}
+
+.work-calendar-ai-required {
+  padding: 10px 11px;
+  border: 1px solid #ddd4e1;
+  border-radius: 10px;
+  display: grid;
+  grid-template-columns: 24px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 9px;
+  color: #725f79;
+  background: #fff;
+}
+
+.work-calendar-ai-required > svg {
+  color: #815c92;
+}
+
+.work-calendar-ai-required > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.work-calendar-ai-required strong {
+  font-size: 10px;
+}
+
+.work-calendar-ai-required small {
+  color: #918596;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.manual-work-calendar {
+  border-color: #c9ded6;
+  background: linear-gradient(180deg,#fff 0%,#f7fbf9 100%);
 }
 
 .work-calendar-settings,
@@ -12172,10 +12243,13 @@ b {
   color: #876b94;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1180px) {
   .calendar-provider-grid.work-calendar-methods {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2,minmax(0,1fr));
   }
+}
+
+@media (max-width: 1100px) {
 
   .work-calendar-draft {
     grid-template-columns: auto minmax(180px,1.3fr) minmax(140px,.8fr) auto;
@@ -12188,9 +12262,22 @@ b {
 }
 
 @media (max-width: 700px) {
+  .calendar-provider-grid.work-calendar-methods {
+    grid-template-columns: 1fr;
+  }
+
   .work-calendar-target-row,
   .work-calendar-draft {
     grid-template-columns: 1fr;
+  }
+
+  .work-calendar-ai-required {
+    grid-template-columns: 24px minmax(0,1fr);
+  }
+
+  .work-calendar-ai-required > a {
+    grid-column: 2;
+    justify-self: start;
   }
 
   .work-calendar-draft-check,
