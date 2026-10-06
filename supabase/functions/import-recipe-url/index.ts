@@ -160,7 +160,10 @@ Deno.serve(async(req:Request)=>{
   const rawUrl=body.url?.trim()
   if(!householdId||!rawUrl) return json({error:"Household and recipe URL are required."},400)
 
-  const membership=await adminClient
+  // Validate household access with the same authenticated client/RLS path used
+  // by the Famioo web app. This prevents the Edge Function from disagreeing
+  // with a household the signed-in user can already open in the app.
+  const membership=await userClient
     .from("household_members")
     .select("role,status")
     .eq("household_id",householdId)
@@ -168,7 +171,15 @@ Deno.serve(async(req:Request)=>{
     .eq("status","active")
     .maybeSingle()
 
-  if(membership.error||!membership.data) return json({error:"You do not have access to this household."},403)
+  if(membership.error||!membership.data) {
+    return json({error:"You do not have access to this household."},403)
+  }
+
+  const moduleRow=await adminClient
+    .from("modules")
+    .select("is_core,is_active")
+    .eq("code","meals")
+    .maybeSingle()
 
   const moduleAccess=await adminClient
     .from("household_modules")
@@ -177,10 +188,18 @@ Deno.serve(async(req:Request)=>{
     .eq("module_code","meals")
     .maybeSingle()
 
-  if(moduleAccess.error||!moduleAccess.data?.enabled) return json({error:"Meals & Recipes is not enabled for this household."},403)
-  if(moduleAccess.data.valid_until && new Date(moduleAccess.data.valid_until).getTime()<=Date.now()){
-    return json({error:"Meals & Recipes access has expired."},403)
-  }
+  const entitled=Boolean(
+    moduleRow.data?.is_active
+    && (
+      moduleRow.data?.is_core
+      || (
+        moduleAccess.data?.enabled
+        && (!moduleAccess.data.valid_until || new Date(moduleAccess.data.valid_until).getTime()>Date.now())
+      )
+    )
+  )
+
+  if(!entitled) return json({error:"Meals & Recipes is not enabled for this household."},403)
 
   let url:URL
   try{ url=new URL(rawUrl) } catch { return json({error:"Enter a valid recipe URL."},400) }
