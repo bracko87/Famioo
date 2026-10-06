@@ -25,6 +25,7 @@ import { ProjectsArchivePage } from './pages/ProjectsArchivePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { ModulePlaceholderPage } from './pages/ModulePlaceholderPage'
 import { MealsPage } from './pages/MealsPage'
+import { FilesPage } from './pages/FilesPage'
 
 function LoadingScreen() {
   return (
@@ -152,7 +153,7 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="projects/archive" element={<ProjectsArchivePage />} />
           <Route path="meals" element={<MealsPage />} />
-          <Route path="files" element={<ModulePlaceholderPage />} />
+          <Route path="files" element={<FilesPage />} />
           <Route path="assistant" element={<ModulePlaceholderPage />} />
         </Route>
 
