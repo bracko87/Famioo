@@ -95,7 +95,7 @@ function AuthenticatedApp({ user }: { user: User }) {
     } finally {
       if (foreground) setLoading(false)
     }
-  }, [user])
+  }, [user.id])
 
   useEffect(() => {
     void loadContext()
