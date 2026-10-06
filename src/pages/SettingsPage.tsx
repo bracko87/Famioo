@@ -11,6 +11,7 @@ import { TypesSettings } from '../components/settings/TypesSettings'
 import { MobileAppSettings } from '../components/settings/MobileAppSettings'
 import { CategoryAvailabilitySettings } from '../components/settings/CategoryAvailabilitySettings'
 import { NotificationsSecuritySettings } from '../components/settings/NotificationsSecuritySettings'
+import { PrivacySecuritySettings } from '../components/settings/PrivacySecuritySettings'
 
 type SettingsTab =
   | 'general'
@@ -23,6 +24,7 @@ type SettingsTab =
   | 'category-availability'
   | 'weather'
   | 'notifications-security'
+  | 'privacy-security'
   | 'mobile-app'
 
 const settingsTabs: Array<{ id: SettingsTab; label: string }> = [
@@ -36,6 +38,7 @@ const settingsTabs: Array<{ id: SettingsTab; label: string }> = [
   { id: 'category-availability', label: 'Category availability' },
   { id: 'weather', label: 'Weather' },
   { id: 'notifications-security', label: 'Notifications & security' },
+  { id: 'privacy-security', label: 'Privacy & encryption' },
   { id: 'mobile-app', label: 'Mobile app' },
 ]
 
@@ -78,6 +81,7 @@ export function SettingsPage() {
         {activeTab === 'category-availability' && <CategoryAvailabilitySettings />}
         {activeTab === 'weather' && <WeatherSettings />}
         {activeTab === 'notifications-security' && <NotificationsSecuritySettings />}
+        {activeTab === 'privacy-security' && <PrivacySecuritySettings />}
         {activeTab === 'mobile-app' && <MobileAppSettings />}
       </section>
     </div>
