@@ -58,8 +58,8 @@ function AuthenticatedApp({ user }: { user: User }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const loadContext = useCallback(async (preferredHouseholdId?: string) => {
-    setLoading(true)
+  const loadContext = useCallback(async (preferredHouseholdId?: string, foreground = true) => {
+    if (foreground) setLoading(true)
     setError('')
 
     try {
@@ -91,7 +91,7 @@ function AuthenticatedApp({ user }: { user: User }) {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not open Famioo.')
     } finally {
-      setLoading(false)
+      if (foreground) setLoading(false)
     }
   }, [user])
 
@@ -100,7 +100,7 @@ function AuthenticatedApp({ user }: { user: User }) {
   }, [loadContext])
 
   async function switchHousehold(nextId: string) {
-    await loadContext(nextId)
+    await loadContext(nextId, true)
   }
 
   if (loading) return <LoadingScreen />
@@ -130,7 +130,7 @@ function AuthenticatedApp({ user }: { user: User }) {
         profiles,
         modules,
         switchHousehold,
-        refresh: () => loadContext(household.id),
+        refresh: () => loadContext(household.id, false),
       }}
     >
       <Routes>
