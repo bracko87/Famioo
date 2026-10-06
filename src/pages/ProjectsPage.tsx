@@ -1060,7 +1060,21 @@ export function ProjectsPage() {
     )
   }
 
-  function ProjectDateSection({ title,subtitle,rows }: { title:string;subtitle:string;rows:ProjectRow[] }) {
+  function ProjectDateSection({ title,subtitle,rows,collapsible=false }: { title:string;subtitle:string;rows:ProjectRow[];collapsible?:boolean }) {
+    if(collapsible){
+      return (
+        <details className="task-section projects-date-section collapsible-date-section">
+          <summary className="task-section-head">
+            <div><h2>{title}</h2><p>{subtitle}</p></div>
+            <span>{rows.length}</span>
+          </summary>
+          {rows.length
+            ? <div className="projects-date-list collapsible-date-content">{rows.map(renderProjectCard)}</div>
+            : <div className="task-section-empty collapsible-date-content">No projects in this section.</div>}
+        </details>
+      )
+    }
+
     return (
       <section className="task-section projects-date-section">
         <header className="task-section-head">
@@ -1074,7 +1088,21 @@ export function ProjectsPage() {
     )
   }
 
-  function ChoreDateSection({ title,subtitle,rows }: { title:string;subtitle:string;rows:WorkItem[] }) {
+  function ChoreDateSection({ title,subtitle,rows,collapsible=false }: { title:string;subtitle:string;rows:WorkItem[];collapsible?:boolean }) {
+    if(collapsible){
+      return (
+        <details className="task-section projects-date-section collapsible-date-section">
+          <summary className="task-section-head">
+            <div><h2>{title}</h2><p>{subtitle}</p></div>
+            <span>{rows.length}</span>
+          </summary>
+          {rows.length
+            ? <div className="chores-list collapsible-date-content">{rows.map(renderWorkItem)}</div>
+            : <div className="task-section-empty collapsible-date-content">No chores in this section.</div>}
+        </details>
+      )
+    }
+
     return (
       <section className="task-section projects-date-section">
         <header className="task-section-head">
@@ -1136,8 +1164,9 @@ export function ProjectsPage() {
           />
           <ProjectDateSection
             title="Later"
-            subtitle="Projects due after the next 10 days. The next 60 days are shown first."
+            subtitle="Projects due after the next 10 days. Open this section when you want to see them."
             rows={[...projectGroups.later,...projectGroups.far]}
+            collapsible
           />
           <ProjectDateSection
             title="Without date"
@@ -1170,8 +1199,9 @@ export function ProjectsPage() {
           />
           <ChoreDateSection
             title="Later"
-            subtitle="Chores due after the next 10 days. The next 60 days are shown first."
+            subtitle="Chores due after the next 10 days. Open this section when you want to see them."
             rows={[...choreGroups.later,...choreGroups.far]}
+            collapsible
           />
           <ChoreDateSection
             title="Without date"
