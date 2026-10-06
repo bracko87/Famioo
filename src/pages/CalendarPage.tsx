@@ -10,6 +10,7 @@ import { TimePicker } from '../components/ui/TimePicker'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { DatePicker } from '../components/ui/DatePicker'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { firstName } from '../lib/personName'
 
 type CalendarView = 'day' | 'week' | 'month' | 'upcoming'
@@ -51,7 +52,17 @@ type LinkedWorkItem = {
   id: string
   item_kind: 'project_task' | 'chore'
   status: 'open' | 'done' | 'archived'
+  source_event_occurrence_key: string | null
+  source_event_series_rule_id: string | null
 }
+
+type SeriesRule = {
+  id:string
+  item_kind:'project_task'|'chore'
+  active:boolean
+}
+
+type DeleteScope='one'|'future'|'all'
 
 function currentTimeInZone(timezone: string) {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -243,6 +254,9 @@ export function CalendarPage() {
   const [eventCostTitle, setEventCostTitle] = useState('')
   const [eventCostAmount, setEventCostAmount] = useState('')
   const [eventCostSaving, setEventCostSaving] = useState(false)
+  const [seriesRules,setSeriesRules] = useState<SeriesRule[]>([])
+  const [projectScopeKind,setProjectScopeKind] = useState<'project_task'|'chore'|null>(null)
+  const [deleteRequest,setDeleteRequest] = useState<DeleteScope|null>(null)
 
   const range = useMemo(
     () => rangeFor(view, anchor, mondayFirst),
@@ -381,6 +395,9 @@ export function CalendarPage() {
     setLinkedWorkItems([])
     setEventCostTitle('')
     setEventCostAmount('')
+    setSeriesRules([])
+    setProjectScopeKind(null)
+    setDeleteRequest(null)
     setError('')
   }
 
@@ -496,7 +513,7 @@ export function CalendarPage() {
     else if (ruleResult.error) setError(ruleResult.error.message)
     else if (reminderResult.error) setError(reminderResult.error.message)
 
-    const [checklistResult,costResult,workResult] = await Promise.all([
+    const [checklistResult,costResult,workResult,seriesRuleResult] = await Promise.all([
       checklistAccess?.enabled
         ? supabase
             .from('checklists')
@@ -518,10 +535,18 @@ export function CalendarPage() {
       projectsAccess?.enabled
         ? supabase
             .from('project_work_items')
-            .select('id,item_kind,status')
+            .select('id,item_kind,status,source_event_occurrence_key,source_event_series_rule_id')
             .eq('household_id',household.id)
             .eq('linked_event_id',item.event_id)
             .neq('status','archived')
+        : Promise.resolve({ data:[],error:null }),
+      projectsAccess?.enabled
+        ? supabase
+            .from('project_event_series_rules')
+            .select('id,item_kind,active')
+            .eq('household_id',household.id)
+            .eq('event_id',item.event_id)
+            .eq('active',true)
         : Promise.resolve({ data:[],error:null }),
     ])
 
@@ -554,22 +579,15 @@ export function CalendarPage() {
     if (workResult.error) setError((current) => current || workResult.error?.message || '')
     else setLinkedWorkItems((workResult.data ?? []) as LinkedWorkItem[])
 
+    if (seriesRuleResult.error) setError((current) => current || seriesRuleResult.error?.message || '')
+    else setSeriesRules((seriesRuleResult.data ?? []) as SeriesRule[])
+
     setEventCostTitle(row.title + ' cost')
     setEventCostAmount('')
   }
 
-  async function deleteEvent(scope: 'one' | 'future' | 'all' = 'all') {
+  async function deleteEvent(scope: DeleteScope = 'all') {
     if (!editingEventId || !canWrite || deleting) return
-
-    const confirmation = scope === 'one'
-      ? 'Delete only this occurrence?'
-      : scope === 'future'
-        ? 'Delete this occurrence and all future occurrences?'
-        : editingRecurring
-          ? 'Delete every occurrence in this repeating event?'
-          : 'Delete this calendar event?'
-
-    if (!window.confirm(confirmation)) return
 
     setDeleting(true)
     setError('')
@@ -594,6 +612,10 @@ export function CalendarPage() {
 
     closeComposer()
     await load()
+  }
+
+  function requestDelete(scope:DeleteScope) {
+    setDeleteRequest(scope)
   }
 
   async function toggleLinkedChecklistItem(item: LinkedChecklistItem) {
@@ -658,17 +680,55 @@ export function CalendarPage() {
     setEventCostAmount('')
   }
 
-  function openProjectsConnection(kind: 'project_task' | 'chore') {
-    if (!editingEventId) return
-    const existing=linkedWorkItems.find((item) => item.item_kind === kind)
-    const tab=kind === 'chore' ? 'chores' : 'projects'
+  function navigateProjectsConnection(kind:'project_task'|'chore',scope:'one'|'series'='one') {
+    if (!editingEventId || !editingOccurrence) return
+    const tab=kind==='chore' ? 'chores' : 'projects'
+    const seriesRule=seriesRules.find((rule)=>rule.item_kind===kind && rule.active)
+    const occurrenceItem=linkedWorkItems.find((item)=>
+      item.item_kind===kind
+      && item.source_event_occurrence_key===editingOccurrence.occurrence_key
+    )
+
     const params=new URLSearchParams({ tab })
-    if (existing) params.set('editItem',existing.id)
-    else {
+
+    if(scope==='series' && seriesRule){
+      params.set('seriesRule',seriesRule.id)
+    } else if(scope==='one' && occurrenceItem && !occurrenceItem.source_event_series_rule_id){
+      params.set('editItem',occurrenceItem.id)
+    } else if(scope==='series' && seriesRule){
+      params.set('seriesRule',seriesRule.id)
+    } else {
       params.set('event',editingEventId)
       params.set('kind',kind)
+      params.set('scope',scope)
+      params.set('occurrenceKey',editingOccurrence.occurrence_key)
+      params.set('occurrenceDate',
+        editingOccurrence.occurrence_start_date
+          ?? (editingOccurrence.occurrence_start_at
+            ? dateInZone(editingOccurrence.occurrence_start_at,editingOccurrence.event_timezone)
+            : composerDate ?? '')
+      )
     }
+
+    setProjectScopeKind(null)
     routeNavigate('/app/projects?' + params.toString())
+  }
+
+  function openProjectsConnection(kind: 'project_task' | 'chore') {
+    if (!editingEventId || !editingOccurrence) return
+
+    const seriesRule=seriesRules.find((rule)=>rule.item_kind===kind && rule.active)
+    if(seriesRule){
+      navigateProjectsConnection(kind,'series')
+      return
+    }
+
+    if(editingRecurring){
+      setProjectScopeKind(kind)
+      return
+    }
+
+    navigateProjectsConnection(kind,'one')
   }
 
   function applyTemplate(nextTemplateId: string) {
@@ -1298,13 +1358,35 @@ export function CalendarPage() {
                       <small>Keep this Calendar event as the main item and add a points-only linked responsibility.</small>
                     </div>
                     <div className="event-connection-actions">
-                      <button type="button" className="secondary-button compact" disabled={!canWriteProjects} onClick={() => openProjectsConnection('project_task')}>
-                        {linkedWorkItems.some((item) => item.item_kind === 'project_task') ? 'Edit as project' : 'Add as project'}
+                      <button type="button" className="secondary-button compact event-link-button" disabled={!canWriteProjects} onClick={() => openProjectsConnection('project_task')}>
+                        {seriesRules.some((item)=>item.item_kind==='project_task' && item.active)
+                          ? 'Edit project rule'
+                          : linkedWorkItems.some((item) => item.item_kind === 'project_task' && item.source_event_occurrence_key===editingOccurrence?.occurrence_key)
+                            ? 'Edit project'
+                            : 'Add project'}
                       </button>
-                      <button type="button" className="secondary-button compact" disabled={!canWriteProjects} onClick={() => openProjectsConnection('chore')}>
-                        {linkedWorkItems.some((item) => item.item_kind === 'chore') ? 'Edit as chore' : 'Add as chore'}
+                      <button type="button" className="secondary-button compact event-link-button" disabled={!canWriteProjects} onClick={() => openProjectsConnection('chore')}>
+                        {seriesRules.some((item)=>item.item_kind==='chore' && item.active)
+                          ? 'Edit chore rule'
+                          : linkedWorkItems.some((item) => item.item_kind === 'chore' && item.source_event_occurrence_key===editingOccurrence?.occurrence_key)
+                            ? 'Edit chore'
+                            : 'Add chore'}
                       </button>
                     </div>
+
+                    {projectScopeKind && (
+                      <div className="event-project-scope">
+                        <span>
+                          <strong>Apply to</strong>
+                          <small>Choose whether points apply only to this date or automatically to every future occurrence.</small>
+                        </span>
+                        <div>
+                          <button type="button" className="secondary-button compact" onClick={()=>navigateProjectsConnection(projectScopeKind,'one')}>Only this occurrence</button>
+                          <button type="button" className="primary-button compact" onClick={()=>navigateProjectsConnection(projectScopeKind,'series')}>All occurrences</button>
+                          <button type="button" className="icon-button compact-icon" onClick={()=>setProjectScopeKind(null)} aria-label="Close occurrence choice"><X size={14}/></button>
+                        </div>
+                      </div>
+                    )}
                   </section>
                 )}
 
@@ -1372,7 +1454,7 @@ export function CalendarPage() {
               </div>
             )}
 
-            <fieldset className="participant-fieldset">
+            <fieldset className="participant-fieldset event-participants-box">
               <legend>Participants</legend>
               <div className="profile-choice-grid">
                 {profiles.map((profile) => (
@@ -1415,9 +1497,9 @@ export function CalendarPage() {
               <div className="event-delete-options">
                 <strong>Which occurrence should be deleted?</strong>
                 <div>
-                  <button type="button" className="secondary-button compact danger-button" disabled={deleting} onClick={() => void deleteEvent('one')}>Only this occurrence</button>
-                  <button type="button" className="secondary-button compact danger-button" disabled={deleting} onClick={() => void deleteEvent('future')}>This & future</button>
-                  <button type="button" className="secondary-button compact danger-button" disabled={deleting} onClick={() => void deleteEvent('all')}>All occurrences</button>
+                  <button type="button" className="secondary-button compact danger-button" disabled={deleting} onClick={() => requestDelete('one')}>Only this occurrence</button>
+                  <button type="button" className="secondary-button compact danger-button" disabled={deleting} onClick={() => requestDelete('future')}>This & future</button>
+                  <button type="button" className="secondary-button compact danger-button" disabled={deleting} onClick={() => requestDelete('all')}>All occurrences</button>
                 </div>
               </div>
             )}
@@ -1428,7 +1510,7 @@ export function CalendarPage() {
                   type="button"
                   className="secondary-button compact danger-button event-delete-button"
                   disabled={saving || deleting}
-                  onClick={() => editingRecurring ? setDeleteOptionsOpen((current) => !current) : void deleteEvent('all')}
+                  onClick={() => editingRecurring ? setDeleteOptionsOpen((current) => !current) : requestDelete('all')}
                 >
                   <Trash2 size={14} />
                   {deleting ? 'Deleting…' : 'Delete'}
@@ -1442,6 +1524,23 @@ export function CalendarPage() {
           </form>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteRequest)}
+        title={deleteRequest==='one' ? 'Delete this occurrence?' : deleteRequest==='future' ? 'Delete this and future occurrences?' : editingRecurring ? 'Delete all occurrences?' : 'Delete event?'}
+        message={deleteRequest==='one'
+          ? 'Only this date will be removed. The remaining recurring dates stay in Calendar.'
+          : deleteRequest==='future'
+            ? 'This date and every later occurrence in the series will be removed.'
+            : editingRecurring
+              ? 'The complete recurring event series will be removed.'
+              : 'This Calendar event will be removed.'}
+        confirmLabel="Delete"
+        danger
+        busy={deleting}
+        onCancel={()=>setDeleteRequest(null)}
+        onConfirm={()=>{ if(deleteRequest) void deleteEvent(deleteRequest) }}
+      />
     </div>
   )
 }
