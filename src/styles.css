@@ -10882,3 +10882,142 @@ b {
     margin-top: 10px;
   }
 }
+
+
+/* =========================================================
+   Privacy & encryption
+   ========================================================= */
+.privacy-notice {
+  margin: -2px 0 14px;
+  padding: 9px 11px;
+  border: 1px solid #e4dae8;
+  border-radius: 10px;
+  display: grid;
+  grid-template-columns: 18px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 8px;
+  color: #776b7b;
+  background: rgba(255,255,255,.7);
+  font-size: 11px;
+}
+
+.privacy-notice > svg {
+  color: #7d5a8a;
+}
+
+.privacy-notice span {
+  min-width: 0;
+}
+
+.privacy-notice strong {
+  color: #5f5264;
+  font-weight: 650;
+}
+
+.privacy-notice a {
+  color: #7b4d93;
+  white-space: nowrap;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.privacy-notice a:hover {
+  text-decoration: underline;
+}
+
+.privacy-notice.compact {
+  min-height: 36px;
+}
+
+.privacy-settings-card {
+  padding: 18px;
+}
+
+.privacy-status-banner {
+  padding: 12px;
+  border: 1px solid #d9e5df;
+  border-radius: 11px;
+  display: grid;
+  grid-template-columns: 24px minmax(0,1fr);
+  align-items: center;
+  gap: 9px;
+  color: #507064;
+  background: #f2f8f5;
+}
+
+.privacy-status-banner > span {
+  display: grid;
+  gap: 2px;
+}
+
+.privacy-status-banner strong {
+  font-size: 12px;
+}
+
+.privacy-status-banner small {
+  font-size: 11px;
+  color: #74877f;
+}
+
+.privacy-settings-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 10px;
+}
+
+.privacy-settings-grid article {
+  min-height: 138px;
+  padding: 13px;
+  border: 1px solid #e7ddea;
+  border-radius: 11px;
+  display: grid;
+  grid-template-columns: 24px minmax(0,1fr);
+  align-content: start;
+  gap: 9px;
+  background: #fbf9fc;
+}
+
+.privacy-settings-grid article > svg {
+  color: #80568f;
+}
+
+.privacy-settings-grid strong {
+  color: #5e5263;
+  font-size: 12px;
+}
+
+.privacy-settings-grid p,
+.privacy-important-note p {
+  margin: 4px 0 0;
+  color: #8c8091;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.privacy-important-note {
+  margin-top: 12px;
+  padding: 12px 13px;
+  border: 1px solid #ecd9dc;
+  border-radius: 11px;
+  background: #fff8f9;
+}
+
+.privacy-important-note > strong {
+  color: #74545a;
+  font-size: 12px;
+}
+
+@media (max-width: 700px) {
+  .privacy-notice {
+    grid-template-columns: 18px minmax(0,1fr);
+  }
+
+  .privacy-notice a {
+    grid-column: 2;
+  }
+
+  .privacy-settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
