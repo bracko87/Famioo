@@ -351,7 +351,7 @@ export function SchoolPage() {
 
       <section className="school-entry-section">
         <header className="school-section-head">
-          <div>
+          <div className="school-section-title-line">
             <span className="eyebrow">UPCOMING</span>
             <h2>{selectedChild === 'all' ? 'Kids overview' : firstName(profileById.get(selectedChild)?.display_name ?? 'Child')}</h2>
           </div>
