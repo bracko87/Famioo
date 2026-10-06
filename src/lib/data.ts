@@ -41,7 +41,7 @@ export async function loadHouseholds(user: User): Promise<Household[]> {
 export async function loadProfiles(householdId: string): Promise<FamilyProfile[]> {
   const result = await supabase
     .from('family_profiles')
-    .select('id,household_id,linked_user_id,display_name,profile_type,color_key,avatar_emoji,avatar_path')
+    .select('id,household_id,linked_user_id,display_name,profile_type,color_key,avatar_emoji,avatar_path,birth_date')
     .eq('household_id', householdId)
     .eq('active', true)
     .order('display_name')
