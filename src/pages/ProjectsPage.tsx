@@ -566,7 +566,9 @@ export function ProjectsPage() {
     resetItem(kind,projectId)
     if (item) {
       setEditingItemId(item.id)
-      setItemSource('new')
+      const calendarSource=Boolean(item.linked_event_id && !item.linked_task_id && item.sync_calendar)
+      setItemSource(calendarSource ? 'event' : 'new')
+      if (calendarSource && item.linked_event_id) setSourceEventId(item.linked_event_id)
       setItemKind(item.item_kind)
       setItemProject(item.project_id ?? '')
       setItemTitle(item.title)
@@ -980,8 +982,8 @@ export function ProjectsPage() {
   const importedEdit = Boolean(editingItemId && items.find((item) => item.id === editingItemId)?.task_link_origin === 'imported')
   const taskSourceLocked = itemSource === 'task' && !editingItemId
   const eventSourceLocked = Boolean(sourceEventId)
-  const sourceFieldsLocked = taskSourceLocked || eventSourceLocked
-  const assignmentLocked = taskSourceLocked
+  const sourceFieldsLocked = taskSourceLocked || eventSourceLocked || importedEdit
+  const assignmentLocked = taskSourceLocked || importedEdit
 
   return (
     <div className="page projects-page">
