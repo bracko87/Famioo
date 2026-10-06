@@ -1,4 +1,4 @@
-import { Database, KeyRound, LockKeyhole, ShieldCheck, Smartphone } from 'lucide-react'
+import { Database, LockKeyhole, ShieldCheck, Smartphone } from 'lucide-react'
 
 export function PrivacySecuritySettings() {
   return (
@@ -6,8 +6,8 @@ export function PrivacySecuritySettings() {
       <div className="settings-section-head">
         <div>
           <span className="eyebrow">PRIVACY & ENCRYPTION</span>
-          <h2>How Famioo protects private household data</h2>
-          <p>Famioo separates private household access from end-to-end encryption so the app never promises more protection than is actually active.</p>
+          <h2>Your family's privacy is built into Famioo</h2>
+          <p>Private household information is protected with authenticated access, strict household permissions, private storage and encrypted network connections.</p>
         </div>
         <ShieldCheck size={24} />
       </div>
@@ -15,48 +15,48 @@ export function PrivacySecuritySettings() {
       <div className="privacy-status-banner">
         <LockKeyhole size={19} />
         <span>
-          <strong>Current production protection</strong>
-          <small>Authenticated household access, Row Level Security, private storage buckets and encrypted HTTPS transport are active.</small>
+          <strong>Private by design</strong>
+          <small>Only authenticated household members with the required permission can access household records through Famioo.</small>
         </span>
       </div>
 
       <div className="privacy-settings-grid">
         <article>
+          <ShieldCheck size={18} />
+          <div>
+            <strong>Household access protection</strong>
+            <p>Famioo uses household membership, roles and Row Level Security so one household cannot simply browse another household's private records.</p>
+          </div>
+        </article>
+
+        <article>
+          <LockKeyhole size={18} />
+          <div>
+            <strong>Encrypted connection</strong>
+            <p>Data sent between your device and Famioo uses encrypted HTTPS/TLS connections, protecting information while it travels across the internet.</p>
+          </div>
+        </article>
+
+        <article>
           <Database size={18} />
           <div>
-            <strong>What the server stores today</strong>
-            <p>Most structured module fields are still stored as normal database values behind strict household permissions. Private Files use a non-public storage bucket. This is secure private storage, but it is not yet zero-knowledge end-to-end encryption.</p>
+            <strong>Private file storage</strong>
+            <p>Files and photos are stored in non-public household storage and are delivered through controlled, time-limited access rather than public links.</p>
           </div>
         </article>
 
         <article>
           <Smartphone size={18} />
           <div>
-            <strong>Target: encrypt before upload</strong>
-            <p>Files, photos and sensitive structured values will be encrypted on the user device before they are sent to Famioo. The backend will receive ciphertext plus only the minimum metadata required for syncing and permissions.</p>
-          </div>
-        </article>
-
-        <article>
-          <KeyRound size={18} />
-          <div>
-            <strong>Keys stay with authorized devices</strong>
-            <p>The prepared design uses a household data key wrapped separately for authorized devices. Famioo stores public device keys and wrapped household keys, never the raw household decryption key.</p>
-          </div>
-        </article>
-
-        <article>
-          <ShieldCheck size={18} />
-          <div>
-            <strong>Rollout order</strong>
-            <p>Files and photos first, then Life Admin and School attachments, followed by Household Costs and other sensitive structured data. A module will only display an “end-to-end encrypted” label after its complete read/write/share/recovery path is encrypted.</p>
+            <strong>Stronger device-side protection</strong>
+            <p>Famioo is prepared for an additional device-side encryption layer for the most sensitive content, starting with files and private attachments and expanding module by module.</p>
           </div>
         </article>
       </div>
 
-      <div className="privacy-important-note">
-        <strong>Why Famioo does not yet say “your data never leaves the phone unencrypted” everywhere</strong>
-        <p>That statement would currently be inaccurate. Household Costs totals, School/Kita fields, Shopping text, Home Care and Life Admin structured records still rely on server-readable values for sync and calculations. The database foundation for client-side encryption is now prepared, but those modules must be migrated safely before the stronger wording is shown.</p>
+      <div className="privacy-positive-note">
+        <strong>Privacy remains part of the product design</strong>
+        <p>Sensitive modules such as Files, Household Costs, School & Kita, Home Care and Life Admin are treated as private household areas and use the same household access protections throughout the app.</p>
       </div>
     </section>
   )
