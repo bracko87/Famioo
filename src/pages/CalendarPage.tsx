@@ -272,7 +272,6 @@ export function CalendarPage() {
   const [editingBaseStartDate,setEditingBaseStartDate] = useState('')
   const [editingBaseEndDate,setEditingBaseEndDate] = useState('')
   const [editingOccurrenceInitialDate,setEditingOccurrenceInitialDate] = useState('')
-  const [editingOccurrenceInitialEndDate,setEditingOccurrenceInitialEndDate] = useState('')
 
   const range = useMemo(
     () => rangeFor(view, anchor, mondayFirst),
@@ -417,7 +416,6 @@ export function CalendarPage() {
     setEditingBaseStartDate('')
     setEditingBaseEndDate('')
     setEditingOccurrenceInitialDate('')
-    setEditingOccurrenceInitialEndDate('')
     setError('')
   }
 
@@ -521,7 +519,6 @@ export function CalendarPage() {
     setEditingBaseStartDate(baseStartDate)
     setEditingBaseEndDate(baseEndDate)
     setEditingOccurrenceInitialDate(eventDate)
-    setEditingOccurrenceInitialEndDate(eventEndDate)
     setComposerDate(eventDate)
     setEndDate(eventEndDate)
     setTemplateId('')
