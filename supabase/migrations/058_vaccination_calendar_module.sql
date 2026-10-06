@@ -5,8 +5,8 @@
 insert into public.modules(code,name,description,icon_key,sort_order,is_core,is_active)
 values(
   'vaccinations',
-  'Vaccinations & Check-ups',
-  'German child vaccination planning and U/J preventive check-up calendar',
+  'Prevention',
+  'German child preventive health planner for vaccinations and U/J examinations',
   'vaccinations',
   65,
   false,
@@ -28,7 +28,7 @@ insert into public.billing_products(
 )
 values(
   'module_vaccinations',
-  'Vaccinations & Check-ups',
+  'Prevention',
   'module',
   'vaccinations',
   0.99,
@@ -992,7 +992,7 @@ declare
 begin
   if auth.uid() is null then raise exception 'Authentication required'; end if;
   if not private.has_module_access(p_household_id,'vaccinations','full') then
-    raise exception 'Vaccinations & Check-ups write access required';
+    raise exception 'Prevention write access required';
   end if;
 
   select birth_date into v_birth_date
@@ -1072,7 +1072,7 @@ as $$
 begin
   if auth.uid() is null then raise exception 'Authentication required'; end if;
   if not private.has_module_access(p_household_id,'vaccinations','full') then
-    raise exception 'Vaccinations & Check-ups write access required';
+    raise exception 'Prevention write access required';
   end if;
   if p_birth_date is null or p_birth_date>current_date then
     raise exception 'Use a valid date of birth';
@@ -1211,7 +1211,7 @@ declare
 begin
   if auth.uid() is null then raise exception 'Authentication required'; end if;
   if not private.has_module_access(p_household_id,'vaccinations','full') then
-    raise exception 'Vaccinations & Check-ups write access required';
+    raise exception 'Prevention write access required';
   end if;
   if p_status not in ('recommended','scheduled','completed','not_applicable') then
     raise exception 'Invalid check-up status';
