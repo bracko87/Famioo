@@ -7,10 +7,10 @@ set is_core=true,
 where code='files';
 
 insert into public.household_modules(household_id,module_code,enabled,source,settings_json,enabled_at,updated_at)
-select h.id,'files',true,'core','{}'::jsonb,now(),now()
+select h.id,'files',true,'default','{}'::jsonb,now(),now()
 from public.households h
 on conflict(household_id,module_code)
-do update set enabled=true,source='core',valid_until=null,updated_at=now();
+do update set enabled=true,source='default',valid_until=null,updated_at=now();
 
 
 create table if not exists public.billing_products(
