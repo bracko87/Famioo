@@ -39,6 +39,7 @@ const routeByModule: Record<ModuleCode, string> = {
   meals: '/app/meals',
   files: '/app/files',
   assistant: '/app/assistant',
+  vaccinations: '/app/vaccinations',
 }
 
 export function PromoCarousel({ modules }: { modules: ModuleAccess[] }) {
