@@ -604,9 +604,13 @@ export function CalendarConnectionsPage(){
             <p>Create a separate Work calendar and enter appointments yourself. Work and Family stay separate but can be viewed together in the same Calendar.</p>
           </div>
           <span className="calendar-provider-status connected"><Check size={12}/>{workCalendar?'Work Calendar ready':'Included with Calendar'}</span>
-          <button type="button" className="primary-button compact" disabled={!canWrite||creatingWorkCalendar} onClick={()=>void createWorkCalendar()}>
-            {creatingWorkCalendar?'Creating…':workCalendar?'Use Work Calendar':'Create Work Calendar'}
-          </button>
+          {workCalendar ? (
+            <Link className="primary-button compact" to="/app/calendar">Open Work Calendar</Link>
+          ) : (
+            <button type="button" className="primary-button compact" disabled={!canWrite||creatingWorkCalendar} onClick={()=>void createWorkCalendar()}>
+              {creatingWorkCalendar?'Creating…':'Create Work Calendar'}
+            </button>
+          )}
         </article>
       </section>
 
