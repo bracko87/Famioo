@@ -1013,8 +1013,12 @@ export function MealsPage(){
             </label>
 
             <div className="recipe-supported-sites">
-              <span>Supported now</span>
-              <b>Chefkoch</b><b>LECKER</b><b>essen & trinken</b><b>BBC Good Food</b><b>Allrecipes</b>
+              <span>Supported now · open a site to find a recipe</span>
+              <a href="https://www.chefkoch.de/rs/s0/Rezepte.html" target="_blank" rel="noreferrer">Chefkoch<ExternalLink size={12}/></a>
+              <a href="https://www.lecker.de/rezepte" target="_blank" rel="noreferrer">LECKER<ExternalLink size={12}/></a>
+              <a href="https://www.essen-und-trinken.de/rezepte" target="_blank" rel="noreferrer">essen & trinken<ExternalLink size={12}/></a>
+              <a href="https://www.bbcgoodfood.com/recipes" target="_blank" rel="noreferrer">BBC Good Food<ExternalLink size={12}/></a>
+              <a href="https://www.allrecipes.com/recipes/" target="_blank" rel="noreferrer">Allrecipes<ExternalLink size={12}/></a>
             </div>
 
             <small className="field-hint">Famioo does not bypass logins or paywalls. The original source link is kept with every imported recipe.</small>
