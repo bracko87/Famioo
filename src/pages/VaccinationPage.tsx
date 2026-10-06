@@ -1,4 +1,4 @@
-import { CalendarDays, Check, MapPin, Pencil, Plus, ShieldCheck, Syringe, X } from 'lucide-react'
+import { CalendarDays, Check, MapPin, Pencil, ShieldCheck, Syringe, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { DatePicker } from '../components/ui/DatePicker'
@@ -11,6 +11,9 @@ import { categoryColor } from '../lib/categoryColors'
 import { supabase } from '../lib/supabase'
 import type { CalendarRow } from '../lib/types'
 
+type HealthStatus='recommended'|'scheduled'|'completed'|'not_applicable'
+type PlanTab='vaccinations'|'checkups'
+
 type VaccinationTemplate={
   code:string
   schedule_version:string
@@ -19,6 +22,15 @@ type VaccinationTemplate={
   age_label:string
   timing_note:string|null
   is_optional:boolean
+  sort_order:number
+}
+
+type CheckupTemplate={
+  code:string
+  schedule_version:string
+  checkup_name:string
+  age_label:string
+  timing_note:string|null
   sort_order:number
 }
 
@@ -36,26 +48,54 @@ type VaccinationEntry={
   location_text:string|null
   provider_text:string|null
   notes:string|null
-  status:'recommended'|'scheduled'|'completed'|'not_applicable'
+  status:HealthStatus
   completed_date:string|null
   calendar_id:string|null
   linked_event_id:string|null
 }
+
+type CheckupEntry={
+  id:string
+  child_profile_id:string
+  template_code:string|null
+  schedule_version:string
+  checkup_name:string
+  recommended_start_date:string|null
+  recommended_end_date:string|null
+  scheduled_date:string|null
+  scheduled_time:string|null
+  location_text:string|null
+  provider_text:string|null
+  notes:string|null
+  status:HealthStatus
+  completed_date:string|null
+  calendar_id:string|null
+  linked_event_id:string|null
+}
+
+type EditingHealthEntry=
+  | {kind:'vaccination';entry:VaccinationEntry}
+  | {kind:'checkup';entry:CheckupEntry}
 
 function firstName(name:string){
   return name.trim().split(/\s+/)[0]||name
 }
 
 function formatDate(value:string|null){
-  if(!value) return 'Date set by paediatrician'
+  if(!value) return 'Date set with paediatrician'
   return new Date(value+'T12:00:00').toLocaleDateString()
 }
 
-function statusLabel(status:VaccinationEntry['status']){
+function statusLabel(status:HealthStatus){
   if(status==='scheduled') return 'Scheduled'
   if(status==='completed') return 'Completed'
   if(status==='not_applicable') return 'Not applicable'
   return 'Recommended'
+}
+
+function dateSort(value:string|null){
+  if(!value) return Number.MAX_SAFE_INTEGER
+  return new Date(value+'T12:00:00').getTime()
 }
 
 export function VaccinationPage(){
@@ -64,17 +104,21 @@ export function VaccinationPage(){
   const canWrite=Boolean(access?.enabled&&access.can_write)
   const children=useMemo(()=>profiles.filter((profile)=>profile.profile_type==='child'),[profiles])
   const [selectedChild,setSelectedChild]=useState('')
-  const [templates,setTemplates]=useState<VaccinationTemplate[]>([])
-  const [entries,setEntries]=useState<VaccinationEntry[]>([])
+  const [planTab,setPlanTab]=useState<PlanTab>('vaccinations')
+  const [vaccinationTemplates,setVaccinationTemplates]=useState<VaccinationTemplate[]>([])
+  const [checkupTemplates,setCheckupTemplates]=useState<CheckupTemplate[]>([])
+  const [vaccinationEntries,setVaccinationEntries]=useState<VaccinationEntry[]>([])
+  const [checkupEntries,setCheckupEntries]=useState<CheckupEntry[]>([])
   const [calendars,setCalendars]=useState<CalendarRow[]>([])
   const [birthDate,setBirthDate]=useState('')
-  const [editing,setEditing]=useState<VaccinationEntry|null>(null)
+  const [editing,setEditing]=useState<EditingHealthEntry|null>(null)
   const [scheduledDate,setScheduledDate]=useState('')
   const [scheduledTime,setScheduledTime]=useState('')
+  const [hasTime,setHasTime]=useState(false)
   const [locationText,setLocationText]=useState('')
   const [providerText,setProviderText]=useState('')
   const [notes,setNotes]=useState('')
-  const [status,setStatus]=useState<VaccinationEntry['status']>('recommended')
+  const [status,setStatus]=useState<HealthStatus>('recommended')
   const [completedDate,setCompletedDate]=useState('')
   const [calendarId,setCalendarId]=useState('')
   const [addToCalendar,setAddToCalendar]=useState(true)
@@ -87,9 +131,14 @@ export function VaccinationPage(){
     [children,selectedChild],
   )
 
-  const templateByCode=useMemo(
-    ()=>new Map(templates.map((item)=>[item.code,item])),
-    [templates],
+  const vaccinationTemplateByCode=useMemo(
+    ()=>new Map(vaccinationTemplates.map((item)=>[item.code,item])),
+    [vaccinationTemplates],
+  )
+
+  const checkupTemplateByCode=useMemo(
+    ()=>new Map(checkupTemplates.map((item)=>[item.code,item])),
+    [checkupTemplates],
   )
 
   useEffect(()=>{
@@ -99,12 +148,19 @@ export function VaccinationPage(){
 
   async function loadBase(){
     if(!access?.enabled) return
-    const [templateResult,calendarResult]=await Promise.all([
+    const [vaccinationTemplateResult,checkupTemplateResult,calendarResult]=await Promise.all([
       supabase
         .from('vaccination_schedule_templates')
         .select('code,schedule_version,vaccine_name,dose_label,age_label,timing_note,is_optional,sort_order')
         .eq('country_code','DE')
         .eq('schedule_version','STIKO 2026')
+        .eq('active',true)
+        .order('sort_order'),
+      supabase
+        .from('child_checkup_schedule_templates')
+        .select('code,schedule_version,checkup_name,age_label,timing_note,sort_order')
+        .eq('country_code','DE')
+        .eq('schedule_version','G-BA 2026')
         .eq('active',true)
         .order('sort_order'),
       supabase
@@ -116,8 +172,11 @@ export function VaccinationPage(){
         .order('name'),
     ])
 
-    if(templateResult.error) setError(templateResult.error.message)
-    else setTemplates((templateResult.data??[]) as VaccinationTemplate[])
+    if(vaccinationTemplateResult.error) setError(vaccinationTemplateResult.error.message)
+    else setVaccinationTemplates((vaccinationTemplateResult.data??[]) as VaccinationTemplate[])
+
+    if(checkupTemplateResult.error) setError((current)=>current||checkupTemplateResult.error.message)
+    else setCheckupTemplates((checkupTemplateResult.data??[]) as CheckupTemplate[])
 
     if(calendarResult.error) setError((current)=>current||calendarResult.error.message)
     else{
@@ -131,31 +190,48 @@ export function VaccinationPage(){
 
   async function loadEntries(childId:string){
     setError('')
-    const result=await supabase
-      .from('child_vaccination_entries')
-      .select('id,child_profile_id,template_code,schedule_version,vaccine_name,dose_label,recommended_start_date,recommended_end_date,scheduled_date,scheduled_time,location_text,provider_text,notes,status,completed_date,calendar_id,linked_event_id')
-      .eq('household_id',household.id)
-      .eq('child_profile_id',childId)
+    const [vaccinationResult,checkupResult]=await Promise.all([
+      supabase
+        .from('child_vaccination_entries')
+        .select('id,child_profile_id,template_code,schedule_version,vaccine_name,dose_label,recommended_start_date,recommended_end_date,scheduled_date,scheduled_time,location_text,provider_text,notes,status,completed_date,calendar_id,linked_event_id')
+        .eq('household_id',household.id)
+        .eq('child_profile_id',childId),
+      supabase
+        .from('child_checkup_entries')
+        .select('id,child_profile_id,template_code,schedule_version,checkup_name,recommended_start_date,recommended_end_date,scheduled_date,scheduled_time,location_text,provider_text,notes,status,completed_date,calendar_id,linked_event_id')
+        .eq('household_id',household.id)
+        .eq('child_profile_id',childId),
+    ])
 
-    if(result.error){
-      setError(result.error.message)
-      return
-    }
+    if(vaccinationResult.error) setError(vaccinationResult.error.message)
+    else setVaccinationEntries((vaccinationResult.data??[]) as VaccinationEntry[])
 
-    setEntries((result.data??[]) as VaccinationEntry[])
+    if(checkupResult.error) setError((current)=>current||checkupResult.error.message)
+    else setCheckupEntries((checkupResult.data??[]) as CheckupEntry[])
   }
 
-  async function initializePlan(childId:string){
+  async function initializePlans(childId:string){
     if(!canWrite) return
-    const result=await supabase.rpc('initialize_child_vaccination_plan_v1',{
-      p_household_id:household.id,
-      p_child_profile_id:childId,
-    })
-    if(result.error){
-      if(!/date of birth/i.test(result.error.message)) setError(result.error.message)
+
+    const [vaccinationResult,checkupResult]=await Promise.all([
+      supabase.rpc('initialize_child_vaccination_plan_v1',{
+        p_household_id:household.id,
+        p_child_profile_id:childId,
+      }),
+      supabase.rpc('initialize_child_checkup_plan_v1',{
+        p_household_id:household.id,
+        p_child_profile_id:childId,
+      }),
+    ])
+
+    const errors=[vaccinationResult.error,checkupResult.error].filter(Boolean)
+    const unexpected=errors.find((item)=>!/date of birth/i.test(item?.message??''))
+    if(unexpected){
+      setError(unexpected.message)
       return
     }
-    await loadEntries(childId)
+
+    if(errors.length===0) await loadEntries(childId)
   }
 
   useEffect(()=>{ void loadBase() },[household.id,access?.enabled])
@@ -165,9 +241,9 @@ export function VaccinationPage(){
     setBirthDate(selectedProfile.birth_date??'')
     void (async()=>{
       await loadEntries(selectedProfile.id)
-      if(selectedProfile.birth_date&&canWrite) await initializePlan(selectedProfile.id)
+      if(selectedProfile.birth_date&&canWrite) await initializePlans(selectedProfile.id)
     })()
-  },[selectedProfile?.id,selectedProfile?.birth_date,access?.enabled])
+  },[selectedProfile?.id,selectedProfile?.birth_date,access?.enabled,canWrite,household.id])
 
   async function saveBirthDate(event:FormEvent){
     event.preventDefault()
@@ -188,15 +264,17 @@ export function VaccinationPage(){
       return
     }
 
-    setMessage('Date of birth saved and the STIKO 2026 vaccination plan was created.')
+    setMessage('Date of birth saved. Vaccination and U/J check-up timelines were created.')
     await refresh()
     await loadEntries(selectedProfile.id)
   }
 
-  function openEntry(entry:VaccinationEntry){
-    setEditing(entry)
+  function openEntry(item:EditingHealthEntry){
+    const entry=item.entry
+    setEditing(item)
     setScheduledDate(entry.scheduled_date??entry.recommended_start_date??'')
-    setScheduledTime(entry.scheduled_time?.slice(0,5)??'')
+    setScheduledTime(entry.scheduled_time?.slice(0,5)??'09:00')
+    setHasTime(Boolean(entry.scheduled_time))
     setLocationText(entry.location_text??'')
     setProviderText(entry.provider_text??'')
     setNotes(entry.notes??'')
@@ -215,11 +293,15 @@ export function VaccinationPage(){
     setError('')
     setMessage('')
 
-    const result=await supabase.rpc('save_child_vaccination_entry_v1',{
-      p_entry_id:editing.id,
+    const rpc=editing.kind==='vaccination'
+      ?'save_child_vaccination_entry_v1'
+      :'save_child_checkup_entry_v1'
+
+    const result=await supabase.rpc(rpc,{
+      p_entry_id:editing.entry.id,
       p_household_id:household.id,
       p_scheduled_date:scheduledDate||null,
-      p_scheduled_time:scheduledTime||null,
+      p_scheduled_time:hasTime?(scheduledTime||null):null,
       p_location_text:locationText.trim()||null,
       p_provider_text:providerText.trim()||null,
       p_notes:notes.trim()||null,
@@ -235,30 +317,63 @@ export function VaccinationPage(){
       return
     }
 
+    const savedKind=editing.kind
     setEditing(null)
-    setMessage('Vaccination entry updated.')
+    setMessage(savedKind==='vaccination'?'Vaccination entry updated.':'Check-up entry updated.')
     if(selectedProfile) await loadEntries(selectedProfile.id)
   }
 
-  const sortedEntries=useMemo(()=>[...entries].sort((a,b)=>{
-    const ta=a.template_code?templateByCode.get(a.template_code):undefined
-    const tb=b.template_code?templateByCode.get(b.template_code):undefined
+  const sortedVaccinations=useMemo(()=>[...vaccinationEntries].sort((a,b)=>{
+    const ta=a.template_code?vaccinationTemplateByCode.get(a.template_code):undefined
+    const tb=b.template_code?vaccinationTemplateByCode.get(b.template_code):undefined
     return (ta?.sort_order??999)-(tb?.sort_order??999)
-  }),[entries,templateByCode])
+  }),[vaccinationEntries,vaccinationTemplateByCode])
 
-  const completedCount=entries.filter((entry)=>entry.status==='completed').length
-  const scheduledCount=entries.filter((entry)=>entry.status==='scheduled').length
-  const nextEntry=sortedEntries.find((entry)=>entry.status==='scheduled')
-    ??sortedEntries.find((entry)=>entry.status==='recommended'&&entry.recommended_start_date)
+  const sortedCheckups=useMemo(()=>[...checkupEntries].sort((a,b)=>{
+    const ta=a.template_code?checkupTemplateByCode.get(a.template_code):undefined
+    const tb=b.template_code?checkupTemplateByCode.get(b.template_code):undefined
+    return (ta?.sort_order??999)-(tb?.sort_order??999)
+  }),[checkupEntries,checkupTemplateByCode])
+
+  const activeEntries=planTab==='vaccinations'?vaccinationEntries:checkupEntries
+  const completedCount=activeEntries.filter((entry)=>entry.status==='completed').length
+  const scheduledCount=activeEntries.filter((entry)=>entry.status==='scheduled').length
+
+  const nextVaccination=useMemo(()=>{
+    const scheduled=[...vaccinationEntries]
+      .filter((entry)=>entry.status==='scheduled'&&entry.scheduled_date)
+      .sort((a,b)=>dateSort(a.scheduled_date)-dateSort(b.scheduled_date))[0]
+    if(scheduled) return scheduled
+    return [...vaccinationEntries]
+      .filter((entry)=>entry.status==='recommended'&&entry.recommended_start_date)
+      .sort((a,b)=>dateSort(a.recommended_start_date)-dateSort(b.recommended_start_date))[0]??null
+  },[vaccinationEntries])
+
+  const nextCheckup=useMemo(()=>{
+    const scheduled=[...checkupEntries]
+      .filter((entry)=>entry.status==='scheduled'&&entry.scheduled_date)
+      .sort((a,b)=>dateSort(a.scheduled_date)-dateSort(b.scheduled_date))[0]
+    if(scheduled) return scheduled
+    return [...checkupEntries]
+      .filter((entry)=>entry.status==='recommended'&&entry.recommended_start_date)
+      .sort((a,b)=>dateSort(a.recommended_start_date)-dateSort(b.recommended_start_date))[0]??null
+  },[checkupEntries])
+
+  const nextEntry=planTab==='vaccinations'?nextVaccination:nextCheckup
+  const nextTitle=nextEntry
+    ? planTab==='vaccinations'
+      ? (nextEntry as VaccinationEntry).vaccine_name+' · '+(nextEntry as VaccinationEntry).dose_label
+      : (nextEntry as CheckupEntry).checkup_name
+    : 'No upcoming item'
 
   if(!access?.enabled){
     return (
       <div className="page vaccination-page">
-        <div className="page-label">VACCINATION CALENDAR</div>
+        <div className="page-label">VACCINATIONS & CHECK-UPS</div>
         <section className="list-card module-placeholder-card">
           <Syringe size={24}/>
-          <strong>Vaccination Calendar is not enabled for this household.</strong>
-          <span>This is an optional Famioo module for child vaccination planning and Calendar synchronization.</span>
+          <strong>Vaccinations & Check-ups is not enabled for this household.</strong>
+          <span>This optional Famioo module combines the German child vaccination schedule with U/J preventive check-ups and Calendar synchronization.</span>
         </section>
       </div>
     )
@@ -268,18 +383,18 @@ export function VaccinationPage(){
     <div className="page vaccination-page">
       <div className="page-heading-row">
         <div>
-          <div className="page-label">VACCINATION CALENDAR</div>
-          <h1>Vaccination Calendar</h1>
-          <p className="page-subtitle">Plan and track each child’s vaccination appointments using the German STIKO 2026 standard schedule, then place booked appointments directly into the family Calendar.</p>
+          <div className="page-label">VACCINATIONS & CHECK-UPS</div>
+          <h1>Vaccinations & Check-ups</h1>
+          <p className="page-subtitle">Keep each child’s German vaccination plan and U/J preventive examinations together, then place booked appointments directly into the Family Calendar.</p>
         </div>
-        <span className="vaccination-source-badge"><ShieldCheck size={14}/>Germany · STIKO 2026</span>
+        <span className="vaccination-source-badge"><ShieldCheck size={14}/>Germany · STIKO + G-BA</span>
       </div>
 
       <section className="list-card vaccination-medical-note">
         <ShieldCheck size={18}/>
         <div>
           <strong>Planning aid, not a replacement for medical advice</strong>
-          <p>Famioo uses the standard STIKO schedule as a template. The child’s paediatrician and vaccination record remain authoritative, especially for premature babies, catch-up vaccinations, medical risk groups and product-specific intervals.</p>
+          <p>Famioo uses the current standard German schedules as templates. The paediatrician, vaccination record and Yellow Book remain authoritative, especially for premature babies, catch-up vaccinations, risk groups, vaccine-product intervals and insurer-specific extra examinations.</p>
         </div>
       </section>
 
@@ -290,7 +405,7 @@ export function VaccinationPage(){
         <section className="list-card empty-state vaccination-empty">
           <Syringe size={26}/>
           <span className="empty-state-title">Create a child profile first.</span>
-          <span>The vaccination plan belongs to the child’s existing Famioo profile.</span>
+          <span>The health timelines belong to the child’s existing Famioo profile.</span>
           <Link className="primary-button compact" to="/app/settings?tab=users">Open household people</Link>
         </section>
       ) : (
@@ -317,7 +432,7 @@ export function VaccinationPage(){
               <div>
                 <span className="eyebrow">SET UP CHILD</span>
                 <h2>Add {firstName(selectedProfile.display_name)}’s date of birth</h2>
-                <p>Famioo needs the birth date to calculate the recommended vaccination windows.</p>
+                <p>Famioo uses the birth date to calculate vaccination windows and U/J check-up periods.</p>
               </div>
               <label>
                 Date of birth
@@ -330,11 +445,20 @@ export function VaccinationPage(){
                 />
               </label>
               <button className="primary-button compact" disabled={!birthDate||saving}>
-                {saving?'Creating plan…':'Create vaccination plan'}
+                {saving?'Creating plans…':'Create child health plans'}
               </button>
             </form>
           ) : selectedProfile ? (
             <>
+              <nav className="vaccination-plan-tabs" aria-label="Child health plan">
+                <button type="button" className={planTab==='vaccinations'?'active':''} onClick={()=>setPlanTab('vaccinations')}>
+                  <Syringe size={15}/>Vaccinations
+                </button>
+                <button type="button" className={planTab==='checkups'?'active':''} onClick={()=>setPlanTab('checkups')}>
+                  <ShieldCheck size={15}/>U / J Check-ups
+                </button>
+              </nav>
+
               <section className="vaccination-summary-grid">
                 <article className="list-card vaccination-summary-card">
                   <span><Check size={18}/></span>
@@ -345,11 +469,15 @@ export function VaccinationPage(){
                   <div><strong>{scheduledCount}</strong><small>scheduled</small></div>
                 </article>
                 <article className="list-card vaccination-summary-card wide">
-                  <span><Syringe size={18}/></span>
+                  <span>{planTab==='vaccinations'?<Syringe size={18}/>:<ShieldCheck size={18}/>}</span>
                   <div>
                     <small>Next</small>
-                    <strong>{nextEntry?nextEntry.vaccine_name+' · '+nextEntry.dose_label:'No upcoming item'}</strong>
-                    <small>{nextEntry?.scheduled_date?formatDate(nextEntry.scheduled_date):nextEntry?.recommended_start_date?'Recommended from '+formatDate(nextEntry.recommended_start_date):'Ask the paediatrician for timing'}</small>
+                    <strong>{nextTitle}</strong>
+                    <small>{nextEntry?.scheduled_date
+                      ?formatDate(nextEntry.scheduled_date)
+                      :nextEntry?.recommended_start_date
+                        ?'Recommended from '+formatDate(nextEntry.recommended_start_date)
+                        :'Set timing with the paediatrician'}</small>
                   </div>
                 </article>
               </section>
@@ -357,17 +485,23 @@ export function VaccinationPage(){
               <section className="vaccination-timeline-section">
                 <header className="vaccination-section-head">
                   <div>
-                    <span className="eyebrow">CHILD PLAN</span>
-                    <h2>{firstName(selectedProfile.display_name)} · vaccination timeline</h2>
+                    <span className="eyebrow">{planTab==='vaccinations'?'STIKO 2026':'GERMAN PREVENTIVE EXAMINATIONS'}</span>
+                    <h2>{firstName(selectedProfile.display_name)} · {planTab==='vaccinations'?'vaccination timeline':'U/J timeline'}</h2>
                   </div>
-                  <button type="button" className="secondary-button compact" disabled={!canWrite} onClick={()=>void initializePlan(selectedProfile.id)}>
-                    Refresh STIKO template
+                  <button type="button" className="secondary-button compact" disabled={!canWrite} onClick={()=>void initializePlans(selectedProfile.id)}>
+                    Refresh German templates
                   </button>
                 </header>
 
+                {planTab==='checkups'&&(
+                  <div className="vaccination-checkup-note">
+                    Standard template: U1–U9 and J1. Optional insurer benefits such as additional U/J examinations are not automatically treated as mandatory appointments.
+                  </div>
+                )}
+
                 <div className="vaccination-timeline">
-                  {sortedEntries.map((entry)=>{
-                    const template=entry.template_code?templateByCode.get(entry.template_code):undefined
+                  {planTab==='vaccinations' ? sortedVaccinations.map((entry)=>{
+                    const template=entry.template_code?vaccinationTemplateByCode.get(entry.template_code):undefined
                     return (
                       <article className={'list-card vaccination-entry '+entry.status} key={entry.id}>
                         <div className="vaccination-age">
@@ -383,7 +517,6 @@ export function VaccinationPage(){
                             </div>
                             <em className={'vaccination-status '+entry.status}>{statusLabel(entry.status)}</em>
                           </div>
-
                           <div className="vaccination-entry-meta">
                             {entry.scheduled_date ? (
                               <span><CalendarDays size={12}/>{formatDate(entry.scheduled_date)}{entry.scheduled_time?' · '+entry.scheduled_time.slice(0,5):''}</span>
@@ -396,13 +529,47 @@ export function VaccinationPage(){
                             {entry.provider_text&&<span><MapPin size={12}/>{entry.provider_text}</span>}
                             {entry.linked_event_id&&<span><CalendarDays size={12}/>In Family Calendar</span>}
                           </div>
-
                           {template?.timing_note&&<p>{template.timing_note}</p>}
                           {entry.notes&&<p className="vaccination-user-note">{entry.notes}</p>}
                         </div>
-
                         {canWrite&&(
-                          <button type="button" className="icon-button compact-icon" aria-label={'Edit '+entry.vaccine_name} onClick={()=>openEntry(entry)}>
+                          <button type="button" className="icon-button compact-icon" aria-label={'Edit '+entry.vaccine_name} onClick={()=>openEntry({kind:'vaccination',entry})}>
+                            <Pencil size={14}/>
+                          </button>
+                        )}
+                      </article>
+                    )
+                  }) : sortedCheckups.map((entry)=>{
+                    const template=entry.template_code?checkupTemplateByCode.get(entry.template_code):undefined
+                    return (
+                      <article className={'list-card vaccination-entry '+entry.status} key={entry.id}>
+                        <div className="vaccination-age">
+                          <span>{template?.age_label??'Custom'}</span>
+                        </div>
+                        <span className="vaccination-dot checkup"><ShieldCheck size={15}/></span>
+                        <div className="vaccination-entry-main">
+                          <div className="vaccination-entry-title">
+                            <div>
+                              <strong>{entry.checkup_name}</strong>
+                              <span>Preventive child health examination</span>
+                            </div>
+                            <em className={'vaccination-status '+entry.status}>{statusLabel(entry.status)}</em>
+                          </div>
+                          <div className="vaccination-entry-meta">
+                            {entry.scheduled_date ? (
+                              <span><CalendarDays size={12}/>{formatDate(entry.scheduled_date)}{entry.scheduled_time?' · '+entry.scheduled_time.slice(0,5):''}</span>
+                            ) : (
+                              <span><CalendarDays size={12}/>Recommended {formatDate(entry.recommended_start_date)}{entry.recommended_end_date&&entry.recommended_end_date!==entry.recommended_start_date?' – '+formatDate(entry.recommended_end_date):''}</span>
+                            )}
+                            {entry.location_text&&<GoogleMapsLink location={entry.location_text}/>}
+                            {entry.provider_text&&<span><MapPin size={12}/>{entry.provider_text}</span>}
+                            {entry.linked_event_id&&<span><CalendarDays size={12}/>In Family Calendar</span>}
+                          </div>
+                          {template?.timing_note&&<p>{template.timing_note}</p>}
+                          {entry.notes&&<p className="vaccination-user-note">{entry.notes}</p>}
+                        </div>
+                        {canWrite&&(
+                          <button type="button" className="icon-button compact-icon" aria-label={'Edit '+entry.checkup_name} onClick={()=>openEntry({kind:'checkup',entry})}>
                             <Pencil size={14}/>
                           </button>
                         )}
@@ -421,10 +588,12 @@ export function VaccinationPage(){
           <form className="modal-card vaccination-composer" onSubmit={saveEntry}>
             <header>
               <div>
-                <span className="eyebrow">VACCINATION APPOINTMENT</span>
-                <h2>{editing.vaccine_name} · {editing.dose_label}</h2>
+                <span className="eyebrow">{editing.kind==='vaccination'?'VACCINATION APPOINTMENT':'U / J CHECK-UP'}</span>
+                <h2>{editing.kind==='vaccination'
+                  ?editing.entry.vaccine_name+' · '+editing.entry.dose_label
+                  :editing.entry.checkup_name}</h2>
               </div>
-              <button type="button" className="icon-button" aria-label="Close vaccination appointment" onClick={()=>setEditing(null)}>
+              <button type="button" className="icon-button" aria-label="Close child health appointment" onClick={()=>setEditing(null)}>
                 <X size={18}/>
               </button>
             </header>
@@ -434,14 +603,14 @@ export function VaccinationPage(){
                 Status
                 <Select
                   value={status}
-                  onChange={(value)=>setStatus(value as VaccinationEntry['status'])}
+                  onChange={(value)=>setStatus(value as HealthStatus)}
                   options={[
                     {value:'recommended',label:'Recommended'},
                     {value:'scheduled',label:'Scheduled'},
                     {value:'completed',label:'Completed'},
                     {value:'not_applicable',label:'Not applicable'},
                   ]}
-                  ariaLabel="Choose vaccination status"
+                  ariaLabel="Choose appointment status"
                 />
               </label>
 
@@ -451,18 +620,28 @@ export function VaccinationPage(){
                   value={scheduledDate}
                   onChange={setScheduledDate}
                   format={household.date_format}
-                  ariaLabel="Choose vaccination appointment date"
+                  ariaLabel="Choose appointment date"
                 />
                 <small className="field-hint">Use the date agreed with the paediatrician.</small>
               </label>
             </div>
 
-            <div className="composer-grid-two aligned-field-row">
-              <label>
-                Time
-                <TimePicker value={scheduledTime} onChange={setScheduledTime}/>
-                <small className="field-hint">Optional. Leave empty for an all-day Calendar entry.</small>
-              </label>
+            <label className="vaccination-specific-time">
+              <input
+                type="checkbox"
+                checked={hasTime}
+                onChange={(event)=>setHasTime(event.target.checked)}
+              />
+              <span>Appointment has a specific time</span>
+            </label>
+
+            <div className={hasTime?'composer-grid-two aligned-field-row':'composer-grid-two aligned-field-row single-health-field'}>
+              {hasTime&&(
+                <label>
+                  Time
+                  <TimePicker value={scheduledTime} onChange={setScheduledTime}/>
+                </label>
+              )}
               <label>
                 Practice / doctor
                 <input value={providerText} onChange={(event)=>setProviderText(event.target.value)} placeholder="e.g. Kinderarzt Dr. Müller"/>
@@ -477,12 +656,12 @@ export function VaccinationPage(){
 
             {status==='completed'&&(
               <label>
-                Vaccination completed on
+                Completed on
                 <DatePicker
                   value={completedDate||scheduledDate}
                   onChange={setCompletedDate}
                   format={household.date_format}
-                  ariaLabel="Choose vaccination completion date"
+                  ariaLabel="Choose completion date"
                 />
               </label>
             )}
@@ -509,7 +688,7 @@ export function VaccinationPage(){
                       label:calendar.name+(calendar.is_default?' · Default':''),
                       dotColor:categoryColor(calendar.color_key),
                     }))}
-                    ariaLabel="Choose Calendar for vaccination appointment"
+                    ariaLabel="Choose Calendar for child health appointment"
                   />
                 </label>
               )}
@@ -520,7 +699,7 @@ export function VaccinationPage(){
             <div className="modal-actions">
               <button type="button" className="secondary-button" onClick={()=>setEditing(null)}>Cancel</button>
               <button className="primary-button" disabled={saving||(status==='scheduled'&&!scheduledDate)||(addToCalendar&&!scheduledDate)}>
-                {saving?'Saving…':'Save vaccination'}
+                {saving?'Saving…':'Save appointment'}
               </button>
             </div>
           </form>
