@@ -11212,3 +11212,37 @@ b {
     max-height: 300px;
   }
 }
+
+
+/* Recipe website import fallback */
+.recipe-import-help,
+.recipe-import-paste {
+  padding: 11px 12px;
+  border: 1px solid #e7dce9;
+  border-radius: 11px;
+  display: grid;
+  gap: 7px;
+  background: #fbf8fc;
+}
+
+.recipe-import-help strong,
+.recipe-import-paste strong {
+  color: #625168;
+  font-size: 11px;
+}
+
+.recipe-import-help span,
+.recipe-import-paste span {
+  color: #8d8092;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.recipe-import-paste textarea {
+  min-height: 142px;
+  resize: vertical;
+}
+
+.recipe-import-paste > button {
+  justify-self: end;
+}
