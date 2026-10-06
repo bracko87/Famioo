@@ -1076,6 +1076,10 @@ export function MealsPage(){
             </header>
 
             <p className="recipe-import-copy">Paste a recipe-page link. Famioo reads the page's structured Recipe data, fills the recipe editor, and lets you review everything before saving.</p>
+            <div className="recipe-import-tip">
+              <strong>Important:</strong>
+              <span>Open one individual recipe first — not a recipe collection or category page — then copy that recipe's URL and paste it below.</span>
+            </div>
 
             <label>Recipe URL
               <input type="url" value={importUrl} onChange={(event)=>setImportUrl(event.target.value)} placeholder="https://www.chefkoch.de/rezepte/…" required autoFocus/>
@@ -1087,7 +1091,7 @@ export function MealsPage(){
               <a href="https://www.lecker.de/rezepte" target="_blank" rel="noreferrer">LECKER<ExternalLink size={12}/></a>
               <a href="https://www.essen-und-trinken.de/rezepte" target="_blank" rel="noreferrer">essen & trinken<ExternalLink size={12}/></a>
               <a href="https://www.bbcgoodfood.com/recipes" target="_blank" rel="noreferrer">BBC Good Food<ExternalLink size={12}/></a>
-              <a href="https://www.allrecipes.com/recipes/" target="_blank" rel="noreferrer">Allrecipes<ExternalLink size={12}/></a>
+              <a href="https://www.loveandlemons.com/recipes/" target="_blank" rel="noreferrer">Love & Lemons<ExternalLink size={12}/></a>
             </div>
 
             <small className="field-hint">Famioo does not bypass logins or paywalls. The original source link is kept with every imported recipe.</small>
