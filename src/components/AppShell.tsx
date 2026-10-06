@@ -16,6 +16,7 @@ import {
   Settings,
   ShoppingBag,
   Sparkles,
+  Syringe,
   Utensils,
   X,
 } from 'lucide-react'
@@ -38,6 +39,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   meals: Utensils,
   files: FileText,
   assistant: Sparkles,
+  vaccinations: Syringe,
 }
 
 const routeByModule: Partial<Record<ModuleCode, string>> = {
@@ -50,6 +52,7 @@ const routeByModule: Partial<Record<ModuleCode, string>> = {
   meals: '/app/meals',
   files: '/app/files',
   assistant: '/app/assistant',
+  vaccinations: '/app/vaccinations',
 }
 
 type HeaderNotification = {
