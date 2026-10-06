@@ -1,4 +1,4 @@
-import { Archive, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, EyeOff, FolderKanban, Pencil, Plus, Settings2, Trash2, WalletCards, X } from 'lucide-react'
+import { Archive, CalendarSync, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, EyeOff, FolderKanban, Pencil, Plus, Settings2, Trash2, WalletCards, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
@@ -1127,6 +1127,13 @@ export function CalendarPage() {
         <button className="secondary-button compact" onClick={() => setAnchor(new Date())}>
           Today
         </button>
+
+        {modules.find((module)=>module.code==='calendar_connections')?.enabled && (
+          <button className="secondary-button compact" onClick={() => routeNavigate('/app/calendar/connections')}>
+            <CalendarSync size={15}/>
+            Connections
+          </button>
+        )}
 
         {canWrite ? (
           <button className="primary-button compact" onClick={() => openComposer(dateKey(new Date()))}>
