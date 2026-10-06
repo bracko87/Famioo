@@ -7,7 +7,7 @@ export function PrivacyNotice({ compact=false }: { compact?:boolean }) {
       <LockKeyhole size={14} />
       <span>
         <strong>Private household data.</strong>
-        {' '}Access is restricted to authorized household members. Client-side end-to-end encryption is prepared but is not yet active for every structured field.
+        {' '}Protected with authenticated household access, strict database permissions, private storage and encrypted connections.
       </span>
       <Link to="/app/settings?tab=privacy-security">Privacy & encryption →</Link>
     </div>
