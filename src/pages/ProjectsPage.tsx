@@ -693,6 +693,8 @@ export function ProjectsPage() {
     setSaving(true)
     setError('')
 
+    const editingItem=editingItemId ? items.find((item) => item.id === editingItemId) : undefined
+
     const result = sourceEventId
       ? await supabase.rpc('save_event_project_work_item_v1',{
           p_id:editingItemId,
@@ -707,25 +709,44 @@ export function ProjectsPage() {
           p_score_execution:scoreExecution,
           p_score_responsibility:scoreResponsibility,
         })
-      : await supabase.rpc('save_project_work_item_v2',{
-          p_id:editingItemId,
-          p_household_id:household.id,
-          p_project_id:itemKind === 'project_task' ? (itemProject || null) : null,
-          p_item_kind:itemKind,
-          p_title:itemTitle.trim() || 'Imported Task',
-          p_category_id:itemCategory || null,
-          p_due_date:itemDue || null,
-          p_location_text:itemLocation.trim() || null,
-          p_assigned_profile_id:itemAssignee || null,
-          p_notes:itemNotes.trim() || null,
-          p_sync_task:importedTask ? true : itemSyncTask,
-          p_sync_calendar:itemSyncCalendar,
-          p_score_duration:scoreDuration,
-          p_score_effort:scoreEffort,
-          p_score_execution:scoreExecution,
-          p_score_responsibility:scoreResponsibility,
-          p_existing_task_id:importedTask ? existingTaskId : null,
-        })
+      : editingItem?.status === 'done'
+        ? await supabase.rpc('save_completed_project_work_item_v1',{
+            p_id:editingItemId,
+            p_household_id:household.id,
+            p_project_id:itemKind === 'project_task' ? (itemProject || null) : null,
+            p_item_kind:itemKind,
+            p_title:itemTitle.trim() || 'Responsibility',
+            p_category_id:itemCategory || null,
+            p_due_date:itemDue || null,
+            p_location_text:itemLocation.trim() || null,
+            p_assigned_profile_id:itemAssignee || null,
+            p_notes:itemNotes.trim() || null,
+            p_sync_task:itemSyncTask,
+            p_sync_calendar:itemSyncCalendar,
+            p_score_duration:scoreDuration,
+            p_score_effort:scoreEffort,
+            p_score_execution:scoreExecution,
+            p_score_responsibility:scoreResponsibility,
+          })
+        : await supabase.rpc('save_project_work_item_v2',{
+            p_id:editingItemId,
+            p_household_id:household.id,
+            p_project_id:itemKind === 'project_task' ? (itemProject || null) : null,
+            p_item_kind:itemKind,
+            p_title:itemTitle.trim() || 'Imported Task',
+            p_category_id:itemCategory || null,
+            p_due_date:itemDue || null,
+            p_location_text:itemLocation.trim() || null,
+            p_assigned_profile_id:itemAssignee || null,
+            p_notes:itemNotes.trim() || null,
+            p_sync_task:importedTask ? true : itemSyncTask,
+            p_sync_calendar:itemSyncCalendar,
+            p_score_duration:scoreDuration,
+            p_score_effort:scoreEffort,
+            p_score_execution:scoreExecution,
+            p_score_responsibility:scoreResponsibility,
+            p_existing_task_id:importedTask ? existingTaskId : null,
+          })
 
     if (result.error) {
       setSaving(false)
