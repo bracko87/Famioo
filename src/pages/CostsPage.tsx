@@ -2,6 +2,7 @@ import { CalendarClock, Plus, Receipt, ShoppingBag, WalletCards, X } from 'lucid
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { DatePicker } from '../components/ui/DatePicker'
 import { Select } from '../components/ui/Select'
+import { PrivacyNotice } from '../components/PrivacyNotice'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
 
@@ -544,6 +545,8 @@ export function CostsPage() {
           </button>
         )}
       </div>
+
+      <PrivacyNotice compact />
 
       {!access?.enabled && <div className="module-access-note">Household Costs is not enabled for this household.</div>}
       {access?.enabled && !canWrite && <div className="module-access-note">Read-only access</div>}
