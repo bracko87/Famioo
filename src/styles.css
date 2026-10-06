@@ -11904,3 +11904,312 @@ b {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* =========================================================
+   Work Calendar import
+   ========================================================= */
+.calendar-provider-grid.work-calendar-methods {
+  grid-template-columns: repeat(3,minmax(0,1fr));
+}
+
+.calendar-provider-icon.screenshot {
+  color: #557a9d;
+  background: #edf4f9;
+}
+
+.calendar-provider-icon.paste {
+  color: #8a6a4e;
+  background: #f7f0e9;
+}
+
+.work-calendar-settings,
+.work-import-card,
+.work-calendar-review,
+.work-calendar-future-note {
+  margin-bottom: 12px;
+  padding: 15px;
+}
+
+.work-calendar-settings > header,
+.work-import-card > header,
+.work-calendar-review > header {
+  margin-bottom: 12px;
+}
+
+.work-calendar-settings h2,
+.work-import-card h2,
+.work-calendar-review h2,
+.work-calendar-future-note h2 {
+  margin: 3px 0 0;
+  color: #574b5b;
+  font-size: 16px;
+  font-weight: 620;
+}
+
+.work-calendar-settings > header p,
+.work-import-card > header p,
+.work-calendar-review > header p,
+.work-calendar-future-note p {
+  margin: 4px 0 0;
+  color: #918496;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.work-import-card > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.work-import-card > header > svg {
+  flex: 0 0 auto;
+  color: #876b94;
+}
+
+.work-calendar-target-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(260px,.7fr);
+  align-items: end;
+  gap: 10px;
+  margin-bottom: 11px;
+}
+
+.work-calendar-owner-note {
+  min-height: 58px;
+  padding: 10px 11px;
+  border: 1px solid #e7dfea;
+  border-radius: 10px;
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  background: #fbf9fc;
+}
+
+.work-calendar-owner-note strong {
+  color: #66576b;
+  font-size: 10px;
+}
+
+.work-calendar-owner-note span {
+  color: #918596;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.work-privacy-grid button {
+  min-height: 90px;
+  padding: 11px;
+  border: 1px solid #e8dfea;
+  border-radius: 11px;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  color: #625268;
+  background: #fcfafc;
+  text-align: left;
+}
+
+.work-privacy-grid button.selected {
+  border-color: #cbb3d6;
+  background: #f8f2fa;
+  box-shadow: inset 0 0 0 1px rgba(126,83,148,.06);
+}
+
+.work-privacy-grid button:disabled {
+  cursor: not-allowed;
+  opacity: .62;
+}
+
+.work-privacy-grid button strong {
+  font-size: 11px;
+}
+
+.work-privacy-grid button p {
+  margin: 0;
+  color: #918495;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.work-privacy-grid button small {
+  margin-top: 4px;
+  color: #77568a;
+  font-size: 9px;
+}
+
+.work-import-card {
+  display: grid;
+  gap: 11px;
+}
+
+.work-import-card input[type="file"],
+.calendar-file-import input[type="file"] {
+  min-height: 43px;
+  padding: 7px 9px;
+  border: 1px solid #ddd1e2;
+  border-radius: 10px;
+  color: #6c5d71;
+  background: #fff;
+  font-size: 11px;
+}
+
+.work-import-card input[type="file"]::file-selector-button,
+.calendar-file-import input[type="file"]::file-selector-button {
+  margin-right: 9px;
+  padding: 7px 10px;
+  border: 1px solid #d4c1dc;
+  border-radius: 8px;
+  color: #6f4f80;
+  background: #f8f2fa;
+  font: inherit;
+  cursor: pointer;
+}
+
+.work-calendar-paste {
+  width: 100%;
+  min-height: 145px;
+  padding: 11px 12px;
+  border: 1px solid #dfd4e3;
+  border-radius: 11px;
+  resize: vertical;
+  color: #5e5262;
+  background: #fff;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.work-calendar-paste:focus {
+  outline: 2px solid rgba(125,83,148,.13);
+  border-color: #c4add0;
+}
+
+.work-calendar-draft-list {
+  display: grid;
+  gap: 8px;
+}
+
+.work-calendar-draft {
+  padding: 10px;
+  border: 1px solid #e9e1eb;
+  border-radius: 11px;
+  display: grid;
+  grid-template-columns: auto minmax(180px,1.5fr) minmax(145px,.8fr) auto minmax(110px,.65fr) minmax(110px,.65fr);
+  align-items: end;
+  gap: 8px;
+  background: #fcfbfc;
+}
+
+.work-calendar-draft.selected {
+  border-color: #cdbbd6;
+  background: #faf6fb;
+}
+
+.work-calendar-draft label {
+  min-width: 0;
+}
+
+.work-calendar-draft-check,
+.work-calendar-all-day-check {
+  min-height: 38px;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px;
+  color: #706375;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.work-calendar-draft-check input,
+.work-calendar-all-day-check input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+}
+
+.work-calendar-confidence {
+  grid-column: 2 / -1;
+  color: #918596;
+  font-size: 9px;
+}
+
+.work-calendar-review-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.work-calendar-future-note {
+  display: grid;
+  grid-template-columns: 42px minmax(0,1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.calendar-provider-icon.future {
+  color: #697f86;
+  background: #edf3f3;
+}
+
+.work-calendar-future-note > div {
+  min-width: 0;
+}
+
+.work-calendar-page .calendar-file-import > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.work-calendar-page .calendar-file-import > header > svg {
+  flex: 0 0 auto;
+  color: #876b94;
+}
+
+@media (max-width: 1100px) {
+  .calendar-provider-grid.work-calendar-methods {
+    grid-template-columns: 1fr;
+  }
+
+  .work-calendar-draft {
+    grid-template-columns: auto minmax(180px,1.3fr) minmax(140px,.8fr) auto;
+  }
+
+  .work-calendar-draft label:nth-of-type(5),
+  .work-calendar-draft label:nth-of-type(6) {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 700px) {
+  .work-calendar-target-row,
+  .work-calendar-draft {
+    grid-template-columns: 1fr;
+  }
+
+  .work-calendar-draft-check,
+  .work-calendar-all-day-check,
+  .work-calendar-confidence,
+  .work-calendar-draft label:nth-of-type(5),
+  .work-calendar-draft label:nth-of-type(6) {
+    grid-column: 1;
+  }
+
+  .work-calendar-review-actions {
+    justify-content: stretch;
+  }
+
+  .work-calendar-review-actions > button {
+    flex: 1;
+  }
+
+  .work-calendar-future-note {
+    grid-template-columns: 36px minmax(0,1fr);
+  }
+}
