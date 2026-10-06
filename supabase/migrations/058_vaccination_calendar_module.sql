@@ -50,19 +50,19 @@ on conflict(product_code) do update set
   sort_order=excluded.sort_order,
   updated_at=now();
 
--- Existing development households receive the module as a launch preview.
+-- Existing development households receive the module as a admin preview.
 -- New households still use the normal entitlement/purchase flow.
 insert into public.household_modules(
   household_id,module_code,enabled,source,enabled_at,updated_at
 )
-select id,'vaccinations',true,'launch_preview',now(),now()
+select id,'vaccinations',true,'admin',now(),now()
 from public.households
 on conflict(household_id,module_code)
 do update set
   enabled=true,
   source=case
     when public.household_modules.source='purchase' then public.household_modules.source
-    else 'launch_preview'
+    else 'admin'
   end,
   enabled_at=coalesce(public.household_modules.enabled_at,now()),
   updated_at=now();
