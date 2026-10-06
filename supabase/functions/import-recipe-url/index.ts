@@ -136,8 +136,7 @@ Deno.serve(async(req:Request)=>{
 
   const supabaseUrl=Deno.env.get("SUPABASE_URL")
   const anonKey=Deno.env.get("SUPABASE_ANON_KEY")
-  const serviceRoleKey=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
-  if(!supabaseUrl||!anonKey||!serviceRoleKey) return json({error:"Server configuration is incomplete."},500)
+  if(!supabaseUrl||!anonKey) return json({error:"Server configuration is incomplete."},500)
 
   const authorization=req.headers.get("Authorization")
   if(!authorization) return json({error:"Authentication required."},401)
@@ -146,10 +145,6 @@ Deno.serve(async(req:Request)=>{
     global:{headers:{Authorization:authorization}},
     auth:{persistSession:false,autoRefreshToken:false},
   })
-  const adminClient=createClient(supabaseUrl,serviceRoleKey,{
-    auth:{persistSession:false,autoRefreshToken:false},
-  })
-
   const {data:{user},error:userError}=await userClient.auth.getUser()
   if(userError||!user) return json({error:"Authentication required."},401)
 
