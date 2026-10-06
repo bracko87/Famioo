@@ -78,12 +78,12 @@ export function PromoCarousel({ modules }: { modules: ModuleAccess[] }) {
               aria-hidden={relative !== 'active'}
               key={slide.code}
             >
-              <div className="promo-copy">
+              <div className="famioo-promo-copy">
                 <span className="eyebrow light">{module?.name?.toUpperCase() ?? slide.code.toUpperCase()}</span>
                 <h2>{slide.title}</h2>
                 <p>{slide.description}</p>
                 <Link
-                  className="promo-action"
+                  className="famioo-promo-action"
                   to={routeByModule[slide.code]}
                   tabIndex={relative === 'active' ? 0 : -1}
                 >
@@ -93,7 +93,7 @@ export function PromoCarousel({ modules }: { modules: ModuleAccess[] }) {
               </div>
 
               <div
-                className="promo-image"
+                className="famioo-promo-image"
                 aria-hidden="true"
                 style={{ backgroundImage: `url("${slide.image}")` }}
               />
@@ -101,7 +101,7 @@ export function PromoCarousel({ modules }: { modules: ModuleAccess[] }) {
           )
         })}
 
-        <div className="promo-progress" aria-hidden="true">
+        <div className="famioo-promo-progress" aria-hidden="true">
           {promoSlides.map((item, dotIndex) => (
             <span className={dotIndex === index ? 'active' : ''} key={item.code} />
           ))}
