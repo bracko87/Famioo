@@ -50,7 +50,7 @@ input:focus, select:focus, textarea:focus {
 fieldset { border: 0; padding: 0; margin: 0; }
 legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 
-.eyebrow { font-size: 10px; letter-spacing: .14em; font-weight: 750; color: #a2528b; }
+.eyebrow { font-size: 12px; letter-spacing: .14em; font-weight: 750; color: #a2528b; }
 .eyebrow.light { color: rgba(255, 255, 255, .72); }
 
 .primary-button, .secondary-button {
@@ -119,7 +119,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .brand-mark i:nth-child(4) { background: #7dc8d7; transform: rotate(285deg) translateY(-5px); }
 .brand-copy { display: grid; gap: 1px; }
 .brand-copy strong { font-size: 17px; }
-.brand-copy small { font-size: 9px; color: rgba(255,255,255,.72); }
+.brand-copy small { font-size: 11px; color: rgba(255,255,255,.72); }
 .brand-compact .brand-mark { width: 31px; height: 31px; border-radius: 10px; }
 .brand-compact .brand-copy strong { font-size: 14px; }
 .brand-compact .brand-copy small { display: none; }
@@ -234,7 +234,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   text-align: left;
 }
 .side-nav a:hover, .side-nav button:hover, .side-nav a.active { color: #fff; background: rgba(255,255,255,.12); }
-.nav-label { padding: 0 12px 7px; color: rgba(255,255,255,.45); font-size: 9px; letter-spacing: .15em; font-weight: 750; }
+.nav-label { padding: 0 12px 7px; color: rgba(255,255,255,.45); font-size: 11px; letter-spacing: .15em; font-weight: 750; }
 .nav-label-spaced { padding-top: 17px; }
 .side-nav-bottom { margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.12); }
 .mobile-sidebar-close, .mobile-menu-button, .mobile-bottom-nav, .sidebar-backdrop { display: none; }
@@ -275,7 +275,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   padding: 0 24px;
   color: #fff;
   background: linear-gradient(100deg, #54266d, #7c397e 48%, #69758a);
-  font-size: 10px;
+  font-size: 12px;
 }
 .app-footer > span { opacity: .65; }
 
@@ -320,9 +320,9 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .module-banner::after { content: ""; position: absolute; width: 110px; height: 110px; border-radius: 50%; right: -35px; top: -55px; background: rgba(255,255,255,.12); }
 .module-banner-icon { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.16); }
 .module-banner-copy { display: grid; gap: 2px; min-width: 0; }
-.module-banner-copy small { font-size: 9px; opacity: .76; }
+.module-banner-copy small { font-size: 11px; opacity: .76; }
 .module-banner-copy strong { font-size: 13px; font-weight: 620; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.module-banner-copy em { font-size: 9px; font-style: normal; opacity: .72; }
+.module-banner-copy em { font-size: 11px; font-style: normal; opacity: .72; }
 .module-banner b { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: rgba(255,255,255,.12); font-weight: 400; }
 .module-tone-1 { background: linear-gradient(135deg,#7557d8,#aa5bc7 65%,#ce589c); }
 .module-tone-2 { background: linear-gradient(135deg,#df9b38,#e88d45 58%,#e7766c); }
@@ -337,15 +337,15 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .calendar-toolbar h2 { margin: 0 10px; min-width: 200px; }
 .calendar-toolbar .secondary-button { margin-left: auto; }
 .month-calendar { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: #fff; box-shadow: var(--shadow); }
-.calendar-weekday { padding: 10px 9px; background: #f8f4fa; border-bottom: 1px solid var(--line); color: #8a7b92; font-size: 10px; font-weight: 750; letter-spacing: .08em; }
+.calendar-weekday { padding: 10px 9px; background: #f8f4fa; border-bottom: 1px solid var(--line); color: #8a7b92; font-size: 12px; font-weight: 750; letter-spacing: .08em; }
 .calendar-day { min-height: 130px; padding: 9px; border: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #fff; text-align: left; display: flex; flex-direction: column; gap: 7px; color: var(--ink); }
 .calendar-day:hover { background: #fcf9fd; }
 .calendar-day.outside { background: #faf8fb; color: #b4a9ba; }
 .calendar-day.today .calendar-day-number { background: #7541a5; color: #fff; }
 .calendar-day-number { width: 25px; height: 25px; border-radius: 9px; display: grid; place-items: center; font-size: 11px; }
 .calendar-day-events { display: grid; gap: 4px; min-width: 0; }
-.calendar-event-pill { display: block; padding: 4px 6px; border-radius: 6px; background: #eee6fb; color: #6a4f8c; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.calendar-day-events small { font-size: 8px; color: #9d8da6; }
+.calendar-event-pill { display: block; padding: 4px 6px; border-radius: 6px; background: #eee6fb; color: #6a4f8c; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.calendar-day-events small { font-size: 12px; color: #9d8da6; }
 
 .modal-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(38,24,44,.35); display: grid; place-items: center; padding: 20px; backdrop-filter: blur(4px); }
 .modal-card { width: min(560px,100%); max-height: min(760px,90vh); overflow: auto; padding: 23px; border-radius: 20px; background: #fff; box-shadow: 0 30px 90px rgba(37,20,47,.24); display: grid; gap: 16px; }
@@ -357,7 +357,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .profile-choice-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
 .profile-choice { display: grid; grid-template-columns: 20px 30px 1fr; align-items: center; gap: 7px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; }
 .profile-choice input { width: 16px; }
-.profile-choice > span { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: #f0e9f5; font-size: 10px; }
+.profile-choice > span { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: #f0e9f5; font-size: 12px; }
 .profile-choice strong { font-size: 11px; }
 
 .quick-create { display: grid; grid-template-columns: 22px minmax(0,1fr) auto; align-items: center; gap: 9px; padding: 9px 10px 9px 13px; margin-bottom: 14px; border: 1px solid var(--line); border-radius: 14px; background: #fff; box-shadow: 0 8px 25px rgba(70,47,82,.035); color: #9a87a3; }
@@ -371,7 +371,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .task-row.done .task-check { background: #7551b2; border-color: #7551b2; }
 .task-row > span:last-child { display: grid; gap: 2px; }
 .task-row strong { font-size: 12px; }
-.task-row small { font-size: 9px; color: var(--muted); }
+.task-row small { font-size: 11px; color: var(--muted); }
 .empty-state { min-height: 180px; display: grid; place-content: center; justify-items: center; gap: 5px; text-align: center; padding: 25px; }
 .empty-state span { font-size: 11px; color: var(--muted); }
 
@@ -394,14 +394,14 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .settings-card h2 { margin: 4px 0 14px; }
 .settings-card dl { margin: 0; }
 .settings-card dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
-.settings-card dt { font-size: 10px; color: var(--muted); }
+.settings-card dt { font-size: 12px; color: var(--muted); }
 .settings-card dd { margin: 0; font-size: 11px; }
 .settings-module-list { display: grid; }
 .settings-module-list > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
 .settings-module-list span { display: grid; gap: 2px; }
 .settings-module-list strong { font-size: 11px; }
-.settings-module-list small { font-size: 9px; color: var(--muted); }
-.settings-module-list em { font-size: 9px; font-style: normal; padding: 4px 7px; border-radius: 999px; background: #f2edf4; color: #9b8da2; }
+.settings-module-list small { font-size: 11px; color: var(--muted); }
+.settings-module-list em { font-size: 11px; font-style: normal; padding: 4px 7px; border-radius: 999px; background: #f2edf4; color: #9b8da2; }
 .settings-module-list em.enabled { background: #e8f6ef; color: #3d866b; }
 
 @media (max-width: 900px) {
@@ -417,17 +417,17 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   .app-content { min-height: calc(100vh - var(--header) - 70px); }
   .app-footer { display: none; }
   .mobile-bottom-nav { position: fixed; z-index: 24; inset: auto 0 0; min-height: 66px; display: grid; grid-template-columns: repeat(4,1fr); background: rgba(255,255,255,.96); border-top: 1px solid var(--line); backdrop-filter: blur(16px); padding-bottom: env(safe-area-inset-bottom); }
-  .mobile-bottom-nav a { display: grid; place-items: center; align-content: center; gap: 3px; text-decoration: none; color: #98899e; font-size: 9px; }
+  .mobile-bottom-nav a { display: grid; place-items: center; align-content: center; gap: 3px; text-decoration: none; color: #98899e; font-size: 11px; }
   .mobile-bottom-nav a.active { color: #74479e; }
   .page { padding: 23px 14px 28px; }
   .module-grid, .checklist-grid, .settings-grid { grid-template-columns: 1fr; }
   .home-hero { min-height: 180px; padding: 22px; align-items: flex-start; flex-direction: column; }
   .hero-action { align-self: stretch; justify-content: space-between; }
   .month-calendar { border-radius: 12px; }
-  .calendar-weekday { padding: 8px 3px; text-align: center; font-size: 8px; }
+  .calendar-weekday { padding: 8px 3px; text-align: center; font-size: 12px; }
   .calendar-day { min-height: 86px; padding: 5px; }
-  .calendar-day-number { width: 21px; height: 21px; font-size: 9px; }
-  .calendar-event-pill { padding: 3px; font-size: 7px; }
+  .calendar-day-number { width: 21px; height: 21px; font-size: 11px; }
+  .calendar-event-pill { padding: 3px; font-size: 11px; }
   .calendar-day-events small { display: none; }
   .calendar-toolbar h2 { font-size: 17px; min-width: auto; }
   .form-row { grid-template-columns: 1fr; }
@@ -449,7 +449,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   .page-heading h1 { font-size: 29px; }
   .module-banner { grid-template-columns: 38px minmax(0,1fr) 23px; min-height: 76px; }
   .module-banner-copy strong { font-size: 12px; }
-  .module-banner-copy em { font-size: 8px; }
+  .module-banner-copy em { font-size: 12px; }
 }
 
 
@@ -501,7 +501,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 }
 
 .header-notification-button > span {
-  font-size: 10px;
+  font-size: 12px;
   color: rgba(255,255,255,.82);
 }
 
@@ -518,7 +518,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   background: #f45f98;
   color: #fff;
   box-shadow: 0 3px 8px rgba(57,26,68,.18);
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 750;
 }
 
@@ -539,7 +539,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   place-items: center;
   background: rgba(255,255,255,.16);
   color: #fff;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 750;
 }
 
@@ -547,7 +547,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 650;
 }
 
@@ -580,7 +580,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 
 .notification-popover-head small {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .notification-popover-list {
@@ -593,7 +593,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   display: grid;
   place-items: center;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .notification-item {
@@ -627,19 +627,19 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .notification-item strong {
   display: block;
   margin-bottom: 2px;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .notification-item p {
   margin: 0 0 3px;
   color: #83768a;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.4;
 }
 
 .notification-item small {
   color: #aaa0af;
-  font-size: 7.5px;
+  font-size: 11px;
 }
 
 .footer-weather {
@@ -668,13 +668,13 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   text-overflow: ellipsis;
   white-space: nowrap;
   color: #fff;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 650;
 }
 
 .footer-weather small {
   color: rgba(255,255,255,.66);
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .footer-weather-muted {
@@ -702,7 +702,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 
 .settings-card-heading p {
   margin: 0 0 12px;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .settings-card-heading > svg {
@@ -764,12 +764,12 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .weather-location-results button small {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .weather-settings-actions {
@@ -784,7 +784,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 
 .weather-settings-actions > span {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 @media (max-width: 900px) {
@@ -809,7 +809,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   }
 
   .header-profile > strong {
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .notification-popover {
@@ -890,7 +890,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   border-radius: 10px;
   background: rgba(255,255,255,.72);
   color: #796d81;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 620;
 }
 
@@ -918,7 +918,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .settings-section-intro {
   margin: -6px 0 12px;
   max-width: 760px;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .settings-placeholder-card {
@@ -952,7 +952,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 
 .settings-placeholder-card small {
   color: #a093a7;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 @media (max-width: 900px) {
@@ -988,7 +988,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .page-label {
   margin-bottom: 12px;
   color: #a2528b;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1;
   letter-spacing: .14em;
   font-weight: 750;
@@ -1058,7 +1058,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   color: #fff;
   background: rgba(255,255,255,.11);
   text-decoration: none;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 650;
 }
 
@@ -1144,7 +1144,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   align-items: center;
   color: #8d7e95;
   background: rgba(255,255,255,.7);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .module-access-note {
@@ -1184,7 +1184,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .settings-section-head p {
   margin: 0;
   max-width: 740px;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .role-chip,
@@ -1196,7 +1196,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   align-items: center;
   color: #704a85;
   background: #f2eaf7;
-  font-size: 9px;
+  font-size: 11px;
   font-style: normal;
   text-transform: capitalize;
 }
@@ -1227,13 +1227,13 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 }
 
 .settings-form-footer strong {
-  font-size: 10px;
+  font-size: 12px;
   text-transform: capitalize;
 }
 
 .settings-form-footer small {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .module-status-group {
@@ -1279,7 +1279,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .users-table-head {
   min-height: 34px;
   color: #9b8fa1;
-  font-size: 8px;
+  font-size: 12px;
   letter-spacing: .08em;
   font-weight: 700;
   text-transform: uppercase;
@@ -1287,7 +1287,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 
 .users-table-row {
   color: #625568;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .user-cell {
@@ -1306,7 +1306,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   place-items: center;
   color: #fff;
   background: linear-gradient(135deg,#7658c4,#b15b9f);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .user-cell strong {
@@ -1320,7 +1320,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   min-height: 30px;
   padding: 4px 28px 4px 8px;
   border-radius: 8px;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .role-badge,
@@ -1332,7 +1332,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   display: inline-flex;
   align-items: center;
   font-style: normal;
-  font-size: 8px;
+  font-size: 12px;
   text-transform: capitalize;
 }
 
@@ -1358,7 +1358,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   gap: 5px;
   color: #a54869;
   background: #fff7fa;
-  font-size: 8px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -1396,7 +1396,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   gap: 6px;
   color: #8d7c94;
   background: transparent;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .mode-switch button.active {
@@ -1427,7 +1427,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   border-radius: 10px;
   background: #faf7fc;
   color: #8a7d91;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .permission-legend b {
@@ -1456,7 +1456,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .permissions-head {
   min-height: 34px;
   color: #998b9f;
-  font-size: 8px;
+  font-size: 12px;
   letter-spacing: .08em;
   font-weight: 700;
   text-transform: uppercase;
@@ -1469,12 +1469,12 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 }
 
 .permission-module strong {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .permission-module small {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .permission-fixed {
@@ -1556,7 +1556,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 
   .promo-copy p {
     max-width: 300px;
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .promo-image {
@@ -1639,7 +1639,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   border-radius: 8px;
   color: #8a7b91;
   background: transparent;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 630;
 }
 
@@ -1675,13 +1675,13 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 620;
 }
 
 .calendar-event-text small {
   color: #95899a;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .calendar-event-detail {
@@ -1702,7 +1702,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 }
 
 .calendar-event-detail .calendar-event-text strong {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .week-calendar {
@@ -1743,7 +1743,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 
 .week-day-head small {
   color: #9a8da0;
-  font-size: 8px;
+  font-size: 12px;
   text-transform: uppercase;
 }
 
@@ -1770,7 +1770,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .calendar-empty-mini {
   padding: 12px 4px;
   color: #b0a5b4;
-  font-size: 8px;
+  font-size: 12px;
   text-align: center;
 }
 
@@ -1799,7 +1799,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 
 .day-calendar > header span {
   color: #887a90;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .day-calendar > header strong {
@@ -1853,7 +1853,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 
 .upcoming-date span {
   color: #9a8e9f;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .upcoming-events {
@@ -1916,13 +1916,13 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 }
 
 .category-name strong {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .category-name small,
 .category-color-label {
   color: var(--muted);
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .category-color-label {
@@ -1957,7 +1957,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 }
 
 .category-color-preview strong {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .category-message {
@@ -1980,7 +1980,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   gap: 5px;
   color: #8a7d91;
   background: #fff;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .identity-switch button.active {
@@ -1992,7 +1992,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .identity-hint {
   margin-top: -5px;
   color: #a093a6;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .user-avatar-wrap {
@@ -2218,7 +2218,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .custom-select.permission-select .custom-select-trigger {
   min-height: 30px;
   border-radius: 8px;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .header-household .custom-select {
@@ -2233,7 +2233,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   color: #fff;
   background: rgba(255,255,255,.08);
   box-shadow: none;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .header-household .custom-select-menu {
@@ -2291,7 +2291,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 }
 
 .calendar-event-text small {
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .calendar-event-detail {
@@ -2304,7 +2304,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 }
 
 .calendar-event-detail .calendar-event-text small {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .day-calendar {
@@ -2324,7 +2324,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
 .day-all-day-row > span {
   padding-top: 9px;
   color: #8f8296;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 650;
 }
 
@@ -2356,7 +2356,7 @@ legend { padding: 0 0 9px; font-size: 13px; font-weight: 650; color: #695d72; }
   border-right: 1px solid #eee8f0;
   color: #8e8195;
   background: #fcfafc;
-  font-size: 10px;
+  font-size: 12px;
   text-align: right;
   align-self: stretch;
 }
@@ -2471,7 +2471,7 @@ b {
   margin-top: 5px;
   display: block;
   color: #9c90a1;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.4;
 }
 
@@ -2492,7 +2492,7 @@ b {
   border-radius: 9px;
   color: #776b7d;
   background: #fff;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .repeat-weekday-grid button:hover,
@@ -2529,7 +2529,7 @@ b {
 .profile-avatar-sm {
   width: 30px;
   height: 30px;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .profile-avatar-md {
@@ -2606,7 +2606,7 @@ b {
 
 .composer-option small {
   color: #978a9c;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .composer-source-note {
@@ -2615,7 +2615,7 @@ b {
   border-radius: 10px;
   color: #776a7e;
   background: #faf6fb;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -2650,7 +2650,7 @@ b {
   flex-wrap: wrap;
   gap: 7px 11px;
   color: #928797;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .task-meta > span,
@@ -2713,7 +2713,7 @@ b {
   border-radius: 9px;
   color: #71557c;
   background: #f0e9f5;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 550;
 }
 
@@ -2728,13 +2728,13 @@ b {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: #514655;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 550;
 }
 
 .user-name-copy small {
   color: #9a8d9e;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .role-badge.profile,
@@ -2779,7 +2779,7 @@ b {
 
 .shopping-card header small {
   color: #9a8f9e;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .shopping-items {
@@ -2832,7 +2832,7 @@ b {
 
 .shopping-item small {
   color: #918596;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .shopping-add {
@@ -2919,7 +2919,7 @@ b {
   color: #6f6275;
   background: #fbf9fc;
   white-space: nowrap;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .all-day-control input {
@@ -3068,7 +3068,7 @@ b {
   display: grid;
   place-items: center;
   color: #9c90a1;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .date-picker-grid button {
@@ -3078,7 +3078,7 @@ b {
   border-radius: 8px;
   color: #5e5363;
   background: transparent;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .date-picker-grid button:hover:not(:disabled) {
@@ -3120,7 +3120,7 @@ b {
   border-radius: 8px;
   color: #744e8c;
   background: #fff;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .date-picker-actions button:hover {
@@ -3166,7 +3166,7 @@ b {
 .task-section-head p {
   margin: 0;
   color: #978b9b;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .task-section-head > span {
@@ -3178,7 +3178,7 @@ b {
   place-items: center;
   color: #775686;
   background: #f1eaf4;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .task-section-list {
@@ -3198,7 +3198,7 @@ b {
   align-items: center;
   color: #a094a4;
   background: rgba(255,255,255,.55);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .task-section-list .task-row {
@@ -3306,7 +3306,7 @@ b {
   color: #5f5264;
   background: transparent;
   text-align: left;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .task-menu button:hover {
@@ -3373,7 +3373,7 @@ b {
   align-items: center;
   gap: 6px;
   color: #65586a;
-  font-size: 9px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
@@ -3419,13 +3419,13 @@ b {
 .field-map-link {
   margin-top: 5px;
   color: #806d8a;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .calendar-location-link {
   margin-top: 3px;
   color: #826f8c;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .checklist-card-controls {
@@ -3454,7 +3454,7 @@ b {
   border-radius: 9px;
   color: #87694f;
   background: #fff9f1;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.45;
 }
 
@@ -3488,7 +3488,7 @@ b {
 .archived-checklists-section p {
   margin: 0;
   color: #95899a;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .archive-count {
@@ -3500,7 +3500,7 @@ b {
   place-items: center;
   color: #765783;
   background: #f0e9f3;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .checklist-card.archived {
@@ -3546,7 +3546,7 @@ b {
   place-items: initial;
   color: #5f5364;
   background: transparent;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -3589,7 +3589,7 @@ b {
   place-items: center;
   color: #765783;
   background: #f0e9f3;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .archive-repository-modal {
@@ -3628,7 +3628,7 @@ b {
 .archive-repository-row small,
 .archive-empty-state {
   color: #968a9a;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .archive-empty-state {
@@ -3662,7 +3662,7 @@ b {
   flex-wrap: wrap;
   gap: 5px 10px;
   color: #938797;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .shopping-list-meta > span {
@@ -3680,7 +3680,7 @@ b {
 
 .shopping-card-head-actions > small {
   color: #938797;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .shopping-composer {
@@ -3705,7 +3705,7 @@ b {
 
 .shopping-event-preview span {
   color: #998d9d;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .shopping-event-preview strong {
@@ -3714,12 +3714,12 @@ b {
   align-items: center;
   gap: 5px;
   color: #5d515f;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 550;
 }
 
 .shopping-event-location .google-maps-link {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .shopping-archive-composer {
@@ -3728,7 +3728,7 @@ b {
 
 .form-intro {
   margin: -4px 0 0;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .money-input {
@@ -3779,7 +3779,7 @@ b {
 
 .cost-summary-card > span {
   color: #9b8d9f;
-  font-size: 9px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: .08em;
 }
@@ -3792,7 +3792,7 @@ b {
 
 .cost-summary-card > small {
   color: #9a8e9e;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .cost-list {
@@ -3837,7 +3837,7 @@ b {
 
 .cost-main-copy small {
   color: #95899a;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .cost-row > strong {
@@ -3942,7 +3942,7 @@ b {
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .archive-page-heading {
@@ -3996,7 +3996,7 @@ b {
 .archive-date-column small,
 .archive-list-copy small {
   color: #9b8fa0;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .archive-page-empty {
@@ -4014,7 +4014,7 @@ b {
 .settings-intro p {
   max-width: 760px;
   margin: 0;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .template-section-grid,
@@ -4065,7 +4065,7 @@ b {
 .category-module-card p {
   margin: 0;
   color: #96899b;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.45;
 }
 
@@ -4077,7 +4077,7 @@ b {
   place-items: center;
   color: #775886;
   background: #f2ebf4;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .template-list,
@@ -4106,7 +4106,7 @@ b {
 .template-row > div > span {
   overflow: hidden;
   color: #574b5b;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 520;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4115,7 +4115,7 @@ b {
 .template-row small,
 .template-empty {
   color: #9b8e9f;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .template-empty {
@@ -4136,7 +4136,7 @@ b {
   align-items: center;
   justify-content: space-between;
   gap: 9px;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -4188,7 +4188,7 @@ b {
 .finance-card-heading p {
   max-width: 560px;
   margin: 0;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .finance-card-heading > svg {
@@ -4251,7 +4251,7 @@ b {
   border-radius: 8px;
   color: #88798e;
   background: transparent;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .cost-range-tabs button.active {
@@ -4274,7 +4274,7 @@ b {
 
 .cost-report-total span {
   color: #918495;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .cost-report-total strong {
@@ -4340,7 +4340,7 @@ b {
 .cost-bar-column > span {
   overflow: hidden;
   color: #9a8d9f;
-  font-size: 7px;
+  font-size: 11px;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4365,12 +4365,12 @@ b {
 
 .cost-source-row span {
   color: #76697b;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .cost-source-row strong {
   color: #594c5e;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 550;
 }
 
@@ -4409,7 +4409,7 @@ b {
   place-items: center;
   color: #765685;
   background: #f0e9f3;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .task-cost-field {
@@ -4523,7 +4523,7 @@ b {
   gap: 8px;
   color: #998a9e;
   background: rgba(255,255,255,.42);
-  font-size: 9px;
+  font-size: 11px;
   text-align: center;
 }
 
@@ -4555,7 +4555,7 @@ b {
 .collapsed-list-heading > small {
   max-width: 390px;
   color: #9a8e9d;
-  font-size: 9px;
+  font-size: 11px;
   text-align: right;
 }
 
@@ -4606,7 +4606,7 @@ b {
   flex-wrap: wrap;
   gap: 5px 10px;
   color: #95899a;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .compact-list-main > div > span {
@@ -4618,7 +4618,7 @@ b {
 .compact-list-progress {
   min-width: 38px;
   color: #8f8194;
-  font-size: 9px;
+  font-size: 11px;
   text-align: right;
 }
 
@@ -4704,7 +4704,7 @@ b {
 
 .school-summary-card > div > span {
   color: #7e7183;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .school-summary-card > div > strong {
@@ -4715,7 +4715,7 @@ b {
 
 .school-summary-card > div > small {
   color: #9a8e9d;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .school-entry-section {
@@ -4773,7 +4773,7 @@ b {
 
 .school-entry-date span {
   margin-top: 4px;
-  font-size: 8px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: .06em;
 }
@@ -4803,7 +4803,7 @@ b {
   flex-wrap: wrap;
   gap: 5px 10px;
   color: #918494;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .school-entry-meta > span {
@@ -4820,7 +4820,7 @@ b {
 .school-entry-main > p {
   margin: 8px 0 0;
   color: #706474;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
@@ -4841,7 +4841,7 @@ b {
   gap: 5px;
   color: #755287;
   background: #fbf9fc;
-  font-size: 8px;
+  font-size: 12px;
   text-decoration: none;
 }
 
@@ -4868,7 +4868,7 @@ b {
   gap: 8px;
   color: #66596a;
   background: #fbf9fc;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .school-all-day-control input {
@@ -4893,7 +4893,7 @@ b {
   align-items: center;
   gap: 6px;
   color: #65586a;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 550;
 }
 
@@ -4902,12 +4902,12 @@ b {
   padding: 0;
   border: 0;
   background: transparent;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .school-upload-field small {
   color: #9a8e9e;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 @media (max-width: 700px) {
@@ -4933,7 +4933,7 @@ b {
 .archive-retention-note {
   margin: 4px 0 0;
   color: #9a8e9e;
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.4;
 }
 
@@ -5090,7 +5090,7 @@ b {
   border-radius: 10px;
   color: #766a7c;
   background: rgba(255,255,255,.76);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .home-care-tabs button:hover,
@@ -5161,7 +5161,7 @@ b {
 
 .home-care-summary-card > div > span {
   color: #96899b;
-  font-size: 8px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: .07em;
 }
@@ -5177,7 +5177,7 @@ b {
 
 .home-care-summary-card > div > small {
   color: #a094a4;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .home-care-overview-grid {
@@ -5207,7 +5207,7 @@ b {
 }
 
 .home-care-overview-panel .text-button {
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .home-care-mini-list,
@@ -5267,7 +5267,7 @@ b {
 
 .home-care-asset-type {
   color: #9b8d9f;
-  font-size: 8px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: .08em;
 }
@@ -5279,7 +5279,7 @@ b {
   flex-wrap: wrap;
   gap: 6px 10px;
   color: #908493;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .home-care-asset-meta > span,
@@ -5298,7 +5298,7 @@ b {
 .home-care-person .profile-avatar-sm {
   width: 23px;
   height: 23px;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .home-care-asset-details {
@@ -5327,14 +5327,14 @@ b {
 
 .home-care-asset-details dt {
   color: #9a8e9e;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .home-care-asset-details dd {
   margin: 0;
   overflow: hidden;
   color: #5c505f;
-  font-size: 9px;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -5342,7 +5342,7 @@ b {
 .home-care-asset-card > p {
   margin: 10px 0 0;
   color: #766b7b;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .home-care-maintenance-row,
@@ -5380,7 +5380,7 @@ b {
 
 .home-care-date-box small {
   margin-top: 3px;
-  font-size: 7px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: .05em;
 }
@@ -5417,7 +5417,7 @@ b {
 .home-care-row-main > p {
   margin: 7px 0 0;
   color: #766b7a;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.45;
 }
 
@@ -5439,7 +5439,7 @@ b {
   align-items: center;
   color: #735983;
   background: #f1eaf4;
-  font-size: 8px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -5501,7 +5501,7 @@ b {
   overflow: hidden;
   color: #765388;
   background: #fbf9fc;
-  font-size: 8px;
+  font-size: 12px;
   text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -5542,7 +5542,7 @@ b {
 .warranty-mini-row strong {
   overflow: hidden;
   color: #514654;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -5550,7 +5550,7 @@ b {
 
 .warranty-mini-row small {
   color: #978b9b;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .home-care-warranty-table {
@@ -5566,7 +5566,7 @@ b {
   align-items: center;
   gap: 10px;
   color: #756977;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .home-care-warranty-row:last-child {
@@ -5592,7 +5592,7 @@ b {
 .home-care-warranty-row > div strong {
   overflow: hidden;
   color: #504554;
-  font-size: 10px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -5600,7 +5600,7 @@ b {
 .home-care-warranty-row > div small {
   overflow: hidden;
   color: #9a8e9e;
-  font-size: 8px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -5668,19 +5668,19 @@ b {
 
 .home-care-history-row > div strong {
   color: #514655;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .home-care-history-row > div span,
 .home-care-history-row > div small {
   color: #978b9a;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .history-cost {
   color: #66596a;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -5710,7 +5710,7 @@ b {
   align-items: center;
   gap: 6px;
   color: #65586a;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 550;
 }
 
@@ -5719,13 +5719,13 @@ b {
   padding: 0;
   border: 0;
   background: transparent;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .home-care-upload-field small,
 .home-care-cost-note {
   color: #998d9d;
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.4;
 }
 
@@ -5982,7 +5982,7 @@ b {
   border-radius: 10px;
   color: #766a7c;
   background: rgba(255,255,255,.76);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .life-admin-tabs button:hover,
@@ -6067,7 +6067,7 @@ b {
 .life-admin-summary-card small,
 .life-admin-summary-card em {
   color: rgba(255,255,255,.78);
-  font-size: 8px;
+  font-size: 12px;
   font-style: normal;
 }
 
@@ -6189,7 +6189,7 @@ b {
 .life-admin-item-type {
   display: block;
   color: #a08fa4;
-  font-size: 7px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: .08em;
 }
@@ -6211,7 +6211,7 @@ b {
   flex-wrap: wrap;
   gap: 5px 10px;
   color: #918494;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .life-admin-item-meta > span {
@@ -6223,7 +6223,7 @@ b {
 .life-admin-person .profile-avatar-sm {
   width: 22px;
   height: 22px;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .life-admin-date-strip {
@@ -6243,12 +6243,12 @@ b {
   gap: 1px;
   color: #655a69;
   background: #fbf9fc;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .life-admin-date-strip > span small {
   color: #a194a5;
-  font-size: 7px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: .04em;
 }
@@ -6256,7 +6256,7 @@ b {
 .life-admin-item-main > p {
   margin: 7px 0 0;
   color: #766a79;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.45;
 }
 
@@ -6285,7 +6285,7 @@ b {
   overflow: hidden;
   color: #765388;
   background: #fbf9fc;
-  font-size: 8px;
+  font-size: 12px;
   text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -6327,7 +6327,7 @@ b {
   align-items: center;
   gap: 6px;
   color: #65586a;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 550;
 }
 
@@ -6336,12 +6336,12 @@ b {
   padding: 0;
   border: 0;
   background: transparent;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .life-admin-upload-field small {
   color: #998d9d;
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.4;
 }
 
@@ -6408,7 +6408,7 @@ b {
   display: grid;
   gap: 5px;
   color: #766a7b;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .cost-row > strong.income {
@@ -6427,7 +6427,7 @@ b {
 
 .cost-pagination > span {
   color: #95899a;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .cost-pagination > div {
@@ -6437,7 +6437,7 @@ b {
 
 .cost-report-total small {
   color: #4b9278;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 @media (max-width: 900px) {
@@ -6508,7 +6508,7 @@ b {
   place-items: center;
   color: #765489;
   background: #f1eaf4;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .type-settings-row > div {
@@ -6519,13 +6519,13 @@ b {
 
 .type-settings-row strong {
   color: #514654;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .type-settings-row small {
   color: #998d9d;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .type-settings-add {
@@ -6542,7 +6542,7 @@ b {
   display: grid;
   gap: 5px;
   color: #736777;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .type-settings-empty {
@@ -6550,7 +6550,7 @@ b {
   display: grid;
   place-items: center;
   color: #998e9e;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .type-settings-removed {
@@ -6558,7 +6558,7 @@ b {
   padding-top: 10px;
   border-top: 1px solid #eee7f0;
   color: #8f8393;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .type-settings-removed summary {
@@ -6582,7 +6582,7 @@ b {
   gap: 5px;
   color: #765987;
   background: #fbf9fc;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 @media (max-width: 960px) {
@@ -6654,7 +6654,7 @@ b {
   border-radius: 10px;
   color: #766a7c;
   background: rgba(255,255,255,.76);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .projects-tabs button:hover,
@@ -6696,7 +6696,7 @@ b {
 .project-card > p {
   margin: 10px 0 0;
   color: #756978;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
@@ -6707,7 +6707,7 @@ b {
   flex-wrap: wrap;
   gap: 7px 12px;
   color: #918594;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .project-card-meta > span {
@@ -6740,7 +6740,7 @@ b {
   display: grid;
   place-items: center;
   color: #9a8e9e;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .project-work-row {
@@ -6811,7 +6811,7 @@ b {
   align-items: center;
   color: #70528a;
   background: #f0e9f4;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .project-work-meta {
@@ -6821,7 +6821,7 @@ b {
   flex-wrap: wrap;
   gap: 5px 10px;
   color: #938797;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .project-work-meta > span {
@@ -6842,7 +6842,7 @@ b {
   align-items: center;
   gap: 5px;
   color: #746878;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .project-work-person .profile-avatar-sm {
@@ -6853,7 +6853,7 @@ b {
 .project-work-main > p {
   margin: 6px 0 0;
   color: #786d7c;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .projects-section-head {
@@ -6896,7 +6896,7 @@ b {
 .family-standing-card header p {
   margin: 4px 0 0;
   color: #8f8393;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .family-standing-card > header > svg {
@@ -6922,13 +6922,13 @@ b {
 
 .family-rank {
   color: #9a8d9e;
-  font-size: 10px;
+  font-size: 12px;
   text-align: center;
 }
 
 .family-standing-name {
   color: #514654;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .family-standing-total,
@@ -6947,7 +6947,7 @@ b {
 .family-standing-total small,
 .family-standing-all small {
   color: #a094a4;
-  font-size: 7px;
+  font-size: 11px;
 }
 
 .projects-composer {
@@ -7038,18 +7038,18 @@ b {
 
 .home-standing-rank {
   color: #9a8d9f;
-  font-size: 9px;
+  font-size: 11px;
   text-align: center;
 }
 
 .home-family-standing-row > span:nth-of-type(2) {
   color: #514654;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .home-family-standing-row > strong {
   color: #73508e;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -7057,7 +7057,7 @@ b {
   margin-top: auto;
   padding-top: 10px;
   color: #78558b;
-  font-size: 9px;
+  font-size: 11px;
   text-align: right;
 }
 
@@ -7140,13 +7140,13 @@ b {
 }
 
 .type-settings-row.category-row .category-name strong {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .type-settings-row.category-row .category-name small,
 .type-settings-row.category-row .category-color-label {
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .type-settings-add-colored.home_care {
@@ -7194,7 +7194,7 @@ b {
   max-width: 560px;
   margin: 4px 0 0;
   color: #908493;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.45;
 }
 
@@ -7219,7 +7219,7 @@ b {
 
 .project-points-total span {
   margin-top: 3px;
-  font-size: 8px;
+  font-size: 12px;
   opacity: .9;
 }
 
@@ -7234,7 +7234,7 @@ b {
   display: grid;
   gap: 6px;
   color: #716675;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 @media (max-width: 900px) {
@@ -7324,7 +7324,7 @@ b {
 .mobile-app-test-card p {
   margin: 0;
   color: #8f8393;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
@@ -7337,7 +7337,7 @@ b {
   gap: 5px;
   color: #755786;
   background: #f0e8f3;
-  font-size: 9px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
@@ -7374,12 +7374,12 @@ b {
   place-items: center;
   color: #fff;
   background: linear-gradient(135deg,#7644d7,#a44ec1 54%,#d75a9c);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .mobile-app-install-steps span {
   color: #6f6374;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.45;
 }
 
@@ -7398,7 +7398,7 @@ b {
   gap: 3px;
   color: #776b7b;
   background: #f6f1f8;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.45;
 }
 
@@ -7418,7 +7418,7 @@ b {
   align-items: center;
   color: #6f6374;
   background: #fcfafc;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 @media (max-width: 900px) {
@@ -7807,7 +7807,7 @@ b {
     color: #95879a;
     background: transparent;
     text-decoration: none;
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 550;
   }
 
@@ -7828,7 +7828,7 @@ b {
 
   .page-label {
     margin-bottom: 9px;
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .page-heading,
@@ -7928,7 +7928,7 @@ b {
   }
 
   .module-banner-copy small {
-    font-size: 8px;
+    font-size: 12px;
   }
 
   .module-banner-copy strong {
@@ -7936,7 +7936,7 @@ b {
   }
 
   .module-banner-copy em {
-    font-size: 8px;
+    font-size: 12px;
   }
 
   .home-family-standing {
@@ -7971,7 +7971,7 @@ b {
 
   .promo-copy p {
     max-width: 310px;
-    font-size: 10px;
+    font-size: 12px;
     line-height: 1.4;
   }
 
@@ -8051,7 +8051,7 @@ b {
   }
 
   .calendar-weekday {
-    font-size: 8px;
+    font-size: 12px;
   }
 
   .calendar-day {
@@ -8080,7 +8080,7 @@ b {
   }
 
   .upcoming-date {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .task-row,
@@ -8102,7 +8102,7 @@ b {
   .school-entry-meta,
   .home-care-row-meta,
   .life-admin-item-meta {
-    font-size: 9px;
+    font-size: 11px;
     line-height: 1.35;
   }
 
@@ -8170,7 +8170,7 @@ b {
   }
 
   .cost-main-copy small {
-    font-size: 8px;
+    font-size: 12px;
   }
 
   .cost-row > strong {
@@ -8344,7 +8344,7 @@ b {
 
   .composer-option small,
   .field-hint {
-    font-size: 10px;
+    font-size: 12px;
   }
 
   .profile-choice.profile-choice-plain {
@@ -8596,7 +8596,7 @@ b {
   gap: 9px;
   color: #756979;
   background: #faf7fb;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .notification-support-note {
@@ -8607,14 +8607,14 @@ b {
 .notification-support-note strong,
 .notification-device-status strong {
   color: #5e5063;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .notification-support-note span,
 .notification-device-status small {
   display: block;
   color: #988b9d;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .notification-device-status.active {
@@ -8644,13 +8644,13 @@ b {
 
 .settings-switch-row strong {
   color: #5c505f;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .settings-switch-row small {
   color: #9a8d9d;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .settings-switch-row > input[type="checkbox"] {
@@ -8714,7 +8714,7 @@ b {
   display: grid;
   gap: 6px;
   color: #756979;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .summary-schedule-row {
@@ -8728,7 +8728,7 @@ b {
   display: grid;
   gap: 6px;
   color: #756979;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .passkey-settings-card {
@@ -8762,13 +8762,13 @@ b {
 
 .passkey-row strong {
   color: #5d5061;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .passkey-row small {
   color: #9b8e9f;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .notification-settings-save {
@@ -8788,7 +8788,7 @@ b {
 .notification-settings-save p {
   margin: 0;
   color: #918493;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .notification-settings-message {
@@ -8813,7 +8813,7 @@ b {
 .calendar-reminder-fieldset legend {
   padding: 0 5px;
   color: #817386;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .calendar-reminder-fieldset .composer-option {
@@ -8824,7 +8824,7 @@ b {
   display: grid;
   gap: 6px;
   color: #746778;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 @media (max-width: 900px) {
@@ -9052,7 +9052,7 @@ b {
 
 .event-delete-options > strong {
   color: #775f68;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -9094,14 +9094,14 @@ b {
 }
 
 .event-connection-head strong {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .event-connection-head small {
   max-width: 390px;
   color: #9b8f9e;
-  font-size: 8px;
+  font-size: 12px;
   text-align: right;
   line-height: 1.45;
 }
@@ -9127,7 +9127,7 @@ b {
   color: #665a69;
   cursor: pointer;
   list-style: none;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .event-linked-details summary::-webkit-details-marker {
@@ -9156,14 +9156,14 @@ b {
 
 .event-linked-checklist > strong {
   color: #5d5261;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
 }
 
 .event-linked-checklist > small,
 .event-linked-details-body > small {
   color: #9a8e9e;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .event-linked-check-item {
@@ -9177,7 +9177,7 @@ b {
   color: #675b6a;
   background: transparent;
   text-align: left;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .event-linked-check-item > span {
@@ -9208,12 +9208,12 @@ b {
   justify-content: space-between;
   gap: 10px;
   color: #6c606f;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .event-cost-row strong {
   color: #594d5d;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -9247,13 +9247,13 @@ b {
 
 .task-project-connection strong {
   color: #5b4f60;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .task-project-connection small {
   color: #988c9c;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .task-project-connection > div:last-child {
@@ -9432,7 +9432,7 @@ b {
 .event-link-button {
   min-height: 29px !important;
   padding: 0 9px !important;
-  font-size: 8px !important;
+  font-size: 12px !important;
 }
 
 .event-project-scope {
@@ -9453,13 +9453,13 @@ b {
 
 .event-project-scope strong {
   color: #65586a;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
 }
 
 .event-project-scope small {
   color: #9a8e9e;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .event-project-scope > div {
@@ -9471,7 +9471,7 @@ b {
 .event-linked-details summary {
   min-height: 36px;
   padding: 0 10px;
-  font-size: 8.5px;
+  font-size: 12px;
 }
 
 .event-linked-details-body {
@@ -9484,14 +9484,14 @@ b {
 }
 
 .event-linked-checklist > strong {
-  font-size: 8.5px;
+  font-size: 12px;
 }
 
 .event-linked-check-item {
   min-height: 25px;
   grid-template-columns: 17px minmax(0,1fr);
   gap: 6px;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .event-linked-check-item > span {
@@ -9502,11 +9502,11 @@ b {
 
 .event-cost-row {
   min-height: 26px;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .event-cost-row strong {
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .event-cost-add {
@@ -9532,7 +9532,7 @@ b {
   padding: 0 5px;
   margin: 0 0 4px !important;
   color: #65586a;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -9607,7 +9607,7 @@ b {
 .confirm-dialog > p {
   margin: 14px 0 0;
   color: #7d7081;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
@@ -9634,7 +9634,7 @@ b {
 .event-scope-choice > span {
   margin-right: auto;
   color: #756878;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .event-scope-choice button {
@@ -9644,7 +9644,7 @@ b {
   border-radius: 8px;
   color: #745583;
   background: #fff;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .event-scope-choice button.active {
@@ -9721,7 +9721,7 @@ b {
   align-items: center;
   color: #76538a;
   background: #f1eaf5;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .meal-day-items {
@@ -9751,7 +9751,7 @@ b {
   justify-content: center;
   color: #725485;
   background: #f1eaf5;
-  font-size: 8px;
+  font-size: 12px;
   text-transform: capitalize;
 }
 
@@ -9763,13 +9763,13 @@ b {
 
 .meal-plan-row strong {
   color: #594e5d;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .meal-plan-row small {
   color: #998d9d;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .meal-row-actions,
@@ -9781,7 +9781,7 @@ b {
 .recipe-card > p {
   margin: 10px 0 0;
   color: #7b6f7f;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
@@ -9791,7 +9791,7 @@ b {
   flex-wrap: wrap;
   gap: 7px 12px;
   color: #918595;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .recipe-meta span {
@@ -9815,7 +9815,7 @@ b {
   color: #6c5f70;
   background: #fcfafc;
   cursor: pointer;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .recipe-ingredients > div {
@@ -9829,7 +9829,7 @@ b {
   grid-template-columns: 70px minmax(0,1fr);
   gap: 7px;
   color: #746878;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .recipe-ingredients b {
@@ -9864,7 +9864,7 @@ b {
 
   .promo-copy p {
     max-width: 100% !important;
-    font-size: 9px;
+    font-size: 11px;
   }
 
   .event-connection-card {
@@ -9952,16 +9952,16 @@ b {
 }
 
 .calendar-reminder-fieldset .composer-option > span > span {
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .calendar-reminder-fieldset .composer-option small {
-  font-size: 7.5px;
+  font-size: 11px;
 }
 
 .calendar-reminder-fieldset .calendar-reminder-select {
   gap: 4px;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .calendar-reminder-fieldset .custom-select-trigger {
@@ -9984,7 +9984,7 @@ b {
   justify-content: center;
   color: #7b6487;
   background: #f0e8f4;
-  font-size: 7px;
+  font-size: 11px;
 }
 
 .meals-tabs button.active span {
@@ -10009,7 +10009,7 @@ b {
   gap: 4px;
   color: #7b6b80;
   background: #f3eef5;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .recipe-source.imported {
@@ -10023,7 +10023,7 @@ b {
   align-items: center;
   gap: 4px;
   color: #7a5291;
-  font-size: 8px;
+  font-size: 12px;
   text-decoration: none;
 }
 
@@ -10040,7 +10040,7 @@ b {
   margin: 0;
   white-space: pre-wrap;
   color: #6f6373;
-  font-size: 8.5px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
@@ -10052,7 +10052,7 @@ b {
 .recipe-import-copy {
   margin: 0;
   color: #756a79;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
@@ -10066,7 +10066,7 @@ b {
 .recipe-supported-sites > span {
   margin-right: 2px;
   color: #95889a;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .recipe-supported-sites > b {
@@ -10077,7 +10077,7 @@ b {
   align-items: center;
   color: #705480;
   background: #f1eaf5;
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -10101,13 +10101,13 @@ b {
 }
 
 .recipe-import-source strong {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
 }
 
 .recipe-import-source small {
   color: #899ca1;
-  font-size: 7.5px;
+  font-size: 11px;
 }
 
 .shopping-export-mode {
@@ -10125,7 +10125,7 @@ b {
   border-radius: 8px;
   color: #82758a;
   background: transparent;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .shopping-export-mode button.active {
@@ -10158,12 +10158,12 @@ b {
 
 .shopping-export-ingredients > header strong {
   color: #65596a;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .shopping-export-ingredients > header small {
   color: #9a8e9e;
-  font-size: 7.5px;
+  font-size: 11px;
 }
 
 .shopping-export-ingredients > label {
@@ -10193,13 +10193,13 @@ b {
 
 .shopping-export-ingredients label strong {
   color: #625668;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 550;
 }
 
 .shopping-export-ingredients label small {
   color: #b27782;
-  font-size: 7.5px;
+  font-size: 11px;
 }
 
 .recipe-shopping-footer {
@@ -10213,7 +10213,7 @@ b {
 
 .recipe-shopping-footer > span {
   color: #928596;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .recipe-archive-grid .recipe-card {
@@ -10245,4 +10245,36 @@ b {
   .shopping-export-mode {
     grid-template-columns: 1fr;
   }
+}
+
+
+/* Projects & Chores: Later stays closed until the user opens it. */
+.collapsible-date-section {
+  margin: 0;
+}
+
+.collapsible-date-section > summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.collapsible-date-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsible-date-section > summary::after {
+  content: "▾";
+  margin-left: 8px;
+  color: #876b93;
+  font-size: 14px;
+  transition: transform .18s ease;
+}
+
+.collapsible-date-section[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.collapsible-date-content {
+  margin-top: 10px;
 }
