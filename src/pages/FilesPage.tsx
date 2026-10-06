@@ -16,6 +16,7 @@ import {
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Select } from '../components/ui/Select'
+import { PrivacyNotice } from '../components/PrivacyNotice'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
 
@@ -439,6 +440,8 @@ export function FilesPage(){
           </div>
         )}
       </div>
+
+      <PrivacyNotice compact />
 
       {error && !composerOpen && <div className="notice error">{error}</div>}
       {message && <div className="notice success">{message}</div>}
