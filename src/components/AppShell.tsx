@@ -179,6 +179,7 @@ export function AppShell() {
           <NavLink to="/app/calendar" onClick={() => setMobileMenu(false)} title="Calendar"><CalendarDays size={18} /><span className="nav-text">Calendar</span></NavLink>
           <NavLink to="/app/tasks" onClick={() => setMobileMenu(false)} title="Tasks"><ClipboardList size={18} /><span className="nav-text">Tasks</span></NavLink>
           <NavLink to="/app/checklists" onClick={() => setMobileMenu(false)} title="Checklists"><CheckSquare size={18} /><span className="nav-text">Checklists</span></NavLink>
+          <NavLink to="/app/files" onClick={() => setMobileMenu(false)} title="Files"><FileText size={18} /><span className="nav-text">Files</span></NavLink>
 
           {enabledPaid.length > 0 && <span className="nav-label nav-label-spaced">HOUSEHOLD</span>}
           {enabledPaid.map((module) => {
