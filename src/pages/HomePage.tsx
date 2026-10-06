@@ -37,6 +37,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
 
 const routeByModule: Record<ModuleCode, string> = {
   calendar: '/app/calendar',
+  calendar_connections: '/app/calendar/connections',
   tasks: '/app/tasks',
   checklists: '/app/checklists',
   shopping: '/app/shopping',
