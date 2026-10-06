@@ -155,6 +155,23 @@ Deno.serve(async(req)=>{
     return json({error:"This household is not accessible."},403)
   }
 
+  const assistantAccess=await userClient.rpc("household_module_enabled_v1",{
+    p_household_id:body.household_id,
+    p_module_code:"assistant",
+  })
+
+  if(assistantAccess.error){
+    console.error("AI Assistant entitlement check failed",assistantAccess.error)
+    return json({error:"Famioo could not verify AI Assistant access. Please try again."},503)
+  }
+
+  if(assistantAccess.data!==true){
+    return json({
+      error:"AI Assistant is required for screenshot and pasted-text calendar extraction.",
+      code:"AI_ASSISTANT_REQUIRED",
+    },403)
+  }
+
   const timezone=String(householdResult.data.timezone||body.timezone||"Europe/Berlin")
   const apiKey=Deno.env.get("OPENAI_API_KEY")
   if(!apiKey){
