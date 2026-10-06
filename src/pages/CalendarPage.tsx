@@ -96,6 +96,18 @@ function addDays(date: Date, days: number) {
   next.setDate(next.getDate() + days)
   return next
 }
+function shiftDateKey(value:string,days:number) {
+  const [year,month,day]=value.split('-').map(Number)
+  const date=new Date(Date.UTC(year,month-1,day))
+  date.setUTCDate(date.getUTCDate()+days)
+  return date.toISOString().slice(0,10)
+}
+
+function daysBetweenDateKeys(from:string,to:string) {
+  const [fy,fm,fd]=from.split('-').map(Number)
+  const [ty,tm,td]=to.split('-').map(Number)
+  return Math.round((Date.UTC(ty,tm-1,td)-Date.UTC(fy,fm-1,fd))/86400000)
+}
 
 function startOfWeek(date: Date, mondayFirst: boolean) {
   const next = new Date(date)
@@ -257,6 +269,10 @@ export function CalendarPage() {
   const [seriesRules,setSeriesRules] = useState<SeriesRule[]>([])
   const [projectScopeKind,setProjectScopeKind] = useState<'project_task'|'chore'|null>(null)
   const [deleteRequest,setDeleteRequest] = useState<DeleteScope|null>(null)
+  const [editingBaseStartDate,setEditingBaseStartDate] = useState('')
+  const [editingBaseEndDate,setEditingBaseEndDate] = useState('')
+  const [editingOccurrenceInitialDate,setEditingOccurrenceInitialDate] = useState('')
+  const [editingOccurrenceInitialEndDate,setEditingOccurrenceInitialEndDate] = useState('')
 
   const range = useMemo(
     () => rangeFor(view, anchor, mondayFirst),
@@ -398,6 +414,10 @@ export function CalendarPage() {
     setSeriesRules([])
     setProjectScopeKind(null)
     setDeleteRequest(null)
+    setEditingBaseStartDate('')
+    setEditingBaseEndDate('')
+    setEditingOccurrenceInitialDate('')
+    setEditingOccurrenceInitialEndDate('')
     setError('')
   }
 
@@ -466,15 +486,29 @@ export function CalendarPage() {
 
     const row = eventResult.data
     const timezone = row.event_timezone || household.timezone
-    const eventDate = row.all_day
-      ? row.start_date ?? item.occurrence_start_date ?? dateKey(anchor)
+    const baseStartDate = row.all_day
+      ? row.start_date ?? dateKey(anchor)
       : row.start_at
         ? dateInZone(row.start_at, timezone)
         : dateKey(anchor)
-    const eventEndDate = row.all_day
-      ? row.end_date ?? eventDate
+    const baseEndDate = row.all_day
+      ? row.end_date ?? baseStartDate
       : row.end_at
         ? dateInZone(row.end_at, timezone)
+        : baseStartDate
+
+    // The editor is opened from a concrete occurrence. Show that occurrence's
+    // date instead of the series' original DTSTART so downstream links (for
+    // example Projects & Chores) always inherit the day the user clicked.
+    const eventDate = item.all_day
+      ? item.occurrence_start_date ?? baseStartDate
+      : item.occurrence_start_at
+        ? dateInZone(item.occurrence_start_at, timezone)
+        : baseStartDate
+    const eventEndDate = item.all_day
+      ? item.occurrence_end_date ?? eventDate
+      : item.occurrence_end_at
+        ? dateInZone(item.occurrence_end_at, timezone)
         : eventDate
     const parsed = parseRrule(ruleResult.data?.rrule ?? null)
     const reminder = reminderResult.data?.[0]
@@ -484,6 +518,10 @@ export function CalendarPage() {
     setEditingOccurrence(item)
     setEditingRecurring(Boolean(ruleResult.data?.rrule))
     setDeleteOptionsOpen(false)
+    setEditingBaseStartDate(baseStartDate)
+    setEditingBaseEndDate(baseEndDate)
+    setEditingOccurrenceInitialDate(eventDate)
+    setEditingOccurrenceInitialEndDate(eventEndDate)
     setComposerDate(eventDate)
     setEndDate(eventEndDate)
     setTemplateId('')
@@ -491,8 +529,8 @@ export function CalendarPage() {
     setDescription(row.description ?? '')
     setCategoryId(row.category_id ?? categories[0]?.id ?? '')
     setAllDay(row.all_day)
-    setStartTime(row.start_at ? timeInZone(row.start_at, timezone) : '18:00')
-    setEndTime(row.end_at ? timeInZone(row.end_at, timezone) : row.start_at ? addMinutesToTime(timeInZone(row.start_at, timezone), 60) : '19:00')
+    setStartTime(item.occurrence_start_at ? timeInZone(item.occurrence_start_at, timezone) : row.start_at ? timeInZone(row.start_at, timezone) : '18:00')
+    setEndTime(item.occurrence_end_at ? timeInZone(item.occurrence_end_at, timezone) : row.end_at ? timeInZone(row.end_at, timezone) : row.start_at ? addMinutesToTime(timeInZone(row.start_at, timezone), 60) : '19:00')
     setParticipantIds((participantResult.data ?? []).map((entry) => entry.profile_id))
     setNotificationEnabled(Boolean(reminder))
     setReminderValue(
@@ -793,12 +831,25 @@ export function CalendarPage() {
       return
     }
 
+    let persistedStartDate=composerDate
+    let persistedEndDate=effectiveEndDate
+
+    if(editingEventId && editingRecurring && editingBaseStartDate && editingOccurrenceInitialDate){
+      const shift=daysBetweenDateKeys(editingOccurrenceInitialDate,composerDate)
+      persistedStartDate=shiftDateKey(editingBaseStartDate,shift)
+
+      if(editingBaseEndDate){
+        const occurrenceDurationDays=daysBetweenDateKeys(composerDate,effectiveEndDate)
+        persistedEndDate=shiftDateKey(persistedStartDate,occurrenceDurationDays)
+      }
+    }
+
     const startAt = allDay
       ? null
-      : new Date(composerDate + 'T' + startTime + ':00').toISOString()
+      : new Date(persistedStartDate + 'T' + startTime + ':00').toISOString()
     const endAt = allDay
       ? null
-      : new Date(effectiveEndDate + 'T' + endTime + ':00').toISOString()
+      : new Date(persistedEndDate + 'T' + endTime + ':00').toISOString()
 
     if (!allDay && endAt && startAt && new Date(endAt) <= new Date(startAt)) {
       setSaving(false)
@@ -856,8 +907,8 @@ export function CalendarPage() {
       p_all_day: allDay,
       p_start_at: startAt,
       p_end_at: endAt,
-      p_start_date: allDay ? composerDate : null,
-      p_end_date: allDay ? effectiveEndDate : null,
+      p_start_date: allDay ? persistedStartDate : null,
+      p_end_date: allDay ? persistedEndDate : null,
       p_timezone: household.timezone,
       p_location_text: locationText.trim() || null,
       p_category_id: categoryId || null,
