@@ -12300,3 +12300,404 @@ b {
     grid-template-columns: 36px minmax(0,1fr);
   }
 }
+
+
+/* =========================================================
+   Vaccination Calendar
+   ========================================================= */
+.vaccination-page .page-heading-row {
+  margin-bottom: 12px;
+}
+
+.vaccination-source-badge {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #d8e4df;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #557165;
+  background: #f3f8f5;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.vaccination-medical-note {
+  margin-bottom: 12px;
+  padding: 12px 13px;
+  display: grid;
+  grid-template-columns: 28px minmax(0,1fr);
+  align-items: start;
+  gap: 9px;
+  border-color: #dbe6e1;
+  background: #f7faf8;
+}
+
+.vaccination-medical-note > svg {
+  color: #638071;
+}
+
+.vaccination-medical-note strong {
+  color: #536b61;
+  font-size: 11px;
+}
+
+.vaccination-medical-note p {
+  margin: 3px 0 0;
+  color: #7d8f87;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.vaccination-child-strip {
+  margin-bottom: 12px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.vaccination-child-card {
+  min-width: 180px;
+  padding: 10px 11px;
+  border: 1px solid #e6dfe8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #685c6d;
+  background: #fff;
+  text-align: left;
+}
+
+.vaccination-child-card.active {
+  border-color: #c8b2d2;
+  background: #faf5fb;
+  box-shadow: inset 0 0 0 1px rgba(127,89,145,.05);
+}
+
+.vaccination-child-card > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.vaccination-child-card strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.vaccination-child-card small {
+  color: #948999;
+  font-size: 9px;
+}
+
+.vaccination-birth-card {
+  margin-bottom: 12px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(190px,250px) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.vaccination-birth-card h2 {
+  margin: 3px 0 0;
+  color: #574b5b;
+  font-size: 16px;
+  font-weight: 620;
+}
+
+.vaccination-birth-card p {
+  margin: 4px 0 0;
+  color: #918496;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.vaccination-summary-grid {
+  margin-bottom: 14px;
+  display: grid;
+  grid-template-columns: minmax(140px,.55fr) minmax(140px,.55fr) minmax(280px,1.5fr);
+  gap: 9px;
+}
+
+.vaccination-summary-card {
+  min-height: 82px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vaccination-summary-card > span {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #6c5b76;
+  background: #f1eaf4;
+}
+
+.vaccination-summary-card > div {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.vaccination-summary-card strong {
+  color: #55495a;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.vaccination-summary-card.wide strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.vaccination-summary-card small {
+  color: #968b9a;
+  font-size: 9px;
+}
+
+.vaccination-section-head {
+  margin-bottom: 9px;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vaccination-section-head h2 {
+  margin: 3px 0 0;
+  color: #574b5b;
+  font-size: 16px;
+  font-weight: 620;
+}
+
+.vaccination-timeline {
+  display: grid;
+  gap: 7px;
+}
+
+.vaccination-entry {
+  min-height: 92px;
+  padding: 10px 11px;
+  display: grid;
+  grid-template-columns: 116px 32px minmax(0,1fr) 32px;
+  align-items: center;
+  gap: 9px;
+}
+
+.vaccination-entry.completed {
+  border-color: #d7e5de;
+  background: #f9fcfa;
+}
+
+.vaccination-entry.not_applicable {
+  opacity: .64;
+}
+
+.vaccination-age {
+  display: grid;
+  gap: 3px;
+}
+
+.vaccination-age > span {
+  color: #695873;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.vaccination-age small {
+  color: #9a8e9d;
+  font-size: 8px;
+  line-height: 1.3;
+}
+
+.vaccination-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #755888;
+  background: #f0e8f3;
+}
+
+.vaccination-entry.completed .vaccination-dot {
+  color: #4f7867;
+  background: #eaf4ef;
+}
+
+.vaccination-entry-main {
+  min-width: 0;
+}
+
+.vaccination-entry-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.vaccination-entry-title > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.vaccination-entry-title strong {
+  color: #55495a;
+  font-size: 11px;
+}
+
+.vaccination-entry-title span {
+  color: #8d8191;
+  font-size: 9px;
+}
+
+.vaccination-status {
+  min-height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  color: #806f86;
+  background: #f0ebf2;
+  font-size: 9px;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.vaccination-status.scheduled {
+  color: #5c6f96;
+  background: #edf1f7;
+}
+
+.vaccination-status.completed {
+  color: #4f7867;
+  background: #eaf4ef;
+}
+
+.vaccination-status.not_applicable {
+  color: #8a858d;
+  background: #efedef;
+}
+
+.vaccination-entry-meta {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  color: #847987;
+  font-size: 9px;
+}
+
+.vaccination-entry-meta > span,
+.vaccination-entry-meta > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vaccination-entry-main p {
+  margin: 6px 0 0;
+  color: #978b9b;
+  font-size: 9px;
+  line-height: 1.42;
+}
+
+.vaccination-entry-main .vaccination-user-note {
+  color: #6f6374;
+}
+
+.vaccination-composer {
+  width: min(720px,calc(100vw - 24px));
+}
+
+.vaccination-composer textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.vaccination-calendar-sync {
+  padding: 10px;
+  border: 1px solid #e7dfea;
+  border-radius: 11px;
+  display: grid;
+  gap: 9px;
+  background: #fbf9fc;
+}
+
+.vaccination-empty {
+  min-height: 250px;
+}
+
+@media (max-width: 900px) {
+  .vaccination-birth-card {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .vaccination-summary-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+
+  .vaccination-summary-card.wide {
+    grid-column: 1 / -1;
+  }
+
+  .vaccination-entry {
+    grid-template-columns: 92px 30px minmax(0,1fr) 30px;
+  }
+}
+
+@media (max-width: 650px) {
+  .vaccination-source-badge {
+    margin-top: 6px;
+  }
+
+  .vaccination-summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .vaccination-entry {
+    grid-template-columns: 30px minmax(0,1fr) 30px;
+  }
+
+  .vaccination-age {
+    grid-column: 1 / -1;
+    padding-bottom: 2px;
+    border-bottom: 1px solid #eee8f0;
+  }
+
+  .vaccination-dot {
+    grid-column: 1;
+  }
+
+  .vaccination-entry-main {
+    grid-column: 2;
+  }
+
+  .vaccination-entry > .icon-button {
+    grid-column: 3;
+  }
+
+  .vaccination-entry-title {
+    flex-direction: column;
+  }
+
+  .vaccination-section-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
