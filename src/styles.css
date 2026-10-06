@@ -11246,3 +11246,24 @@ b {
 .recipe-import-paste > button {
   justify-self: end;
 }
+
+
+.recipe-import-tip {
+  margin-top: -2px;
+  padding: 8px 10px;
+  border: 1px solid #e3d8e7;
+  border-radius: 9px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: #7f7284;
+  background: #fbf8fc;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.recipe-import-tip strong {
+  flex: 0 0 auto;
+  color: #6d5577;
+  font-weight: 650;
+}
