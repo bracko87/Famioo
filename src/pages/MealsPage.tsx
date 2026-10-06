@@ -1,24 +1,29 @@
 import {
+  Archive,
   CalendarDays,
   ChefHat,
   Clock3,
+  ExternalLink,
+  Globe2,
   Pencil,
   Plus,
+  RotateCcw,
   ShoppingBag,
   Trash2,
   Users,
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { DatePicker } from '../components/ui/DatePicker'
 import { Select } from '../components/ui/Select'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
 
-type MealsTab='plan'|'recipes'
+type MealsTab='plan'|'recipes'|'archive'
 type MealType='breakfast'|'lunch'|'dinner'|'snack'|'other'
+type RecipeSource='own'|'imported'
+type ShoppingMode='existing'|'new'
 
 type Recipe={
   id:string
@@ -28,6 +33,13 @@ type Recipe={
   prep_minutes:number|null
   servings:number|null
   instructions:string|null
+  source_type:RecipeSource
+  source_url:string|null
+  source_site:string|null
+  source_author:string|null
+  source_image_url:string|null
+  imported_at:string|null
+  archived_at:string|null
   created_at:string
 }
 
@@ -50,8 +62,28 @@ type MealPlanEntry={
   created_at:string
 }
 
+type ShoppingList={
+  id:string
+  title:string
+}
+
+type ImportedRecipe={
+  title:string
+  description:string
+  meal_type:MealType
+  prep_minutes:number|null
+  servings:number|null
+  ingredients:string[]
+  instructions:string
+  source_url:string
+  source_site:string
+  source_author:string
+  source_image_url:string
+}
+
 type ConfirmState=
   | { kind:'recipe';id:string;title:string }
+  | { kind:'deleteRecipe';id:string;title:string }
   | { kind:'meal';id:string;title:string;linkedEventId:string|null }
   | null
 
@@ -85,9 +117,18 @@ function parseIngredients(value:string){
     })
 }
 
+function importedIngredientForEditor(line:string){
+  const trimmed=line.trim()
+  const match=trimmed.match(/^((?:(?:\d+(?:[.,]\d+)?)|(?:\d+\s*\/\s*\d+)|[¼½¾⅓⅔⅛⅜⅝⅞])(?:\s*(?:-|–)\s*(?:\d+(?:[.,]\d+)?))?\s*(?:kg|g|mg|l|ml|cl|dl|tsp|tbsp|tl|el|cup|cups|oz|lb|lbs|stück|stk\.?|prise[n]?|bund|dose[n]?|päckchen|packung|scheibe[n]?|zehe[n]?)?)\s+(.+)$/i)
+  return match ? match[1].trim()+' | '+match[2].trim() : trimmed
+}
+
+function normalizeIngredient(value:string){
+  return value.trim().toLocaleLowerCase().replace(/\s+/g,' ')
+}
+
 export function MealsPage(){
   const { household,modules }=useHousehold()
-  const navigate=useNavigate()
   const access=modules.find((module)=>module.code==='meals')
   const canWrite=Boolean(access?.can_write)
   const calendarWritable=Boolean(modules.find((module)=>module.code==='calendar')?.can_write)
@@ -95,8 +136,10 @@ export function MealsPage(){
 
   const [tab,setTab]=useState<MealsTab>('plan')
   const [recipes,setRecipes]=useState<Recipe[]>([])
+  const [archivedRecipes,setArchivedRecipes]=useState<Recipe[]>([])
   const [ingredients,setIngredients]=useState<Ingredient[]>([])
   const [meals,setMeals]=useState<MealPlanEntry[]>([])
+  const [shoppingLists,setShoppingLists]=useState<ShoppingList[]>([])
   const [error,setError]=useState('')
   const [message,setMessage]=useState('')
   const [saving,setSaving]=useState(false)
@@ -111,6 +154,16 @@ export function MealsPage(){
   const [recipeServings,setRecipeServings]=useState('')
   const [recipeIngredients,setRecipeIngredients]=useState('')
   const [recipeInstructions,setRecipeInstructions]=useState('')
+  const [recipeSourceType,setRecipeSourceType]=useState<RecipeSource>('own')
+  const [recipeSourceUrl,setRecipeSourceUrl]=useState('')
+  const [recipeSourceSite,setRecipeSourceSite]=useState('')
+  const [recipeSourceAuthor,setRecipeSourceAuthor]=useState('')
+  const [recipeSourceImageUrl,setRecipeSourceImageUrl]=useState('')
+  const [recipeImportedAt,setRecipeImportedAt]=useState<string|null>(null)
+
+  const [importOpen,setImportOpen]=useState(false)
+  const [importUrl,setImportUrl]=useState('')
+  const [importBusy,setImportBusy]=useState(false)
 
   const [mealOpen,setMealOpen]=useState(false)
   const [editingMealId,setEditingMealId]=useState<string|null>(null)
@@ -122,15 +175,30 @@ export function MealsPage(){
   const [mealCalendar,setMealCalendar]=useState(true)
   const [editingMealEventId,setEditingMealEventId]=useState<string|null>(null)
 
+  const [shoppingOpen,setShoppingOpen]=useState(false)
+  const [shoppingRecipe,setShoppingRecipe]=useState<Recipe|null>(null)
+  const [shoppingMode,setShoppingMode]=useState<ShoppingMode>('existing')
+  const [shoppingListId,setShoppingListId]=useState('')
+  const [shoppingNewTitle,setShoppingNewTitle]=useState('')
+  const [shoppingSelected,setShoppingSelected]=useState<Set<string>>(new Set())
+  const [shoppingDuplicates,setShoppingDuplicates]=useState<Set<string>>(new Set())
+  const [shoppingBusy,setShoppingBusy]=useState(false)
+
   async function load(){
     setError('')
-    const [recipeResult,ingredientResult,mealResult]=await Promise.all([
+    const [recipeResult,archivedResult,ingredientResult,mealResult,shoppingResult]=await Promise.all([
       supabase
         .from('recipes')
-        .select('id,title,description,meal_type,prep_minutes,servings,instructions,created_at')
+        .select('id,title,description,meal_type,prep_minutes,servings,instructions,source_type,source_url,source_site,source_author,source_image_url,imported_at,archived_at,created_at')
         .eq('household_id',household.id)
         .is('archived_at',null)
         .order('title'),
+      supabase
+        .from('recipes')
+        .select('id,title,description,meal_type,prep_minutes,servings,instructions,source_type,source_url,source_site,source_author,source_image_url,imported_at,archived_at,created_at')
+        .eq('household_id',household.id)
+        .not('archived_at','is',null)
+        .order('archived_at',{ ascending:false }),
       supabase
         .from('recipe_ingredients')
         .select('id,recipe_id,item_text,quantity,sort_order')
@@ -143,19 +211,34 @@ export function MealsPage(){
         .gte('meal_date',todayKey())
         .order('meal_date')
         .order('meal_type'),
+      shoppingWritable
+        ? supabase
+            .from('shopping_lists')
+            .select('id,title')
+            .eq('household_id',household.id)
+            .eq('status','active')
+            .is('archived_at',null)
+            .order('created_at',{ ascending:false })
+        : Promise.resolve({ data:[],error:null }),
     ])
 
     if(recipeResult.error) setError(recipeResult.error.message)
     else setRecipes((recipeResult.data??[]) as Recipe[])
+
+    if(archivedResult.error) setError((current)=>current||archivedResult.error.message)
+    else setArchivedRecipes((archivedResult.data??[]) as Recipe[])
 
     if(ingredientResult.error) setError((current)=>current||ingredientResult.error.message)
     else setIngredients((ingredientResult.data??[]) as Ingredient[])
 
     if(mealResult.error) setError((current)=>current||mealResult.error.message)
     else setMeals((mealResult.data??[]) as MealPlanEntry[])
+
+    if(shoppingResult.error) setError((current)=>current||shoppingResult.error.message)
+    else setShoppingLists((shoppingResult.data??[]) as ShoppingList[])
   }
 
-  useEffect(()=>{ void load() },[household.id])
+  useEffect(()=>{ void load() },[household.id,shoppingWritable])
 
   const ingredientsByRecipe=useMemo(()=>{
     const map=new Map<string,Ingredient[]>()
@@ -169,6 +252,11 @@ export function MealsPage(){
     { value:'',label:'No saved recipe' },
     ...recipes.map((recipe)=>({ value:recipe.id,label:recipe.title })),
   ],[recipes])
+
+  const shoppingListOptions=useMemo(
+    ()=>shoppingLists.map((list)=>({ value:list.id,label:list.title })),
+    [shoppingLists],
+  )
 
   const groupedMeals=useMemo(()=>{
     const map=new Map<string,MealPlanEntry[]>()
@@ -187,6 +275,12 @@ export function MealsPage(){
     setRecipeServings('')
     setRecipeIngredients('')
     setRecipeInstructions('')
+    setRecipeSourceType('own')
+    setRecipeSourceUrl('')
+    setRecipeSourceSite('')
+    setRecipeSourceAuthor('')
+    setRecipeSourceImageUrl('')
+    setRecipeImportedAt(null)
   }
 
   function openRecipe(recipe?:Recipe){
@@ -199,6 +293,12 @@ export function MealsPage(){
       setRecipePrep(recipe.prep_minutes==null?'':String(recipe.prep_minutes))
       setRecipeServings(recipe.servings==null?'':String(recipe.servings))
       setRecipeInstructions(recipe.instructions??'')
+      setRecipeSourceType(recipe.source_type)
+      setRecipeSourceUrl(recipe.source_url??'')
+      setRecipeSourceSite(recipe.source_site??'')
+      setRecipeSourceAuthor(recipe.source_author??'')
+      setRecipeSourceImageUrl(recipe.source_image_url??'')
+      setRecipeImportedAt(recipe.imported_at)
       setRecipeIngredients(
         (ingredientsByRecipe.get(recipe.id)??[])
           .map((item)=>item.quantity ? item.quantity+' | '+item.item_text : item.item_text)
@@ -223,6 +323,12 @@ export function MealsPage(){
       prep_minutes:recipePrep ? Number(recipePrep) : null,
       servings:recipeServings ? Number(recipeServings) : null,
       instructions:recipeInstructions.trim()||null,
+      source_type:recipeSourceType,
+      source_url:recipeSourceType==='imported' ? recipeSourceUrl || null : null,
+      source_site:recipeSourceType==='imported' ? recipeSourceSite || null : null,
+      source_author:recipeSourceType==='imported' ? recipeSourceAuthor || null : null,
+      source_image_url:recipeSourceType==='imported' ? recipeSourceImageUrl || null : null,
+      imported_at:recipeSourceType==='imported' ? recipeImportedAt ?? new Date().toISOString() : null,
       updated_at:new Date().toISOString(),
     }
 
@@ -263,7 +369,66 @@ export function MealsPage(){
     setSaving(false)
     setRecipeOpen(false)
     resetRecipe()
+    setTab('recipes')
+    setMessage(recipeSourceType==='imported' ? 'Imported recipe saved in your Recipe book.' : 'Recipe saved in your Recipe book.')
     await load()
+  }
+
+  async function importFromWebsite(event:FormEvent){
+    event.preventDefault()
+    if(!canWrite || !importUrl.trim()) return
+
+    setImportBusy(true)
+    setError('')
+    setMessage('')
+
+    const result=await supabase.functions.invoke('import-recipe-url',{
+      body:{
+        household_id:household.id,
+        url:importUrl.trim(),
+      },
+    })
+
+    setImportBusy(false)
+
+    if(result.error || result.data?.error){
+      let detail=result.data?.error || result.error?.message || 'Recipe import failed.'
+      const context=(result.error as { context?:Response }|null)?.context
+      if(context){
+        try{
+          const payload=await context.clone().json() as { error?:string }
+          if(payload.error) detail=payload.error
+        } catch {
+          // Keep the normal function error.
+        }
+      }
+      setError(detail)
+      return
+    }
+
+    const imported=result.data?.recipe as ImportedRecipe|undefined
+    if(!imported){
+      setError('The recipe website did not return a recipe.')
+      return
+    }
+
+    resetRecipe()
+    setRecipeTitle(imported.title||'Imported recipe')
+    setRecipeDescription(imported.description||'')
+    setRecipeMealType(imported.meal_type||'dinner')
+    setRecipePrep(imported.prep_minutes==null?'':String(imported.prep_minutes))
+    setRecipeServings(imported.servings==null?'':String(imported.servings))
+    setRecipeIngredients((imported.ingredients??[]).map(importedIngredientForEditor).join('\n'))
+    setRecipeInstructions(imported.instructions||'')
+    setRecipeSourceType('imported')
+    setRecipeSourceUrl(imported.source_url||importUrl.trim())
+    setRecipeSourceSite(imported.source_site||'')
+    setRecipeSourceAuthor(imported.source_author||'')
+    setRecipeSourceImageUrl(imported.source_image_url||'')
+    setRecipeImportedAt(new Date().toISOString())
+    setImportOpen(false)
+    setImportUrl('')
+    setRecipeOpen(true)
   }
 
   function resetMeal(){
@@ -396,48 +561,151 @@ export function MealsPage(){
 
     setMealOpen(false)
     resetMeal()
+    setMessage('Meal saved.')
     await load()
   }
 
-  async function sendToShopping(recipe:Recipe){
-    if(!shoppingWritable) return
-    setError('')
-    setMessage('')
+  async function loadShoppingDuplicates(listId:string,recipe:Recipe){
+    const recipeItems=ingredientsByRecipe.get(recipe.id)??[]
+    if(!listId){
+      setShoppingDuplicates(new Set())
+      setShoppingSelected(new Set(recipeItems.map((item)=>item.id)))
+      return
+    }
+
+    const result=await supabase
+      .from('shopping_items')
+      .select('item_text')
+      .eq('household_id',household.id)
+      .eq('shopping_list_id',listId)
+
+    if(result.error){
+      setError(result.error.message)
+      return
+    }
+
+    const existingNames=new Set((result.data??[]).map((row)=>normalizeIngredient(row.item_text)))
+    const duplicateIds=new Set(recipeItems
+      .filter((item)=>existingNames.has(normalizeIngredient(item.item_text)))
+      .map((item)=>item.id))
+
+    setShoppingDuplicates(duplicateIds)
+    setShoppingSelected(new Set(recipeItems.filter((item)=>!duplicateIds.has(item.id)).map((item)=>item.id)))
+  }
+
+  function openShoppingExport(recipe:Recipe){
     const recipeItems=ingredientsByRecipe.get(recipe.id)??[]
     if(!recipeItems.length){
       setError('Add ingredients to this recipe first.')
       return
     }
 
-    const listResult=await supabase
-      .from('shopping_lists')
-      .insert({
-        household_id:household.id,
-        title:recipe.title+' ingredients',
-        status:'active',
-      })
-      .select('id')
-      .single()
+    const firstList=shoppingLists[0]?.id??''
+    setShoppingRecipe(recipe)
+    setShoppingMode(firstList ? 'existing' : 'new')
+    setShoppingListId(firstList)
+    setShoppingNewTitle(recipe.title+' ingredients')
+    setShoppingDuplicates(new Set())
+    setShoppingSelected(new Set(recipeItems.map((item)=>item.id)))
+    setShoppingOpen(true)
 
-    if(listResult.error){
-      setError(listResult.error.message)
+    if(firstList) void loadShoppingDuplicates(firstList,recipe)
+  }
+
+  async function exportToShopping(){
+    if(!shoppingWritable || !shoppingRecipe || shoppingBusy) return
+
+    const recipeItems=(ingredientsByRecipe.get(shoppingRecipe.id)??[])
+      .filter((item)=>shoppingSelected.has(item.id))
+
+    if(!recipeItems.length){
+      setError('Choose at least one ingredient to export.')
       return
     }
 
+    if(shoppingMode==='existing' && !shoppingListId){
+      setError('Choose a Shopping list.')
+      return
+    }
+
+    if(shoppingMode==='new' && !shoppingNewTitle.trim()){
+      setError('Enter a name for the new Shopping list.')
+      return
+    }
+
+    setShoppingBusy(true)
+    setError('')
+    setMessage('')
+
+    let targetListId=shoppingListId
+    let targetTitle=shoppingLists.find((list)=>list.id===shoppingListId)?.title??'Shopping list'
+
+    if(shoppingMode==='new'){
+      const listResult=await supabase
+        .from('shopping_lists')
+        .insert({
+          household_id:household.id,
+          title:shoppingNewTitle.trim(),
+          status:'active',
+        })
+        .select('id,title')
+        .single()
+
+      if(listResult.error){
+        setShoppingBusy(false)
+        setError(listResult.error.message)
+        return
+      }
+
+      targetListId=listResult.data.id
+      targetTitle=listResult.data.title
+    }
+
+    const currentResult=await supabase
+      .from('shopping_items')
+      .select('sort_order')
+      .eq('household_id',household.id)
+      .eq('shopping_list_id',targetListId)
+      .order('sort_order',{ ascending:false })
+      .limit(1)
+
+    const firstSort=(currentResult.data?.[0]?.sort_order??-1)+1
+
     const itemResult=await supabase.from('shopping_items').insert(recipeItems.map((item,index)=>({
       household_id:household.id,
-      shopping_list_id:listResult.data.id,
+      shopping_list_id:targetListId,
       item_text:item.item_text,
       quantity:item.quantity,
-      sort_order:index,
+      sort_order:firstSort+index,
     })))
+
+    setShoppingBusy(false)
 
     if(itemResult.error){
       setError(itemResult.error.message)
       return
     }
 
-    navigate('/app/shopping')
+    setShoppingOpen(false)
+    setShoppingRecipe(null)
+    setMessage(recipeItems.length+' ingredient'+(recipeItems.length===1?'':'s')+' added to '+targetTitle+'.')
+    await load()
+  }
+
+  async function restoreRecipe(recipe:Recipe){
+    const result=await supabase
+      .from('recipes')
+      .update({ archived_at:null,updated_at:new Date().toISOString() })
+      .eq('id',recipe.id)
+      .eq('household_id',household.id)
+
+    if(result.error){
+      setError(result.error.message)
+      return
+    }
+
+    setMessage(recipe.title+' restored to your Recipe book.')
+    await load()
   }
 
   async function confirmDelete(){
@@ -449,6 +717,17 @@ export function MealsPage(){
       const result=await supabase
         .from('recipes')
         .update({ archived_at:new Date().toISOString(),updated_at:new Date().toISOString() })
+        .eq('id',confirm.id)
+        .eq('household_id',household.id)
+      if(result.error){
+        setSaving(false)
+        setError(result.error.message)
+        return
+      }
+    } else if(confirm.kind==='deleteRecipe'){
+      const result=await supabase
+        .from('recipes')
+        .delete()
         .eq('id',confirm.id)
         .eq('household_id',household.id)
       if(result.error){
@@ -485,17 +764,106 @@ export function MealsPage(){
     await load()
   }
 
+  function recipeCard(recipe:Recipe,archived=false){
+    const recipeItems=ingredientsByRecipe.get(recipe.id)??[]
+
+    return (
+      <article className="recipe-card list-card" key={recipe.id}>
+        <header>
+          <div>
+            <span className="eyebrow">{recipe.meal_type.toUpperCase()}</span>
+            <h2>{recipe.title}</h2>
+          </div>
+          {canWrite && (
+            <div className="recipe-actions">
+              {!archived && <button type="button" className="icon-button compact-icon" onClick={()=>openRecipe(recipe)} aria-label={'Edit '+recipe.title}><Pencil size={14}/></button>}
+              {archived ? (
+                <>
+                  <button type="button" className="icon-button compact-icon" onClick={()=>void restoreRecipe(recipe)} aria-label={'Restore '+recipe.title}><RotateCcw size={14}/></button>
+                  <button type="button" className="icon-button compact-icon danger-icon-button" onClick={()=>setConfirm({ kind:'deleteRecipe',id:recipe.id,title:recipe.title })} aria-label={'Permanently delete '+recipe.title}><Trash2 size={14}/></button>
+                </>
+              ) : (
+                <button type="button" className="icon-button compact-icon danger-icon-button" onClick={()=>setConfirm({ kind:'recipe',id:recipe.id,title:recipe.title })} aria-label={'Archive '+recipe.title}><Archive size={14}/></button>
+              )}
+            </div>
+          )}
+        </header>
+
+        <div className="recipe-source-row">
+          <span className={recipe.source_type==='imported'?'recipe-source imported':'recipe-source'}>
+            {recipe.source_type==='imported' ? <Globe2 size={12}/> : <ChefHat size={12}/>}
+            {recipe.source_type==='imported' ? 'Imported · '+(recipe.source_site||'website') : 'Own recipe'}
+          </span>
+          {recipe.source_url && (
+            <a href={recipe.source_url} target="_blank" rel="noreferrer">
+              Source<ExternalLink size={11}/>
+            </a>
+          )}
+        </div>
+
+        {recipe.description && <p>{recipe.description}</p>}
+
+        <div className="recipe-meta">
+          {recipe.prep_minutes!=null && <span><Clock3 size={13}/>{recipe.prep_minutes} min</span>}
+          {recipe.servings!=null && <span><Users size={13}/>{recipe.servings} servings</span>}
+          <span>{recipeItems.length} ingredients</span>
+          {recipe.source_author && <span>By {recipe.source_author}</span>}
+        </div>
+
+        {recipeItems.length>0 && (
+          <details className="recipe-ingredients">
+            <summary>Ingredients</summary>
+            <div>
+              {recipeItems.map((item)=>(
+                <span key={item.id}><b>{item.quantity||'•'}</b>{item.item_text}</span>
+              ))}
+            </div>
+          </details>
+        )}
+
+        {recipe.instructions && (
+          <details className="recipe-ingredients recipe-instructions">
+            <summary>Preparation</summary>
+            <div><p>{recipe.instructions}</p></div>
+          </details>
+        )}
+
+        {!archived && (
+          <footer>
+            {shoppingWritable && (
+              <button type="button" className="secondary-button compact" onClick={()=>openShoppingExport(recipe)}>
+                <ShoppingBag size={14}/>Ingredients to Shopping
+              </button>
+            )}
+            {canWrite && (
+              <button type="button" className="primary-button compact" onClick={()=>{
+                resetMeal()
+                setMealRecipeId(recipe.id)
+                setMealTitle(recipe.title)
+                setMealType(recipe.meal_type)
+                setMealOpen(true)
+              }}>
+                <CalendarDays size={14}/>Use as meal
+              </button>
+            )}
+          </footer>
+        )}
+      </article>
+    )
+  }
+
   return (
     <div className="page meals-page">
       <div className="page-heading-row">
         <div>
           <div className="page-label">MEALS & RECIPES</div>
           <h1>Meals & Recipes</h1>
-          <p className="page-subtitle">Save family recipes, plan meals, connect them to Calendar and move ingredients straight into Shopping.</p>
+          <p className="page-subtitle">Keep your family recipe book, import supported web recipes, plan meals and send only the ingredients you need to Shopping.</p>
         </div>
         {canWrite && (
           <div className="meals-heading-actions">
-            <button type="button" className="secondary-button compact" onClick={()=>openRecipe()}><Plus size={14}/>Recipe</button>
+            <button type="button" className="secondary-button compact" onClick={()=>openRecipe()}><Plus size={14}/>Own recipe</button>
+            <button type="button" className="secondary-button compact" onClick={()=>{setImportUrl('');setError('');setImportOpen(true)}}><Globe2 size={14}/>Import website</button>
             <button type="button" className="primary-button compact" onClick={()=>openMeal()}><Plus size={14}/>Plan meal</button>
           </div>
         )}
@@ -503,7 +871,8 @@ export function MealsPage(){
 
       <nav className="projects-tabs meals-tabs" aria-label="Meals and Recipes sections">
         <button type="button" className={tab==='plan'?'active':''} onClick={()=>setTab('plan')}>Meal plan</button>
-        <button type="button" className={tab==='recipes'?'active':''} onClick={()=>setTab('recipes')}>Recipes</button>
+        <button type="button" className={tab==='recipes'?'active':''} onClick={()=>setTab('recipes')}>Recipe book <span>{recipes.length}</span></button>
+        <button type="button" className={tab==='archive'?'active':''} onClick={()=>setTab('archive')}>Archive <span>{archivedRecipes.length}</span></button>
       </nav>
 
       {!access?.enabled && <div className="module-access-note">Meals & Recipes is not enabled for this household.</div>}
@@ -528,7 +897,7 @@ export function MealsPage(){
                     <span className="meal-type-chip">{meal.meal_type}</span>
                     <div>
                       <strong>{meal.title}</strong>
-                      <small>{meal.notes||'No notes'}{meal.linked_event_id?' · Calendar':''}</small>
+                      <small>{meal.notes||'No notes'}{meal.linked_event_id?' · Calendar':''}{meal.recipe_id?' · Recipe book':''}</small>
                     </div>
                     {canWrite && (
                       <div className="meal-row-actions">
@@ -544,7 +913,7 @@ export function MealsPage(){
             <div className="list-card empty-state">
               <ChefHat size={27}/>
               <span className="empty-state-title">No meals planned yet.</span>
-              <span>Plan the first family meal and optionally add it to Calendar.</span>
+              <span>Use any saved recipe as a meal or create a meal without a recipe.</span>
             </div>
           )}
         </section>
@@ -552,67 +921,23 @@ export function MealsPage(){
 
       {tab==='recipes' && (
         <section className="recipe-grid">
-          {recipes.length ? recipes.map((recipe)=>{
-            const recipeItems=ingredientsByRecipe.get(recipe.id)??[]
-            return (
-              <article className="recipe-card list-card" key={recipe.id}>
-                <header>
-                  <div>
-                    <span className="eyebrow">{recipe.meal_type.toUpperCase()}</span>
-                    <h2>{recipe.title}</h2>
-                  </div>
-                  {canWrite && (
-                    <div className="recipe-actions">
-                      <button type="button" className="icon-button compact-icon" onClick={()=>openRecipe(recipe)} aria-label={'Edit '+recipe.title}><Pencil size={14}/></button>
-                      <button type="button" className="icon-button compact-icon danger-icon-button" onClick={()=>setConfirm({ kind:'recipe',id:recipe.id,title:recipe.title })} aria-label={'Delete '+recipe.title}><Trash2 size={14}/></button>
-                    </div>
-                  )}
-                </header>
-
-                {recipe.description && <p>{recipe.description}</p>}
-
-                <div className="recipe-meta">
-                  {recipe.prep_minutes!=null && <span><Clock3 size={13}/>{recipe.prep_minutes} min</span>}
-                  {recipe.servings!=null && <span><Users size={13}/>{recipe.servings} servings</span>}
-                  <span>{recipeItems.length} ingredients</span>
-                </div>
-
-                {recipeItems.length>0 && (
-                  <details className="recipe-ingredients">
-                    <summary>Ingredients</summary>
-                    <div>
-                      {recipeItems.map((item)=>(
-                        <span key={item.id}><b>{item.quantity||'•'}</b>{item.item_text}</span>
-                      ))}
-                    </div>
-                  </details>
-                )}
-
-                <footer>
-                  {shoppingWritable && (
-                    <button type="button" className="secondary-button compact" onClick={()=>void sendToShopping(recipe)}>
-                      <ShoppingBag size={14}/>Send to Shopping
-                    </button>
-                  )}
-                  {canWrite && (
-                    <button type="button" className="primary-button compact" onClick={()=>{
-                      resetMeal()
-                      setMealRecipeId(recipe.id)
-                      setMealTitle(recipe.title)
-                      setMealType(recipe.meal_type)
-                      setMealOpen(true)
-                    }}>
-                      <CalendarDays size={14}/>Plan meal
-                    </button>
-                  )}
-                </footer>
-              </article>
-            )
-          }) : (
+          {recipes.length ? recipes.map((recipe)=>recipeCard(recipe)) : (
             <div className="list-card empty-state">
               <ChefHat size={27}/>
-              <span className="empty-state-title">No recipes saved yet.</span>
-              <span>Add a recipe with ingredients, instructions and serving information.</span>
+              <span className="empty-state-title">Your Recipe book is empty.</span>
+              <span>Create your own recipe or import one from a supported recipe website.</span>
+            </div>
+          )}
+        </section>
+      )}
+
+      {tab==='archive' && (
+        <section className="recipe-grid recipe-archive-grid">
+          {archivedRecipes.length ? archivedRecipes.map((recipe)=>recipeCard(recipe,true)) : (
+            <div className="list-card empty-state">
+              <Archive size={27}/>
+              <span className="empty-state-title">No archived recipes.</span>
+              <span>Recipes you archive from the Recipe book will stay here until restored or permanently deleted.</span>
             </div>
           )}
         </section>
@@ -624,9 +949,23 @@ export function MealsPage(){
         }}>
           <form className="modal-card meals-composer" onSubmit={saveRecipe}>
             <header>
-              <div><span className="eyebrow">{editingRecipeId?'EDIT RECIPE':'NEW RECIPE'}</span><h2>{editingRecipeId?'Edit recipe':'Add recipe'}</h2></div>
+              <div>
+                <span className="eyebrow">{recipeSourceType==='imported'?'IMPORTED RECIPE':editingRecipeId?'EDIT RECIPE':'NEW RECIPE'}</span>
+                <h2>{editingRecipeId?'Edit recipe':recipeSourceType==='imported'?'Review imported recipe':'Create your own recipe'}</h2>
+              </div>
               <button type="button" className="icon-button" onClick={()=>{setRecipeOpen(false);resetRecipe()}} disabled={saving} aria-label="Close recipe form"><X size={18}/></button>
             </header>
+
+            {recipeSourceType==='imported' && (
+              <div className="recipe-import-source">
+                <Globe2 size={16}/>
+                <span>
+                  <strong>{recipeSourceSite||'Imported website'}</strong>
+                  <small>Review and edit anything before saving it to your Famioo Recipe book.</small>
+                </span>
+                {recipeSourceUrl && <a href={recipeSourceUrl} target="_blank" rel="noreferrer">Open source<ExternalLink size={12}/></a>}
+              </div>
+            )}
 
             <div className="composer-grid-two aligned-field-row">
               <label>Recipe name<input value={recipeTitle} onChange={(event)=>setRecipeTitle(event.target.value)} required autoFocus/></label>
@@ -641,14 +980,51 @@ export function MealsPage(){
             </div>
 
             <label>Ingredients
-              <textarea value={recipeIngredients} onChange={(event)=>setRecipeIngredients(event.target.value)} rows={6} placeholder={'One ingredient per line\n500 g | Pasta\n2 | Tomatoes\nOlive oil'}/>
-              <small className="field-hint">Use “quantity | ingredient” when you want a quantity.</small>
+              <textarea value={recipeIngredients} onChange={(event)=>setRecipeIngredients(event.target.value)} rows={7} placeholder={'One ingredient per line\n500 g | Pasta\n2 | Tomatoes\nOlive oil'}/>
+              <small className="field-hint">Use “quantity | ingredient” when you want a separate quantity. Imported ingredients can be corrected here before saving.</small>
             </label>
 
-            <label>Instructions<textarea value={recipeInstructions} onChange={(event)=>setRecipeInstructions(event.target.value)} rows={6} placeholder="Optional preparation steps"/></label>
+            <label>Instructions<textarea value={recipeInstructions} onChange={(event)=>setRecipeInstructions(event.target.value)} rows={7} placeholder="Preparation steps"/></label>
 
             {error && <div className="form-message error">{error}</div>}
-            <div className="composer-footer-right"><button className="primary-button compact" disabled={saving}>{saving?'Saving…':editingRecipeId?'Save changes':'Add recipe'}</button></div>
+            <div className="composer-footer-right">
+              <button className="primary-button compact" disabled={saving}>
+                {saving?'Saving…':editingRecipeId?'Save changes':'Save to Recipe book'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {importOpen && canWrite && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event)=>{
+          if(event.currentTarget===event.target && !importBusy) setImportOpen(false)
+        }}>
+          <form className="modal-card recipe-import-composer" onSubmit={importFromWebsite}>
+            <header>
+              <div><span className="eyebrow">IMPORT FROM WEBSITE</span><h2>Bring a recipe into Famioo</h2></div>
+              <button type="button" className="icon-button" onClick={()=>setImportOpen(false)} disabled={importBusy} aria-label="Close import"><X size={18}/></button>
+            </header>
+
+            <p className="recipe-import-copy">Paste a recipe-page link. Famioo reads the page's structured Recipe data, fills the recipe editor, and lets you review everything before saving.</p>
+
+            <label>Recipe URL
+              <input type="url" value={importUrl} onChange={(event)=>setImportUrl(event.target.value)} placeholder="https://www.chefkoch.de/rezepte/…" required autoFocus/>
+            </label>
+
+            <div className="recipe-supported-sites">
+              <span>Supported now</span>
+              <b>Chefkoch</b><b>LECKER</b><b>essen & trinken</b><b>BBC Good Food</b><b>Allrecipes</b>
+            </div>
+
+            <small className="field-hint">Famioo does not bypass logins or paywalls. The original source link is kept with every imported recipe.</small>
+            {error && <div className="form-message error">{error}</div>}
+
+            <div className="composer-footer-right">
+              <button className="primary-button compact" disabled={importBusy || !importUrl.trim()}>
+                {importBusy?'Reading recipe…':'Import & review'}
+              </button>
+            </div>
           </form>
         </div>
       )}
@@ -663,7 +1039,7 @@ export function MealsPage(){
               <button type="button" className="icon-button" onClick={()=>{setMealOpen(false);resetMeal()}} disabled={saving} aria-label="Close meal form"><X size={18}/></button>
             </header>
 
-            <label>Recipe<Select value={mealRecipeId} onChange={chooseRecipe} options={recipeOptions} ariaLabel="Choose saved recipe"/></label>
+            <label>Recipe from Recipe book<Select value={mealRecipeId} onChange={chooseRecipe} options={recipeOptions} ariaLabel="Choose saved recipe"/></label>
 
             <div className="composer-grid-two aligned-field-row">
               <label>Meal name<input value={mealTitle} onChange={(event)=>setMealTitle(event.target.value)} required/></label>
@@ -686,13 +1062,108 @@ export function MealsPage(){
         </div>
       )}
 
+      {shoppingOpen && shoppingRecipe && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event)=>{
+          if(event.currentTarget===event.target && !shoppingBusy){setShoppingOpen(false);setShoppingRecipe(null)}
+        }}>
+          <section className="modal-card recipe-shopping-composer">
+            <header>
+              <div><span className="eyebrow">SEND TO SHOPPING</span><h2>{shoppingRecipe.title}</h2></div>
+              <button type="button" className="icon-button" onClick={()=>{setShoppingOpen(false);setShoppingRecipe(null)}} disabled={shoppingBusy} aria-label="Close Shopping export"><X size={18}/></button>
+            </header>
+
+            <div className="shopping-export-mode">
+              <button
+                type="button"
+                className={shoppingMode==='existing'?'active':''}
+                disabled={!shoppingLists.length}
+                onClick={()=>{
+                  setShoppingMode('existing')
+                  const id=shoppingListId||shoppingLists[0]?.id||''
+                  setShoppingListId(id)
+                  if(id) void loadShoppingDuplicates(id,shoppingRecipe)
+                }}
+              >
+                Existing Shopping list
+              </button>
+              <button type="button" className={shoppingMode==='new'?'active':''} onClick={()=>{
+                setShoppingMode('new')
+                setShoppingDuplicates(new Set())
+                setShoppingSelected(new Set((ingredientsByRecipe.get(shoppingRecipe.id)??[]).map((item)=>item.id)))
+              }}>
+                New Shopping list
+              </button>
+            </div>
+
+            {shoppingMode==='existing' ? (
+              <label>Choose list
+                <Select
+                  value={shoppingListId}
+                  onChange={(value)=>{
+                    setShoppingListId(value)
+                    void loadShoppingDuplicates(value,shoppingRecipe)
+                  }}
+                  options={shoppingListOptions}
+                  placeholder="Choose Shopping list…"
+                  ariaLabel="Choose Shopping list"
+                />
+              </label>
+            ) : (
+              <label>New list name<input value={shoppingNewTitle} onChange={(event)=>setShoppingNewTitle(event.target.value)} placeholder="e.g. Lidl"/></label>
+            )}
+
+            <div className="shopping-export-ingredients">
+              <header><strong>Ingredients</strong><small>Uncheck anything you do not need.</small></header>
+              {(ingredientsByRecipe.get(shoppingRecipe.id)??[]).map((item)=>(
+                <label key={item.id}>
+                  <input
+                    type="checkbox"
+                    checked={shoppingSelected.has(item.id)}
+                    onChange={(event)=>setShoppingSelected((current)=>{
+                      const next=new Set(current)
+                      if(event.target.checked) next.add(item.id)
+                      else next.delete(item.id)
+                      return next
+                    })}
+                  />
+                  <span>
+                    <strong>{item.quantity ? item.quantity+' · ' : ''}{item.item_text}</strong>
+                    {shoppingDuplicates.has(item.id) && <small>Already in selected list · left unchecked</small>}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            <div className="recipe-shopping-footer">
+              <span>{shoppingSelected.size} selected</span>
+              <button
+                type="button"
+                className="primary-button compact"
+                disabled={shoppingBusy || shoppingSelected.size===0 || (shoppingMode==='existing'&&!shoppingListId) || (shoppingMode==='new'&&!shoppingNewTitle.trim())}
+                onClick={()=>void exportToShopping()}
+              >
+                <ShoppingBag size={14}/>{shoppingBusy?'Adding…':'Add ingredients'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
       <ConfirmDialog
         open={Boolean(confirm)}
-        title={confirm?.kind==='recipe'?'Remove recipe?':'Remove planned meal?'}
-        message={confirm?.kind==='recipe'
-          ? 'The recipe will be archived. Existing planned meals keep their name and date.'
-          : 'This planned meal will be removed'+(confirm?.kind==='meal' && confirm.linkedEventId?' together with its linked Calendar entry.':'.')}
-        confirmLabel="Remove"
+        title={
+          confirm?.kind==='recipe' ? 'Archive recipe?'
+            : confirm?.kind==='deleteRecipe' ? 'Permanently delete recipe?'
+              : 'Remove planned meal?'
+        }
+        message={
+          confirm?.kind==='recipe'
+            ? 'The recipe moves to the Recipe archive. Existing planned meals keep their name and date.'
+            : confirm?.kind==='deleteRecipe'
+              ? 'This recipe and its ingredient list will be permanently removed. Existing planned meals remain as historical meal entries.'
+              : 'This planned meal will be removed'+(confirm?.kind==='meal' && confirm.linkedEventId?' together with its linked Calendar entry.':'.')
+        }
+        confirmLabel={confirm?.kind==='recipe'?'Archive':confirm?.kind==='deleteRecipe'?'Delete permanently':'Remove'}
         danger
         busy={saving}
         onCancel={()=>setConfirm(null)}
