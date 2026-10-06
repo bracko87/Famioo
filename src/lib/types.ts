@@ -25,6 +25,7 @@ export type FamilyProfile = {
 
 export type ModuleCode =
   | 'calendar'
+  | 'calendar_connections'
   | 'tasks'
   | 'checklists'
   | 'shopping'
