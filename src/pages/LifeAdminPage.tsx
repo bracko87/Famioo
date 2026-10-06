@@ -20,6 +20,7 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from '
 import { DatePicker } from '../components/ui/DatePicker'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { Select } from '../components/ui/Select'
+import { PrivacyNotice } from '../components/PrivacyNotice'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
 import { firstName } from '../lib/personName'
@@ -660,6 +661,8 @@ export function LifeAdminPage() {
           </button>
         )}
       </div>
+
+      <PrivacyNotice compact />
 
       <nav className="life-admin-tabs" aria-label="Life Admin sections">
         {tabs.map((item) => (
