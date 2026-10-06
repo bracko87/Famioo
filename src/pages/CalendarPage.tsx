@@ -194,7 +194,7 @@ function parseRrule(rrule: string | null) {
 
 export function CalendarPage() {
   const { household, profiles, modules, user } = useHousehold()
-  const navigate = useNavigate()
+  const routeNavigate = useNavigate()
   const calendarAccess = modules.find((module) => module.code === 'calendar')
   const canWrite = Boolean(calendarAccess?.can_write)
   const mondayFirst = household.week_starts_on === 1
@@ -668,7 +668,7 @@ export function CalendarPage() {
       params.set('event',editingEventId)
       params.set('kind',kind)
     }
-    navigate('/app/projects?' + params.toString())
+    routeNavigate('/app/projects?' + params.toString())
   }
 
   function applyTemplate(nextTemplateId: string) {
