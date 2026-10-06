@@ -21,6 +21,7 @@ import { DatePicker } from '../components/ui/DatePicker'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { Select } from '../components/ui/Select'
+import { PrivacyNotice } from '../components/PrivacyNotice'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
 import { firstName } from '../lib/personName'
@@ -984,6 +985,8 @@ export function HomeCarePage() {
           </div>
         )}
       </div>
+
+      <PrivacyNotice compact />
 
       <nav className="home-care-tabs" aria-label="Home Care sections">
         {tabs.map((item) => (
