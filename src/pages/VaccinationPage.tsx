@@ -1,4 +1,4 @@
-import { CalendarDays, Check, MapPin, Pencil, ShieldCheck, Syringe, X } from 'lucide-react'
+import { CalendarDays, Check, LockKeyhole, MapPin, Pencil, ShieldCheck, Syringe, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { DatePicker } from '../components/ui/DatePicker'
@@ -369,10 +369,10 @@ export function VaccinationPage(){
   if(!access?.enabled){
     return (
       <div className="page vaccination-page">
-        <div className="page-label">VACCINATIONS & CHECK-UPS</div>
+        <div className="page-label">PREVENTION</div>
         <section className="list-card module-placeholder-card">
           <Syringe size={24}/>
-          <strong>Vaccinations & Check-ups is not enabled for this household.</strong>
+          <strong>Prevention is not enabled for this household.</strong>
           <span>This optional Famioo module combines the German child vaccination schedule with U/J preventive check-ups and Calendar synchronization.</span>
         </section>
       </div>
@@ -383,8 +383,8 @@ export function VaccinationPage(){
     <div className="page vaccination-page">
       <div className="page-heading-row">
         <div>
-          <div className="page-label">VACCINATIONS & CHECK-UPS</div>
-          <h1>Vaccinations & Check-ups</h1>
+          <div className="page-label">PREVENTION</div>
+          <h1>Prevention</h1>
           <p className="page-subtitle">Keep each child’s German vaccination plan and U/J preventive examinations together, then place booked appointments directly into the Family Calendar.</p>
         </div>
         <span className="vaccination-source-badge"><ShieldCheck size={14}/>Germany · STIKO + G-BA</span>
@@ -395,6 +395,14 @@ export function VaccinationPage(){
         <div>
           <strong>Planning aid, not a replacement for medical advice</strong>
           <p>Famioo uses the current standard German schedules as templates. The paediatrician, vaccination record and Yellow Book remain authoritative, especially for premature babies, catch-up vaccinations, risk groups, vaccine-product intervals and insurer-specific extra examinations.</p>
+        </div>
+      </section>
+
+      <section className="list-card prevention-data-protection">
+        <LockKeyhole size={18}/>
+        <div>
+          <strong>Protected health data</strong>
+          <p>Your child-health information is encrypted in transit and protected at rest in the Famioo database. Access is restricted by household permissions to authorized household members.</p>
         </div>
       </section>
 
