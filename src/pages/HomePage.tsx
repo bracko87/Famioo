@@ -18,7 +18,7 @@ import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { useHousehold } from '../context/HouseholdContext'
 import { firstName } from '../lib/personName'
 import { supabase } from '../lib/supabase'
-import type { ModuleCode } from '../lib/types'
+import type { CalendarOccurrence, ModuleCode } from '../lib/types'
 
 const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>> = {
   calendar: CalendarDays,
@@ -58,11 +58,16 @@ export function HomePage() {
   const [shoppingCount, setShoppingCount] = useState(0)
   const [costMonthTotal, setCostMonthTotal] = useState(0)
   const [familyPoints, setFamilyPoints] = useState<Record<string, number>>({})
+  const [upcomingEvents, setUpcomingEvents] = useState<CalendarOccurrence[]>([])
 
   useEffect(() => {
     void supabase.rpc('purge_old_archives_v1', { p_household_id: household.id })
 
-    const today = new Date().toISOString().slice(0, 10)
+    const now = new Date()
+    const today = now.toISOString().slice(0, 10)
+    const upcomingEndDate = new Date(now)
+    upcomingEndDate.setDate(upcomingEndDate.getDate() + 10)
+    const upcomingEnd = upcomingEndDate.toISOString().slice(0, 10)
     const calendarModule = modules.find((module) => module.code === 'calendar')
     const tasksModule = modules.find((module) => module.code === 'tasks')
     const checklistsModule = modules.find((module) => module.code === 'checklists')
@@ -73,7 +78,7 @@ export function HomePage() {
       ? supabase.rpc('calendar_occurrences_v1', {
           p_household_id: household.id,
           p_range_start: today,
-          p_range_end: today,
+          p_range_end: upcomingEnd,
         })
       : Promise.resolve({ data: [], error: null })
 
@@ -117,7 +122,17 @@ export function HomePage() {
       : Promise.resolve({ data: [], error: null })
 
     void Promise.all([calendarRequest, tasksRequest, checklistsRequest, shoppingRequest, costsRequest]).then(([events, tasks, lists, shopping, costs]) => {
-      setEventCount(Array.isArray(events.data) ? events.data.length : 0)
+      const occurrenceRows = (Array.isArray(events.data) ? events.data : []) as CalendarOccurrence[]
+      const orderedOccurrences = [...occurrenceRows].sort((a,b) => {
+        const aKey = a.occurrence_start_at ?? ((a.occurrence_start_date ?? '9999-12-31') + 'T00:00:00')
+        const bKey = b.occurrence_start_at ?? ((b.occurrence_start_date ?? '9999-12-31') + 'T00:00:00')
+        return aKey.localeCompare(bKey) || a.title.localeCompare(b.title)
+      })
+      setUpcomingEvents(orderedOccurrences)
+      setEventCount(orderedOccurrences.filter((item) => {
+        const day = item.occurrence_start_date ?? item.occurrence_start_at?.slice(0,10)
+        return day === today
+      }).length)
       setTaskCount(tasks.count ?? 0)
       setChecklistCount(lists.count ?? 0)
       setShoppingCount(shopping.count ?? 0)
@@ -156,6 +171,28 @@ export function HomePage() {
       })
   }, [household.id,modules])
 
+
+  const todayKey = new Date().toISOString().slice(0,10)
+  const todayEvents = upcomingEvents.filter((item) =>
+    (item.occurrence_start_date ?? item.occurrence_start_at?.slice(0,10)) === todayKey,
+  )
+  const nextEvents = upcomingEvents.filter((item) =>
+    (item.occurrence_start_date ?? item.occurrence_start_at?.slice(0,10)) !== todayKey,
+  )
+
+  function occurrenceMeta(item: CalendarOccurrence) {
+    const dayKey = item.occurrence_start_date ?? item.occurrence_start_at?.slice(0,10) ?? ''
+    const dateLabel = dayKey
+      ? new Date(dayKey + 'T12:00:00').toLocaleDateString(undefined,{ weekday:'short',day:'numeric',month:'short' })
+      : ''
+    if (item.all_day || !item.occurrence_start_at) return dateLabel + ' · All day'
+    const time = new Date(item.occurrence_start_at).toLocaleTimeString(undefined,{
+      timeZone:item.event_timezone,
+      hour:'2-digit',
+      minute:'2-digit',
+    })
+    return dateLabel + ' · ' + time
+  }
 
   const metricByCode: Partial<Record<ModuleCode, string>> = {
     calendar: `${eventCount} today`,
@@ -203,6 +240,53 @@ export function HomePage() {
         </div>
 
         <div className="home-future-area">
+          {modules.find((module) => module.code === 'calendar')?.enabled && (
+            <Link className="home-upcoming-calendar list-card" to="/app/calendar">
+              <header>
+                <div>
+                  <span className="eyebrow">UPCOMING</span>
+                  <h2>Today & next 10 days</h2>
+                </div>
+              </header>
+
+              <div className="home-upcoming-calendar-groups">
+                <section>
+                  <div className="home-upcoming-calendar-label">
+                    <span>Today</span>
+                    <small>{todayEvents.length}</small>
+                  </div>
+                  {todayEvents.length ? todayEvents.map((item)=>(
+                    <div className="home-upcoming-calendar-row" key={item.occurrence_key}>
+                      <CalendarDays size={14}/>
+                      <span>
+                        <strong>{item.title}</strong>
+                        <small>{occurrenceMeta(item)}</small>
+                      </span>
+                    </div>
+                  )) : <div className="home-upcoming-calendar-empty">Nothing planned today.</div>}
+                </section>
+
+                <section>
+                  <div className="home-upcoming-calendar-label">
+                    <span>Next 10 days</span>
+                    <small>{nextEvents.length}</small>
+                  </div>
+                  {nextEvents.length ? nextEvents.map((item)=>(
+                    <div className="home-upcoming-calendar-row" key={item.occurrence_key}>
+                      <CalendarDays size={14}/>
+                      <span>
+                        <strong>{item.title}</strong>
+                        <small>{occurrenceMeta(item)}</small>
+                      </span>
+                    </div>
+                  )) : <div className="home-upcoming-calendar-empty">No upcoming events in the next 10 days.</div>}
+                </section>
+              </div>
+
+              <footer>Open Calendar →</footer>
+            </Link>
+          )}
+
           {modules.find((module) => module.code === 'projects')?.enabled && (
             <Link className="home-family-standing list-card" to="/app/projects">
               <header>
