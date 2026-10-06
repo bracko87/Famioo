@@ -356,6 +356,7 @@ export function NotificationsSecuritySettings() {
         </div>
 
         <small className="field-hint">All schedules use {household.timezone} and automatically follow daylight-saving time.</small>
+        <small className="field-hint">Storage downgrade, billing and other essential account emails are transactional notices and are sent separately from optional daily/weekly summaries.</small>
       </section>
 
       <section className="settings-card notification-settings-card passkey-settings-card">
