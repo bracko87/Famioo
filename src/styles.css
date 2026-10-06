@@ -9351,3 +9351,14 @@ b {
     justify-content: flex-start;
   }
 }
+
+
+.danger-icon-button {
+  color: #ad5563;
+}
+
+.danger-icon-button:hover:not(:disabled) {
+  border-color: #ead2d7;
+  background: #fff2f4;
+  color: #984654;
+}
