@@ -13,6 +13,7 @@ import {
   Upload,
   X,
 } from 'lucide-react'
+import jsQR from 'jsqr'
 import {
   useEffect,
   useMemo,
@@ -121,6 +122,57 @@ function safeFileName(name:string){
 
 function getBarcodeDetector(){
   return (window as typeof window&{BarcodeDetector?:BarcodeDetectorConstructor}).BarcodeDetector
+}
+
+function canvasFromVideo(video:HTMLVideoElement,maxSide=960){
+  if(!video.videoWidth||!video.videoHeight) return null
+
+  const scale=Math.min(1,maxSide/Math.max(video.videoWidth,video.videoHeight))
+  const canvas=document.createElement('canvas')
+  canvas.width=Math.max(1,Math.round(video.videoWidth*scale))
+  canvas.height=Math.max(1,Math.round(video.videoHeight*scale))
+  const context=canvas.getContext('2d',{willReadFrequently:true})
+  if(!context) return null
+
+  context.drawImage(video,0,0,canvas.width,canvas.height)
+  return canvas
+}
+
+function detectQrInCanvas(canvas:HTMLCanvasElement){
+  const context=canvas.getContext('2d',{willReadFrequently:true})
+  if(!context) return ''
+
+  const image=context.getImageData(0,0,canvas.width,canvas.height)
+  const result=jsQR(image.data,image.width,image.height,{
+    inversionAttempts:'attemptBoth',
+  })
+
+  return result?.data?.trim()??''
+}
+
+async function canvasFromImageFile(file:File,maxSide=1600){
+  const objectUrl=URL.createObjectURL(file)
+
+  try{
+    const image=new Image()
+    await new Promise<void>((resolve,reject)=>{
+      image.onload=()=>resolve()
+      image.onerror=()=>reject(new Error('Ticket image could not be opened.'))
+      image.src=objectUrl
+    })
+
+    const scale=Math.min(1,maxSide/Math.max(image.naturalWidth,image.naturalHeight))
+    const canvas=document.createElement('canvas')
+    canvas.width=Math.max(1,Math.round(image.naturalWidth*scale))
+    canvas.height=Math.max(1,Math.round(image.naturalHeight*scale))
+    const context=canvas.getContext('2d',{willReadFrequently:true})
+    if(!context) return null
+
+    context.drawImage(image,0,0,canvas.width,canvas.height)
+    return canvas
+  }finally{
+    URL.revokeObjectURL(objectUrl)
+  }
 }
 
 async function captureVideoFrame(video:HTMLVideoElement){
@@ -320,10 +372,6 @@ export function TicketWalletPage(){
     if(!scannerOpen) return
 
     const Detector=getBarcodeDetector()
-    if(!Detector){
-      setScannerError('Live QR scanning is not supported by this browser. Upload a ticket image or enter the code manually.')
-      return
-    }
 
     if(!navigator.mediaDevices?.getUserMedia){
       setScannerError('Camera access is not available in this browser. Upload a ticket image instead.')
@@ -333,7 +381,7 @@ export function TicketWalletPage(){
     let cancelled=false
     let timer=0
     let stream:MediaStream|null=null
-    const detector=new Detector()
+    const detector=Detector?new Detector():null
 
     async function scanLoop(){
       if(cancelled) return
@@ -343,19 +391,33 @@ export function TicketWalletPage(){
         return
       }
 
-      try{
-        const results=await detector.detect(video)
-        const raw=results.find((item)=>item.rawValue?.trim())?.rawValue?.trim()
-        if(raw){
-          const snapshot=await captureVideoFrame(video)
-          if(snapshot) setPendingFile(snapshot)
-          setQrValue(raw)
-          setScannerMessage('QR/barcode detected. Review the ticket details before saving.')
-          setScannerOpen(false)
-          return
+      let raw=''
+
+      if(detector){
+        try{
+          const results=await detector.detect(video)
+          raw=results.find((item)=>item.rawValue?.trim())?.rawValue?.trim()??''
+        }catch{
+          // Native detection is optional; the QR fallback below still runs.
         }
-      }catch{
-        // Keep trying while the camera is active.
+      }
+
+      if(!raw){
+        try{
+          const canvas=canvasFromVideo(video)
+          if(canvas) raw=detectQrInCanvas(canvas)
+        }catch{
+          // Keep trying while the camera is active.
+        }
+      }
+
+      if(raw){
+        const snapshot=await captureVideoFrame(video)
+        if(snapshot) setPendingFile(snapshot)
+        setQrValue(raw)
+        setScannerMessage('QR/barcode detected. Review the ticket details before saving.')
+        setScannerOpen(false)
+        return
       }
 
       timer=window.setTimeout(()=>void scanLoop(),350)
@@ -400,21 +462,33 @@ export function TicketWalletPage(){
   async function detectCodeInImage(file:File){
     if(!file.type.startsWith('image/')) return
 
+    let raw=''
     const Detector=getBarcodeDetector()
-    if(!Detector||!('createImageBitmap' in window)) return
 
-    try{
-      const bitmap=await createImageBitmap(file)
-      const detector=new Detector()
-      const results=await detector.detect(bitmap)
-      bitmap.close()
-      const raw=results.find((item)=>item.rawValue?.trim())?.rawValue?.trim()
-      if(raw){
-        setQrValue(raw)
-        setScannerMessage('QR/barcode detected from the uploaded ticket image.')
+    if(Detector&&'createImageBitmap' in window){
+      try{
+        const bitmap=await createImageBitmap(file)
+        const detector=new Detector()
+        const results=await detector.detect(bitmap)
+        bitmap.close()
+        raw=results.find((item)=>item.rawValue?.trim())?.rawValue?.trim()??''
+      }catch{
+        // Fall through to the browser-independent QR decoder.
       }
-    }catch{
-      // The image remains attached even if browser code detection is unavailable.
+    }
+
+    if(!raw){
+      try{
+        const canvas=await canvasFromImageFile(file)
+        if(canvas) raw=detectQrInCanvas(canvas)
+      }catch{
+        // The ticket can still be saved even if no QR is readable.
+      }
+    }
+
+    if(raw){
+      setQrValue(raw)
+      setScannerMessage('QR/barcode detected from the uploaded ticket image.')
     }
   }
 
@@ -905,7 +979,7 @@ export function TicketWalletPage(){
                 placeholder="QR/barcode value is filled automatically when supported, or it can be pasted here."
               />
 
-              <small>The scanner reads the code itself; it does not send the ticket to an AI service.</small>
+              <small>QR recognition runs locally in the browser and does not use AI. Other barcode formats use the browser’s native detector when available.</small>
             </section>
 
             <section className="ticket-wallet-file-panel">
@@ -936,7 +1010,7 @@ export function TicketWalletPage(){
                 </button>
               )}
 
-              <small>JPG, PNG, WebP or PDF · maximum 15 MB. An uploaded image is also checked locally for a readable QR/barcode when the browser supports it.</small>
+              <small>JPG, PNG, WebP or PDF · maximum 15 MB. Ticket images are checked locally for QR codes; supported browsers can also detect additional barcode formats.</small>
             </section>
 
             <label>
