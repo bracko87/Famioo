@@ -1,4 +1,4 @@
-import { Archive, CalendarSync, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, EyeOff, FolderKanban, Pencil, Plus, Settings2, Trash2, WalletCards, X } from 'lucide-react'
+import { Archive, CalendarSync, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, EyeOff, FolderKanban, LockKeyhole, Pencil, Plus, Settings2, Trash2, WalletCards, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
@@ -290,6 +290,8 @@ export function CalendarPage() {
   const [calendarName,setCalendarName] = useState('')
   const [calendarColorKey,setCalendarColorKey] = useState('purple')
   const [calendarSaving,setCalendarSaving] = useState(false)
+  const [editingExternalReadOnly,setEditingExternalReadOnly] = useState(false)
+  const [editingExternalSource,setEditingExternalSource] = useState('')
 
   const range = useMemo(
     () => rangeFor(view, anchor, mondayFirst),
@@ -444,6 +446,8 @@ export function CalendarPage() {
     setEditingBaseStartDate('')
     setEditingBaseEndDate('')
     setEditingOccurrenceInitialDate('')
+    setEditingExternalReadOnly(false)
+    setEditingExternalSource('')
     setError('')
   }
 
@@ -452,6 +456,8 @@ export function CalendarPage() {
 
     const defaultStart = timedStart ?? currentTimeInZone(household.timezone)
     setEditingEventId(null)
+    setEditingExternalReadOnly(false)
+    setEditingExternalSource('')
     setEditingCalendarId(calendars.find((item) => item.is_default)?.id ?? calendars[0]?.id ?? null)
     setComposerDate(day)
     setEndDate(day)
@@ -481,7 +487,7 @@ export function CalendarPage() {
     const [eventResult, participantResult, ruleResult, reminderResult] = await Promise.all([
       supabase
         .from('calendar_events')
-        .select('id,calendar_id,category_id,title,description,all_day,start_at,end_at,start_date,end_date,event_timezone,location_text')
+        .select('id,calendar_id,category_id,title,description,all_day,start_at,end_at,start_date,end_date,event_timezone,location_text,external_read_only,external_connection_id')
         .eq('id', item.event_id)
         .eq('household_id', household.id)
         .single(),
@@ -511,6 +517,30 @@ export function CalendarPage() {
     }
 
     const row = eventResult.data
+    const externalReadOnly=Boolean(row.external_read_only && row.external_connection_id)
+    setEditingExternalReadOnly(externalReadOnly)
+    setEditingExternalSource('')
+
+    if(externalReadOnly && row.external_connection_id){
+      const sourceResult=await supabase
+        .from('calendar_connections')
+        .select('display_name,provider')
+        .eq('household_id',household.id)
+        .eq('id',row.external_connection_id)
+        .maybeSingle()
+
+      if(sourceResult.data){
+        const provider=sourceResult.data.provider==='ics'
+          ? 'ICS'
+          : sourceResult.data.provider==='microsoft'
+            ? 'Microsoft 365'
+            : sourceResult.data.provider==='google'
+              ? 'Google Calendar'
+              : 'External calendar'
+        setEditingExternalSource(sourceResult.data.display_name+' · '+provider)
+      }
+    }
+
     const timezone = row.event_timezone || household.timezone
     const baseStartDate = row.all_day
       ? row.start_date ?? dateKey(anchor)
@@ -730,6 +760,7 @@ export function CalendarPage() {
   }
 
   async function deleteEvent(scope: DeleteScope = 'all') {
+    if (editingExternalReadOnly) return
     if (!editingEventId || !canWrite || deleting) return
 
     setDeleting(true)
@@ -922,6 +953,10 @@ export function CalendarPage() {
   }
 
   async function save(event: FormEvent) {
+    if (editingExternalReadOnly) {
+      event.preventDefault()
+      return
+    }
     event.preventDefault()
     if (!canWrite || !composerDate || !title.trim() || !calendars.length) return
 
@@ -1309,7 +1344,7 @@ export function CalendarPage() {
           <form className="modal-card event-composer" onSubmit={save}>
             <header>
               <div>
-                <span className="eyebrow">{editingEventId ? 'EDIT EVENT' : 'NEW EVENT'}</span>
+                <span className="eyebrow">{editingExternalReadOnly ? 'SYNCED EVENT' : editingEventId ? 'EDIT EVENT' : 'NEW EVENT'}</span>
                 <h2>
                   {new Date(composerDate + 'T12:00:00').toLocaleDateString(undefined, {
                     weekday: 'long',
@@ -1322,6 +1357,16 @@ export function CalendarPage() {
                 <X size={18} />
               </button>
             </header>
+
+            {editingExternalReadOnly && (
+              <div className="external-event-notice">
+                <LockKeyhole size={16}/>
+                <span>
+                  <strong>Synced read-only event</strong>
+                  <small>{editingExternalSource || 'External calendar'} · Source event details are managed by the connected calendar. Famioo links below remain available.</small>
+                </span>
+              </div>
+            )}
 
             {!editingEventId && (
               <label>
@@ -1341,7 +1386,7 @@ export function CalendarPage() {
 
             <label>
               Title
-              <input value={title} onChange={(event) => setTitle(event.target.value)} autoFocus required />
+              <input value={title} onChange={(event) => setTitle(event.target.value)} autoFocus={!editingExternalReadOnly} readOnly={editingExternalReadOnly} required />
             </label>
 
             <div className="composer-grid-two">
@@ -1352,6 +1397,7 @@ export function CalendarPage() {
                   onChange={setComposerDate}
                   format={household.date_format}
                   ariaLabel="Choose event start date"
+                  disabled={editingExternalReadOnly}
                 />
               </label>
 
@@ -1363,6 +1409,7 @@ export function CalendarPage() {
                   min={composerDate}
                   format={household.date_format}
                   ariaLabel="Choose event end date"
+                  disabled={editingExternalReadOnly}
                 />
               </label>
             </div>
@@ -1373,6 +1420,7 @@ export function CalendarPage() {
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder="Optional details"
+                readOnly={editingExternalReadOnly}
               />
             </label>
 
@@ -1387,6 +1435,7 @@ export function CalendarPage() {
                   dotColor:categoryColor(item.color_key),
                 }))}
                 ariaLabel="Choose calendar"
+                disabled={editingExternalReadOnly}
               />
             </label>
 
@@ -1402,11 +1451,12 @@ export function CalendarPage() {
                     dotColor: categoryColor(item.color_key),
                   }))}
                   ariaLabel="Choose event category"
+                  disabled={editingExternalReadOnly}
                 />
               </label>
 
               <label className="all-day-control">
-                <input type="checkbox" checked={allDay} onChange={(event) => setAllDay(event.target.checked)} />
+                <input type="checkbox" checked={allDay} onChange={(event) => setAllDay(event.target.checked)} disabled={editingExternalReadOnly} />
                 <span>All day</span>
               </label>
             </div>
@@ -1415,12 +1465,12 @@ export function CalendarPage() {
               <div className="composer-grid-two time-range-row">
                 <label>
                   Start time
-                  <TimePicker value={startTime} onChange={setStartTime} />
+                  <TimePicker value={startTime} onChange={setStartTime} disabled={editingExternalReadOnly} />
                 </label>
 
                 <label>
                   End time
-                  <TimePicker value={endTime} onChange={setEndTime} />
+                  <TimePicker value={endTime} onChange={setEndTime} disabled={editingExternalReadOnly} />
                 </label>
               </div>
             )}
@@ -1431,6 +1481,7 @@ export function CalendarPage() {
                 value={locationText}
                 onChange={(event) => setLocationText(event.target.value)}
                 placeholder="Optional location"
+                readOnly={editingExternalReadOnly}
               />
               {locationText.trim() && <GoogleMapsLink location={locationText} label="Open in Google Maps" className="field-map-link" />}
             </label>
@@ -1448,6 +1499,7 @@ export function CalendarPage() {
                     { value: 'monthly', label: 'Monthly' },
                   ]}
                   ariaLabel="Repeat event"
+                  disabled={editingExternalReadOnly}
                 />
               </label>
 
@@ -1470,6 +1522,7 @@ export function CalendarPage() {
                       }
                     })}
                     ariaLabel="Repeat interval"
+                    disabled={editingExternalReadOnly}
                   />
                 </label>
               )}
@@ -1492,6 +1545,7 @@ export function CalendarPage() {
                       type="button"
                       className={repeatDays.includes(code) ? 'active' : ''}
                       key={code}
+                      disabled={editingExternalReadOnly}
                       onClick={() => setRepeatDays((current) => current.includes(code)
                         ? current.filter((item) => item !== code)
                         : [...current, code])}
@@ -1512,49 +1566,56 @@ export function CalendarPage() {
                   min={composerDate}
                   format={household.date_format}
                   ariaLabel="Choose repeat end date"
+                  disabled={editingExternalReadOnly}
                 />
                 <small className="field-hint">Optional. Leave blank for no end date.</small>
               </label>
             )}
 
-            <fieldset className="calendar-reminder-fieldset">
-              <legend>Notification</legend>
-
-              <label className="composer-option">
-                <input
-                  type="checkbox"
-                  checked={notificationEnabled}
-                  onChange={(event) => setNotificationEnabled(event.target.checked)}
-                />
-                <span>
-                  <span>Notify participants</span>
-                  <small>Send a push reminder to selected participants who have Famioo login access and push notifications enabled.</small>
-                </span>
-              </label>
-
-              {notificationEnabled && (
-                <label className="calendar-reminder-select">
-                  Remind
-                  <Select
-                    value={reminderValue}
-                    onChange={(value) => setReminderValue(value as typeof reminderValue)}
-                    options={[
-                      { value: 'morning', label: 'Morning of event · 08:00' },
-                      { value: '0', label: 'At event time' },
-                      { value: '10', label: '10 minutes before' },
-                      { value: '30', label: '30 minutes before' },
-                      { value: '60', label: '1 hour before' },
-                      { value: '1440', label: '1 day before' },
-                    ]}
-                    ariaLabel="Choose calendar reminder time"
+            {editingExternalReadOnly ? (
+              <div className="external-event-local-note">
+                Notifications for this synced event stay with the source calendar. Famioo-local linked items can still be added below.
+              </div>
+            ) : (
+              <fieldset className="calendar-reminder-fieldset">
+                <legend>Notification</legend>
+  
+                <label className="composer-option">
+                  <input
+                    type="checkbox"
+                    checked={notificationEnabled}
+                    onChange={(event) => setNotificationEnabled(event.target.checked)}
                   />
+                  <span>
+                    <span>Notify participants</span>
+                    <small>Send a push reminder to selected participants who have Famioo login access and push notifications enabled.</small>
+                  </span>
                 </label>
-              )}
-
-              {notificationEnabled && participantIds.length === 0 && (
-                <small className="field-hint">Choose at least one participant to receive this reminder.</small>
-              )}
-            </fieldset>
+  
+                {notificationEnabled && (
+                  <label className="calendar-reminder-select">
+                    Remind
+                    <Select
+                      value={reminderValue}
+                      onChange={(value) => setReminderValue(value as typeof reminderValue)}
+                      options={[
+                        { value: 'morning', label: 'Morning of event · 08:00' },
+                        { value: '0', label: 'At event time' },
+                        { value: '10', label: '10 minutes before' },
+                        { value: '30', label: '30 minutes before' },
+                        { value: '60', label: '1 hour before' },
+                        { value: '1440', label: '1 day before' },
+                      ]}
+                      ariaLabel="Choose calendar reminder time"
+                    />
+                  </label>
+                )}
+  
+                {notificationEnabled && participantIds.length === 0 && (
+                  <small className="field-hint">Choose at least one participant to receive this reminder.</small>
+                )}
+              </fieldset>
+            )}
 
             {editingEventId && (
               <div className="event-module-connections">
@@ -1661,30 +1722,32 @@ export function CalendarPage() {
               </div>
             )}
 
-            <fieldset className="participant-fieldset event-participants-box">
-              <legend>Participants</legend>
-              <div className="profile-choice-grid">
-                {profiles.map((profile) => (
-                  <label className="profile-choice profile-choice-plain" key={profile.id}>
-                    <input
-                      type="checkbox"
-                      checked={participantIds.includes(profile.id)}
-                      onChange={(event) => {
-                        setParticipantIds((current) => event.target.checked
-                          ? [...current, profile.id]
-                          : current.filter((id) => id !== profile.id))
-                      }}
-                    />
-                    <ProfileAvatar
-                      avatarPath={profile.avatar_path}
-                      name={profile.display_name}
-                      size="sm"
-                    />
-                    <span className="profile-choice-name">{firstName(profile.display_name)}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+            {!editingExternalReadOnly && (
+              <fieldset className="participant-fieldset event-participants-box">
+                <legend>Participants</legend>
+                <div className="profile-choice-grid">
+                  {profiles.map((profile) => (
+                    <label className="profile-choice profile-choice-plain" key={profile.id}>
+                      <input
+                        type="checkbox"
+                        checked={participantIds.includes(profile.id)}
+                        onChange={(event) => {
+                          setParticipantIds((current) => event.target.checked
+                            ? [...current, profile.id]
+                            : current.filter((id) => id !== profile.id))
+                        }}
+                      />
+                      <ProfileAvatar
+                        avatarPath={profile.avatar_path}
+                        name={profile.display_name}
+                        size="sm"
+                      />
+                      <span className="profile-choice-name">{firstName(profile.display_name)}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            )}
 
             {!editingEventId && (
               <div className="composer-option-list">
@@ -1700,7 +1763,7 @@ export function CalendarPage() {
 
             {error && <div className="form-message error">{error}</div>}
 
-            {editingEventId && deleteOptionsOpen && editingRecurring && (
+            {editingEventId && !editingExternalReadOnly && deleteOptionsOpen && editingRecurring && (
               <div className="event-delete-options">
                 <strong>Which occurrence should be deleted?</strong>
                 <div>
@@ -1712,21 +1775,29 @@ export function CalendarPage() {
             )}
 
             <div className="event-composer-actions">
-              {editingEventId && (
-                <button
-                  type="button"
-                  className="secondary-button compact danger-button event-delete-button"
-                  disabled={saving || deleting}
-                  onClick={() => editingRecurring ? setDeleteOptionsOpen((current) => !current) : requestDelete('all')}
-                >
-                  <Trash2 size={14} />
-                  {deleting ? 'Deleting…' : 'Delete'}
+              {editingExternalReadOnly ? (
+                <button type="button" className="secondary-button compact" onClick={closeComposer}>
+                  Close
                 </button>
-              )}
+              ) : (
+                <>
+                  {editingEventId && (
+                    <button
+                      type="button"
+                      className="secondary-button compact danger-button event-delete-button"
+                      disabled={saving || deleting}
+                      onClick={() => editingRecurring ? setDeleteOptionsOpen((current) => !current) : requestDelete('all')}
+                    >
+                      <Trash2 size={14} />
+                      {deleting ? 'Deleting…' : 'Delete'}
+                    </button>
+                  )}
 
-              <button className="primary-button compact event-save-button" disabled={saving || deleting}>
-                {saving ? 'Saving…' : editingEventId ? 'Save changes' : 'Save event'}
-              </button>
+                  <button className="primary-button compact event-save-button" disabled={saving || deleting}>
+                    {saving ? 'Saving…' : editingEventId ? 'Save changes' : 'Save event'}
+                  </button>
+                </>
+              )}
             </div>
           </form>
         </div>
