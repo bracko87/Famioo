@@ -33,6 +33,7 @@ export function UsersSettings() {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [birthDate, setBirthDate] = useState('')
   const [role, setRole] = useState<'admin' | 'user'>('user')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -98,7 +99,23 @@ export function UsersSettings() {
         return
       }
 
+      if (birthDate) {
+        const birthResult = await supabase
+          .from('family_profiles')
+          .update({ birth_date: birthDate, updated_at: new Date().toISOString() })
+          .eq('id', String(childResult.data))
+          .eq('household_id', household.id)
+
+        if (birthResult.error) {
+          setMessage('Child profile created, but date of birth could not be saved: ' + birthResult.error.message)
+          await loadUsers()
+          await refresh()
+          return
+        }
+      }
+
       setDisplayName('')
+      setBirthDate('')
       setMessage('Child profile created. No login access was created.')
       await loadUsers()
       await refresh()
@@ -438,6 +455,20 @@ export function UsersSettings() {
               Display name
               <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required />
             </label>
+
+            {profileType === 'child' && (
+              <label>
+                Date of birth
+                <input
+                  type="date"
+                  value={birthDate}
+                  max={new Date().toISOString().slice(0, 10)}
+                  onChange={(event) => setBirthDate(event.target.value)}
+                  required
+                />
+                <small className="field-hint">Used to build the child’s vaccination schedule.</small>
+              </label>
+            )}
 
             {profileType === 'adult' && (mode === 'invite' || identityType === 'email') && (
               <label>
