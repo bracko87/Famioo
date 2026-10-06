@@ -277,20 +277,25 @@ Deno.serve(async(req)=>{
   }
 
   const seen:string[]=[]
+  const failures:string[]=[]
   let imported=0
   let updated=0
   let skipped=0
 
   for(const item of masters){
     const start=parseDateTime(item.dtstart,householdTimezone)
-    if(!start){ skipped+=1; continue }
+    if(!start){
+      skipped+=1
+      failures.push(item.uid+": invalid DTSTART")
+      continue
+    }
 
     if(item.status==="CANCELLED"){
-      await userClient
-        .from("calendar_events")
-        .delete()
-        .eq("external_connection_id",connection.id)
-        .eq("external_uid",item.uid)
+      const deleted=await userClient.rpc("delete_external_calendar_event_v1",{
+        p_connection_id:connection.id,
+        p_external_uid:item.uid,
+      })
+      if(deleted.error) failures.push(item.uid+": "+deleted.error.message)
       continue
     }
 
@@ -300,34 +305,15 @@ Deno.serve(async(req)=>{
     const description=importMode==="full" ? item.description||null : null
     const location=importMode==="full" ? item.location||null : null
     const timezone=start.timezone||householdTimezone
+    const externalUpdatedAt=item.lastModified
+      ? (zonedLocalToUtc(item.lastModified,"UTC")?.toISOString()??new Date().toISOString())
+      : new Date().toISOString()
 
-    const eventRow:any={
-      household_id:connection.household_id,
-      calendar_id:connection.target_calendar_id,
-      category_id:workCategory,
-      title:title.slice(0,200),
-      description,
-      all_day:start.allDay,
-      start_at:start.allDay?null:start.instant,
-      end_at:start.allDay?null:(end?.instant??start.instant),
-      start_date:start.allDay?start.date:null,
-      end_date:start.allDay
-        ? (end?.date ? minusOneDay(end.date) : start.date)
-        : null,
-      event_timezone:timezone,
-      location_text:location,
-      visibility:"household",
-      status:"active",
-      created_by_user_id:connection.created_by_user_id,
-      deleted_at:null,
-      deleted_by_user_id:null,
-      external_connection_id:connection.id,
-      external_uid:item.uid,
-      external_updated_at:item.lastModified
-        ? (zonedLocalToUtc(item.lastModified,"UTC")?.toISOString()??new Date().toISOString())
-        : new Date().toISOString(),
-      external_read_only:true,
-      updated_at:new Date().toISOString(),
+    const exceptions=parseExceptionDates(item.exdates,timezone)
+    for(const override of overridesByUid.get(item.uid)??[]){
+      const recurrence=parseDateTime(override.recurrenceId,timezone)
+      if(recurrence?.allDay&&recurrence.date) exceptions.dates.push(recurrence.date)
+      if(recurrence&&!recurrence.allDay&&recurrence.instant) exceptions.instants.push(recurrence.instant)
     }
 
     const existing=await userClient
@@ -337,92 +323,59 @@ Deno.serve(async(req)=>{
       .eq("external_uid",item.uid)
       .maybeSingle()
 
-    let eventId:string
-    if(existing.data?.id){
-      const result=await userClient
-        .from("calendar_events")
-        .update(eventRow)
-        .eq("id",existing.data.id)
-        .select("id")
-        .single()
-      if(result.error){ skipped+=1; continue }
-      eventId=result.data.id
-      updated+=1
-    }else{
-      const result=await userClient
-        .from("calendar_events")
-        .insert(eventRow)
-        .select("id")
-        .single()
-      if(result.error){ skipped+=1; continue }
-      eventId=result.data.id
-      imported+=1
+    const result=await userClient.rpc("upsert_external_calendar_event_v1",{
+      p_connection_id:connection.id,
+      p_external_uid:item.uid,
+      p_title:title.slice(0,200),
+      p_description:description,
+      p_all_day:start.allDay,
+      p_start_at:start.allDay?null:start.instant,
+      p_end_at:start.allDay?null:(end?.instant??start.instant),
+      p_start_date:start.allDay?start.date:null,
+      p_end_date:start.allDay
+        ? (end?.date ? minusOneDay(end.date) : start.date)
+        : null,
+      p_timezone:timezone,
+      p_location_text:location,
+      p_category_id:workCategory,
+      p_external_updated_at:externalUpdatedAt,
+      p_rrule:normalizeRrule(item.rrule),
+      p_exception_dates:[...new Set(exceptions.dates)],
+      p_exception_instants:[...new Set(exceptions.instants)],
+    })
+
+    if(result.error){
+      skipped+=1
+      failures.push(item.uid+": "+result.error.message)
+      continue
     }
 
+    if(existing.data?.id) updated+=1
+    else imported+=1
     seen.push(item.uid)
 
-    const exceptions=parseExceptionDates(item.exdates,timezone)
-    for(const override of overridesByUid.get(item.uid)??[]){
-      const recurrence=parseDateTime(override.recurrenceId,timezone)
-      if(recurrence?.allDay&&recurrence.date) exceptions.dates.push(recurrence.date)
-      if(recurrence&&!recurrence.allDay&&recurrence.instant) exceptions.instants.push(recurrence.instant)
-    }
-
-    const rrule=normalizeRrule(item.rrule)
-    if(rrule){
-      const existingRule=await userClient
-        .from("event_recurrence_rules")
-        .select("id")
-        .eq("household_id",connection.household_id)
-        .eq("event_id",eventId)
-        .maybeSingle()
-
-      const ruleRow={
-        household_id:connection.household_id,
-        event_id:eventId,
-        rrule,
-        timezone,
-        exception_dates:[...new Set(exceptions.dates)],
-        exception_instants:[...new Set(exceptions.instants)],
-        updated_at:new Date().toISOString(),
-      }
-
-      if(existingRule.data?.id){
-        await userClient.from("event_recurrence_rules").update(ruleRow).eq("id",existingRule.data.id)
-      }else{
-        await userClient.from("event_recurrence_rules").insert(ruleRow)
-      }
-    }else{
-      await userClient
-        .from("event_recurrence_rules")
-        .delete()
-        .eq("household_id",connection.household_id)
-        .eq("event_id",eventId)
-    }
-
-    // Recurrence overrides are represented as standalone read-only events while
-    // the master occurrence is excluded through exception dates/instants.
+    // Recurrence overrides are standalone read-only external events while
+    // their original master occurrence is excluded above.
     for(const override of overridesByUid.get(item.uid)??[]){
       const overrideStart=parseDateTime(override.dtstart,timezone)
-      if(!overrideStart||override.status==="CANCELLED") continue
-      const overrideEnd=parseDateTime(override.dtend,timezone)
       const overrideUid=item.uid+"#"+override.recurrenceId!.value
-      const overrideRow:any={
-        ...eventRow,
-        title:importMode==="busy"?"Busy":(override.summary||item.summary||"Busy").slice(0,200),
-        description:importMode==="full"?(override.description||item.description||null):null,
-        location_text:importMode==="full"?(override.location||item.location||null):null,
-        all_day:overrideStart.allDay,
-        start_at:overrideStart.allDay?null:overrideStart.instant,
-        end_at:overrideStart.allDay?null:(overrideEnd?.instant??overrideStart.instant),
-        start_date:overrideStart.allDay?overrideStart.date:null,
-        end_date:overrideStart.allDay
-          ? (overrideEnd?.date?minusOneDay(overrideEnd.date):overrideStart.date)
-          : null,
-        event_timezone:overrideStart.timezone||timezone,
-        external_uid:overrideUid,
+
+      if(!overrideStart){
+        skipped+=1
+        failures.push(overrideUid+": invalid DTSTART")
+        continue
       }
 
+      if(override.status==="CANCELLED"){
+        const deleted=await userClient.rpc("delete_external_calendar_event_v1",{
+          p_connection_id:connection.id,
+          p_external_uid:overrideUid,
+        })
+        if(deleted.error) failures.push(overrideUid+": "+deleted.error.message)
+        continue
+      }
+
+      const overrideEnd=parseDateTime(override.dtend,timezone)
       const existingOverride=await userClient
         .from("calendar_events")
         .select("id")
@@ -430,30 +383,60 @@ Deno.serve(async(req)=>{
         .eq("external_uid",overrideUid)
         .maybeSingle()
 
-      if(existingOverride.data?.id){
-        await userClient.from("calendar_events").update(overrideRow).eq("id",existingOverride.data.id)
-        updated+=1
-      }else{
-        await userClient.from("calendar_events").insert(overrideRow)
-        imported+=1
+      const overrideResult=await userClient.rpc("upsert_external_calendar_event_v1",{
+        p_connection_id:connection.id,
+        p_external_uid:overrideUid,
+        p_title:(importMode==="busy"?"Busy":(override.summary||item.summary||"Busy")).slice(0,200),
+        p_description:importMode==="full"?(override.description||item.description||null):null,
+        p_all_day:overrideStart.allDay,
+        p_start_at:overrideStart.allDay?null:overrideStart.instant,
+        p_end_at:overrideStart.allDay?null:(overrideEnd?.instant??overrideStart.instant),
+        p_start_date:overrideStart.allDay?overrideStart.date:null,
+        p_end_date:overrideStart.allDay
+          ? (overrideEnd?.date?minusOneDay(overrideEnd.date):overrideStart.date)
+          : null,
+        p_timezone:overrideStart.timezone||timezone,
+        p_location_text:importMode==="full"?(override.location||item.location||null):null,
+        p_category_id:workCategory,
+        p_external_updated_at:externalUpdatedAt,
+        p_rrule:null,
+        p_exception_dates:[],
+        p_exception_instants:[],
+      })
+
+      if(overrideResult.error){
+        skipped+=1
+        failures.push(overrideUid+": "+overrideResult.error.message)
+        continue
       }
+
+      if(existingOverride.data?.id) updated+=1
+      else imported+=1
       seen.push(overrideUid)
     }
   }
 
-  if(seen.length){
-    const existingRows=await userClient
-      .from("calendar_events")
-      .select("id,external_uid")
-      .eq("external_connection_id",connection.id)
+  const prune=await userClient.rpc("prune_external_calendar_events_v1",{
+    p_connection_id:connection.id,
+    p_seen_external_uids:seen,
+  })
+  if(prune.error) failures.push("cleanup: "+prune.error.message)
 
-    const stale=(existingRows.data??[])
-      .filter((row)=>row.external_uid&&!seen.includes(row.external_uid))
-      .map((row)=>row.id)
+  if(failures.length){
+    const message="Calendar sync failed for "+failures.length+" item(s): "+failures.slice(0,3).join(" | ")
+    await userClient.from("calendar_connections").update({
+      status:"error",
+      last_error:message.slice(0,900),
+      updated_at:new Date().toISOString(),
+    }).eq("id",connection.id)
 
-    if(stale.length){
-      await userClient.from("calendar_events").delete().in("id",stale)
-    }
+    return json({
+      error:message,
+      imported,
+      updated,
+      skipped,
+      source_events:parsed.length,
+    },422)
   }
 
   const now=new Date().toISOString()
