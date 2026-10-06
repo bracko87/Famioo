@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, CalendarDays, ClipboardCheck, GripVertical, Plus, ShoppingBag, X } from 'lucide-react'
+import { Archive, ArchiveRestore, CalendarDays, ClipboardCheck, GripVertical, Plus, ShoppingBag, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { Select } from '../components/ui/Select'
@@ -115,7 +115,14 @@ export function ShoppingPage() {
     if (eventResult.error) {
       setError((current) => current || eventResult.error.message)
     } else {
-      setEvents((eventResult.data ?? []) as CalendarOccurrence[])
+      const shoppingCategoryIds = new Set(
+        (categoryResult.data ?? [])
+          .filter((category) => ['shopping','shoping','einkaufen'].includes(String(category.name).trim().toLowerCase()))
+          .map((category) => category.id),
+      )
+      setEvents(((eventResult.data ?? []) as CalendarOccurrence[]).filter(
+        (event) => Boolean(event.category_id && shoppingCategoryIds.has(event.category_id)),
+      ))
     }
   }
 
@@ -261,6 +268,24 @@ export function ShoppingPage() {
     else await load()
   }
 
+  async function removeItem(item: ShoppingItem) {
+    if (!canWrite) return
+
+    setError('')
+    const result = await supabase
+      .from('shopping_items')
+      .delete()
+      .eq('household_id', household.id)
+      .eq('id', item.id)
+
+    if (result.error) {
+      setError(result.error.message)
+      return
+    }
+
+    setItems((current) => current.filter((row) => row.id !== item.id))
+  }
+
   function beginArchive(list: ShoppingList) {
     setArchiveTarget(list)
     setArchiveCost('')
@@ -358,7 +383,6 @@ export function ShoppingPage() {
               )}
               {list.scheduled_date && <span>{list.scheduled_date}</span>}
               {list.location_text && <GoogleMapsLink location={list.location_text} />}
-            {list.linked_task_id && <span><ClipboardCheck size={11} />Tasks</span>}
               {list.linked_event_id && <span><CalendarDays size={11} />Calendar</span>}
               {list.linked_task_id && <span><ClipboardCheck size={11} />Tasks</span>}
             </div>
@@ -377,17 +401,29 @@ export function ShoppingPage() {
 
         <div className="shopping-items">
           {listItems.map((item) => (
-            <button
-              type="button"
-              className={item.checked ? 'shopping-item checked' : 'shopping-item'}
-              key={item.id}
-              onClick={() => void toggleItem(item)}
-              disabled={!canWrite}
-            >
-              <span className="shopping-check">{item.checked ? '✓' : ''}</span>
-              <span className="shopping-item-name">{item.item_text}</span>
-              {item.quantity && <small>{item.quantity}</small>}
-            </button>
+            <div className={item.checked ? 'shopping-item checked' : 'shopping-item'} key={item.id}>
+              <button
+                type="button"
+                className="shopping-item-toggle"
+                onClick={() => void toggleItem(item)}
+                disabled={!canWrite}
+              >
+                <span className="shopping-check">{item.checked ? '✓' : ''}</span>
+                <span className="shopping-item-name">{item.item_text}</span>
+                {item.quantity && <small>{item.quantity}</small>}
+              </button>
+              {canWrite && (
+                <button
+                  type="button"
+                  className="shopping-item-remove"
+                  onClick={() => void removeItem(item)}
+                  aria-label={'Remove '+item.item_text+' from shopping list'}
+                  title="Remove item"
+                >
+                  <Trash2 size={14}/>
+                </button>
+              )}
+            </div>
           ))}
         </div>
 
