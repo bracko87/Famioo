@@ -1105,6 +1105,80 @@ revoke all on function public.set_child_birth_date_v1(uuid,uuid,date) from publi
 grant execute on function public.set_child_birth_date_v1(uuid,uuid,date) to authenticated;
 
 
+-- Separate Calendar category for U/J preventive examinations.
+insert into public.event_categories(
+  household_id,name,color_key,icon_key,sort_order,is_system,active,created_by_user_id
+)
+select
+  h.id,
+  'Child Check-up',
+  'green',
+  'child-checkup-default',
+  coalesce((select max(ec.sort_order) from public.event_categories ec where ec.household_id=h.id),0)+10,
+  true,
+  true,
+  null
+from public.households h
+where not exists(
+  select 1
+  from public.event_categories ec
+  where ec.household_id=h.id
+    and lower(ec.name)='child check-up'
+    and ec.active
+);
+
+insert into public.module_category_availability(
+  household_id,module_code,category_id,enabled,updated_at
+)
+select ec.household_id,m.code,ec.id,true,now()
+from public.event_categories ec
+cross join (values ('calendar'),('vaccinations')) as m(code)
+where ec.active
+  and lower(ec.name)='child check-up'
+on conflict(household_id,module_code,category_id)
+do update set enabled=true,updated_at=now();
+
+create or replace function private.checkup_category_id(p_household_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path=public,private,pg_temp
+as $$
+declare
+  v_category uuid;
+begin
+  select id into v_category
+  from public.event_categories
+  where household_id=p_household_id
+    and active
+    and lower(name)='child check-up'
+  order by created_at
+  limit 1;
+
+  if v_category is null then
+    insert into public.event_categories(
+      household_id,name,color_key,icon_key,sort_order,is_system,active,created_by_user_id
+    )
+    values(
+      p_household_id,
+      'Child Check-up',
+      'green',
+      'child-checkup-default',
+      coalesce((select max(sort_order) from public.event_categories where household_id=p_household_id),0)+10,
+      true,
+      true,
+      null
+    )
+    returning id into v_category;
+  end if;
+
+  return v_category;
+end;
+$$;
+
+revoke all on function private.checkup_category_id(uuid) from public,anon,authenticated;
+
+
 create or replace function public.save_child_checkup_entry_v1(
   p_entry_id uuid,
   p_household_id uuid,
@@ -1257,7 +1331,7 @@ begin
       case when p_scheduled_time is null then p_scheduled_date else null end,
       v_timezone,
       nullif(trim(p_location_text),''),
-      private.vaccination_category_id(p_household_id),
+      private.checkup_category_id(p_household_id),
       'household',
       v_participants,
       null,
