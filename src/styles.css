@@ -9362,3 +9362,563 @@ b {
   background: #fff2f4;
   color: #984654;
 }
+
+
+/* =========================================================
+   Famioo UI polish: stable promo rows, compact event links,
+   in-app confirmations, recurring scope and Meals & Recipes
+   ========================================================= */
+
+.promo-copy {
+  width: min(820px, 70%);
+  display: grid;
+  grid-template-rows: auto auto auto auto;
+  align-content: center;
+  justify-items: start;
+  gap: 0;
+}
+
+.promo-copy .eyebrow {
+  white-space: nowrap;
+}
+
+.promo-copy h2 {
+  width: 100%;
+  margin: 8px 0 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.promo-copy p {
+  width: 100%;
+  max-width: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.promo-copy .promo-action {
+  margin-top: 16px;
+  grid-row: 4;
+}
+
+.event-connection-card {
+  min-height: 48px;
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.event-connection-head {
+  min-width: 0;
+  align-items: center;
+}
+
+.event-connection-head small {
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-connection-actions {
+  margin-top: 0;
+  justify-content: flex-end;
+}
+
+.event-link-button {
+  min-height: 29px !important;
+  padding: 0 9px !important;
+  font-size: 8px !important;
+}
+
+.event-project-scope {
+  grid-column: 1 / -1;
+  padding-top: 8px;
+  border-top: 1px solid #eee7f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.event-project-scope > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.event-project-scope strong {
+  color: #65586a;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.event-project-scope small {
+  color: #9a8e9e;
+  font-size: 8px;
+}
+
+.event-project-scope > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.event-linked-details summary {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 8.5px;
+}
+
+.event-linked-details-body {
+  padding: 7px 10px;
+  gap: 6px;
+}
+
+.event-linked-checklist {
+  gap: 3px;
+}
+
+.event-linked-checklist > strong {
+  font-size: 8.5px;
+}
+
+.event-linked-check-item {
+  min-height: 25px;
+  grid-template-columns: 17px minmax(0,1fr);
+  gap: 6px;
+  font-size: 8px;
+}
+
+.event-linked-check-item > span {
+  width: 15px;
+  height: 15px;
+  border-radius: 5px;
+}
+
+.event-cost-row {
+  min-height: 26px;
+  font-size: 8px;
+}
+
+.event-cost-row strong {
+  font-size: 8px;
+}
+
+.event-cost-add {
+  grid-template-columns: minmax(0,1fr) 110px auto;
+  gap: 6px;
+}
+
+.event-cost-add input {
+  min-height: 32px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.event-participants-box {
+  margin: 0 !important;
+  padding: 10px 12px 11px !important;
+  border: 1px solid #e8dfea !important;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.event-participants-box legend {
+  padding: 0 5px;
+  margin: 0 0 4px !important;
+  color: #65586a;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.event-participants-box .profile-choice-grid {
+  gap: 3px 18px;
+}
+
+.event-composer-actions {
+  justify-content: flex-end;
+}
+
+.event-composer-actions .danger-button,
+.event-composer-actions .event-delete-button {
+  margin-right: 0 !important;
+}
+
+.event-delete-options {
+  margin-left: auto;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.event-delete-options > div {
+  justify-content: flex-end;
+}
+
+.confirm-dialog-backdrop {
+  z-index: 1300;
+}
+
+.confirm-dialog {
+  width: min(440px, calc(100vw - 28px));
+  padding: 18px;
+  border: 1px solid #e7dce9;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(48,29,57,.25);
+}
+
+.confirm-dialog > header {
+  display: grid;
+  grid-template-columns: 36px minmax(0,1fr) 30px;
+  align-items: start;
+  gap: 10px;
+}
+
+.confirm-dialog > header > div {
+  min-width: 0;
+}
+
+.confirm-dialog h2 {
+  margin: 3px 0 0;
+  color: #514555;
+  font-size: 16px;
+}
+
+.confirm-dialog-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #78549a;
+  background: #f2ebf7;
+}
+
+.confirm-dialog-icon.danger {
+  color: #a65160;
+  background: #fff0f3;
+}
+
+.confirm-dialog > p {
+  margin: 14px 0 0;
+  color: #7d7081;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.confirm-dialog > footer {
+  margin-top: 17px;
+  padding-top: 12px;
+  border-top: 1px solid #eee8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.event-scope-choice {
+  min-height: 42px;
+  padding: 6px 8px;
+  border: 1px solid #e6dbea;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #fbf8fc;
+}
+
+.event-scope-choice > span {
+  margin-right: auto;
+  color: #756878;
+  font-size: 8px;
+}
+
+.event-scope-choice button {
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid #e2d7e6;
+  border-radius: 8px;
+  color: #745583;
+  background: #fff;
+  font-size: 8px;
+}
+
+.event-scope-choice button.active {
+  border-color: #a985ba;
+  color: #fff;
+  background: linear-gradient(135deg,#7747cf,#c252a3);
+}
+
+.event-source-note {
+  width: 100%;
+}
+
+.projects-composer-footer,
+.composer-footer-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.projects-composer-footer > .danger-button {
+  margin-right: auto;
+}
+
+/* Meals & Recipes */
+.meals-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.meals-tabs {
+  margin-bottom: 16px;
+}
+
+.meal-plan-list,
+.recipe-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.recipe-grid {
+  grid-template-columns: repeat(2,minmax(0,1fr));
+}
+
+.meal-day-card,
+.recipe-card {
+  padding: 14px;
+}
+
+.meal-day-card > header,
+.recipe-card > header {
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee8f0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.meal-day-card h2,
+.recipe-card h2 {
+  margin: 3px 0 0;
+  color: #514555;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.meal-day-card > header > span {
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  color: #76538a;
+  background: #f1eaf5;
+  font-size: 8px;
+}
+
+.meal-day-items {
+  display: grid;
+}
+
+.meal-plan-row {
+  min-height: 54px;
+  padding: 8px 2px;
+  border-bottom: 1px solid #f0ebf2;
+  display: grid;
+  grid-template-columns: 76px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.meal-plan-row:last-child {
+  border-bottom: 0;
+}
+
+.meal-type-chip {
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #725485;
+  background: #f1eaf5;
+  font-size: 8px;
+  text-transform: capitalize;
+}
+
+.meal-plan-row > div:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.meal-plan-row strong {
+  color: #594e5d;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.meal-plan-row small {
+  color: #998d9d;
+  font-size: 8px;
+}
+
+.meal-row-actions,
+.recipe-actions {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.recipe-card > p {
+  margin: 10px 0 0;
+  color: #7b6f7f;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.recipe-meta {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+  color: #918595;
+  font-size: 8px;
+}
+
+.recipe-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.recipe-ingredients {
+  margin-top: 10px;
+  border: 1px solid #ebe2ed;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.recipe-ingredients summary {
+  min-height: 34px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  color: #6c5f70;
+  background: #fcfafc;
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.recipe-ingredients > div {
+  padding: 7px 10px;
+  display: grid;
+  gap: 5px;
+}
+
+.recipe-ingredients > div > span {
+  display: grid;
+  grid-template-columns: 70px minmax(0,1fr);
+  gap: 7px;
+  color: #746878;
+  font-size: 8px;
+}
+
+.recipe-ingredients b {
+  color: #8b7394;
+  font-weight: 600;
+}
+
+.recipe-card > footer {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #eee8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.meals-composer {
+  width: min(760px,100%);
+  max-height: min(880px,92vh);
+  overflow-y: auto;
+}
+
+@media (max-width: 700px) {
+  .promo-copy {
+    width: 90%;
+  }
+
+  .promo-copy h2 {
+    max-width: 100% !important;
+    font-size: clamp(17px,5.2vw,22px);
+  }
+
+  .promo-copy p {
+    max-width: 100% !important;
+    font-size: 9px;
+  }
+
+  .event-connection-card {
+    grid-template-columns: 1fr;
+  }
+
+  .event-connection-head small {
+    display: none;
+  }
+
+  .event-connection-actions {
+    justify-content: flex-start;
+  }
+
+  .event-project-scope {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .event-project-scope > div {
+    flex-wrap: wrap;
+  }
+
+  .event-cost-add,
+  .recipe-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .event-composer-actions {
+    justify-content: flex-end;
+  }
+
+  .event-composer-actions .event-delete-button,
+  .event-composer-actions .event-save-button {
+    width: auto !important;
+  }
+
+  .event-scope-choice {
+    flex-wrap: wrap;
+  }
+
+  .event-scope-choice > span {
+    width: 100%;
+  }
+
+  .meal-plan-row {
+    grid-template-columns: 68px minmax(0,1fr) auto;
+  }
+
+  .meals-heading-actions {
+    width: 100%;
+  }
+
+  .meals-heading-actions > button {
+    flex: 1;
+  }
+}
