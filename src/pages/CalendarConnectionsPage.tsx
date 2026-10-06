@@ -615,7 +615,7 @@ export function CalendarConnectionsPage(){
 
         <div className="calendar-file-privacy-note">
           <strong>Nothing is imported automatically</strong>
-          <span>The screenshot is analyzed only to produce a draft list. You choose which detected events are added to Famioo.</span>
+          <span>The screenshot is sent to the extraction service for this request and is not saved in Famioo file storage. You choose which detected events are added to the calendar.</span>
         </div>
 
         <div className="composer-footer-right">
