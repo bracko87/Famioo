@@ -175,31 +175,19 @@ Deno.serve(async(req:Request)=>{
     return json({error:"You do not have access to this household."},403)
   }
 
-  const moduleRow=await adminClient
-    .from("modules")
-    .select("is_core,is_active")
-    .eq("code","meals")
-    .maybeSingle()
+  // Use the same entitlement RPC as the Famioo application. This avoids
+  // a second, service-role-specific interpretation of household module access.
+  const moduleAccess=await userClient.rpc("household_module_enabled_v1",{
+    p_household_id:householdId,
+    p_module_code:"meals",
+  })
 
-  const moduleAccess=await adminClient
-    .from("household_modules")
-    .select("enabled,valid_until")
-    .eq("household_id",householdId)
-    .eq("module_code","meals")
-    .maybeSingle()
+  if(moduleAccess.error) {
+    console.error("recipe module entitlement check failed",moduleAccess.error)
+    return json({error:"Famioo could not verify Meals & Recipes access. Please try again."},503)
+  }
 
-  const entitled=Boolean(
-    moduleRow.data?.is_active
-    && (
-      moduleRow.data?.is_core
-      || (
-        moduleAccess.data?.enabled
-        && (!moduleAccess.data.valid_until || new Date(moduleAccess.data.valid_until).getTime()>Date.now())
-      )
-    )
-  )
-
-  if(!entitled) return json({error:"Meals & Recipes is not enabled for this household."},403)
+  if(moduleAccess.data!==true) return json({error:"Meals & Recipes is not enabled for this household."},403)
 
   let url:URL
   try{ url=new URL(rawUrl) } catch { return json({error:"Enter a valid recipe URL."},400) }
