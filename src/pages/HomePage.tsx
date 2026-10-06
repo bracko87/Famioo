@@ -9,6 +9,7 @@ import {
   Receipt,
   ShoppingBag,
   Sparkles,
+  Syringe,
   Utensils,
 } from 'lucide-react'
 import { useEffect, useState, type ComponentType } from 'react'
@@ -33,6 +34,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   meals: Utensils,
   files: FileText,
   assistant: Sparkles,
+  vaccinations: Syringe,
 }
 
 const routeByModule: Record<ModuleCode, string> = {
@@ -49,6 +51,7 @@ const routeByModule: Record<ModuleCode, string> = {
   meals: '/app/meals',
   files: '/app/files',
   assistant: '/app/assistant',
+  vaccinations: '/app/vaccinations',
 }
 
 export function HomePage() {
