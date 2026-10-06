@@ -2,7 +2,7 @@ import {
   Archive,
   Camera,
   Download,
-  File,
+  File as FileIcon,
   FileImage,
   FileText,
   FolderOpen,
@@ -484,7 +484,7 @@ export function FilesPage(){
         </section>
       ) : (
         <div className="list-card empty-state files-empty">
-          <File size={28}/>
+          <FileIcon size={28}/>
           <span className="empty-state-title">{tab==='archive'?'No archived files.':'No files here yet.'}</span>
           <span>{tab==='archive'?'Archived files stay here until restored or permanently deleted.':'Upload a document or take a photo with your phone.'}</span>
         </div>
