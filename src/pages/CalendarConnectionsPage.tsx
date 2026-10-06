@@ -119,7 +119,9 @@ async function imageFileToDataUrl(file:File){
 export function CalendarConnectionsPage(){
   const { household,modules,profiles,user }=useHousehold()
   const calendarAccess=modules.find((module)=>module.code==='calendar')
+  const assistantAccess=modules.find((module)=>module.code==='assistant')
   const canWrite=Boolean(calendarAccess?.enabled&&calendarAccess?.can_write)
+  const hasAiAssistant=Boolean(assistantAccess?.enabled)
   const [calendars,setCalendars]=useState<CalendarRow[]>([])
   const [connections,setConnections]=useState<Connection[]>([])
   const [workCategoryId,setWorkCategoryId]=useState<string|null>(null)
@@ -133,6 +135,7 @@ export function CalendarConnectionsPage(){
   const [pasteText,setPasteText]=useState('')
   const [drafts,setDrafts]=useState<ImportDraft[]>([])
   const [saving,setSaving]=useState(false)
+  const [creatingWorkCalendar,setCreatingWorkCalendar]=useState(false)
   const [extracting,setExtracting]=useState<'image'|'text'|null>(null)
   const [syncingId,setSyncingId]=useState<string|null>(null)
   const [deleteConnection,setDeleteConnection]=useState<Connection|null>(null)
@@ -152,6 +155,11 @@ export function CalendarConnectionsPage(){
 
   const calendarById=useMemo(
     ()=>new Map(calendars.map((calendar)=>[calendar.id,calendar])),
+    [calendars],
+  )
+
+  const workCalendar=useMemo(
+    ()=>calendars.find((calendar)=>calendar.name.trim().toLowerCase()==='work')??null,
     [calendars],
   )
 
@@ -189,7 +197,10 @@ export function CalendarConnectionsPage(){
       setTargetCalendarId((current)=>
         rows.some((item)=>item.id===current)
           ? current
-          : rows.find((item)=>item.is_default)?.id??rows[0]?.id??''
+          : rows.find((item)=>item.name.trim().toLowerCase()==='work')?.id
+            ??rows.find((item)=>item.is_default)?.id
+            ??rows[0]?.id
+            ??''
       )
     }
 
@@ -221,6 +232,10 @@ export function CalendarConnectionsPage(){
 
   async function extractDrafts(source:'image'|'text'){
     if(!canWrite||extracting) return
+    if(!hasAiAssistant){
+      setError('AI Assistant is required for screenshot and pasted-text extraction.')
+      return
+    }
     setError('')
     setMessage('')
 
@@ -445,6 +460,39 @@ export function CalendarConnectionsPage(){
     await syncConnection(connectionId,true,textValue)
   }
 
+  async function createWorkCalendar(){
+    if(!canWrite||creatingWorkCalendar) return
+
+    if(workCalendar){
+      setTargetCalendarId(workCalendar.id)
+      setMessage('Work Calendar is ready. Family and Work can be shown together or toggled separately in Calendar.')
+      return
+    }
+
+    setCreatingWorkCalendar(true)
+    setError('')
+    setMessage('')
+
+    const result=await supabase.rpc('save_calendar_v1',{
+      p_calendar_id:null,
+      p_household_id:household.id,
+      p_name:'Work',
+      p_color_key:'blue',
+    })
+
+    setCreatingWorkCalendar(false)
+
+    if(result.error){
+      setError(result.error.message)
+      return
+    }
+
+    const workCalendarId=String(result.data)
+    setTargetCalendarId(workCalendarId)
+    setMessage('Work Calendar created. Add work events manually or use it as the destination for imports. Family and Work can be displayed together.')
+    await load()
+  }
+
   async function removeConnection(){
     if(!deleteConnection||!canWrite) return
     const current=deleteConnection
@@ -493,42 +541,71 @@ export function CalendarConnectionsPage(){
       {message&&<div className="notice success">{message}</div>}
 
       <section className="calendar-provider-grid work-calendar-methods">
-        <article className="calendar-provider-card ready">
+        <article className={'calendar-provider-card ready '+(!hasAiAssistant?'ai-locked':'')}>
           <span className="calendar-provider-icon screenshot"><ImageIcon size={20}/></span>
           <div>
-            <span className="eyebrow">EASIEST FOR COMPANY CALENDARS</span>
+            <span className="eyebrow">AI-ASSISTED IMPORT</span>
             <h2>Calendar screenshot</h2>
-            <p>Upload a week or month screenshot. Famioo detects the occupied blocks and asks you to confirm them before import.</p>
+            <p>Upload a week or month screenshot. AI Assistant detects the occupied blocks and asks you to confirm them before import.</p>
           </div>
-          <span className="calendar-provider-status connected"><Check size={12}/>Available now</span>
-          <button type="button" className="primary-button compact" disabled={!canWrite} onClick={()=>screenshotRef.current?.scrollIntoView({behavior:'smooth',block:'center'})}>
-            Upload screenshot
-          </button>
+          <span className={'calendar-provider-status '+(hasAiAssistant?'connected':'locked')}>
+            <Sparkles size={12}/>{hasAiAssistant?'AI Assistant included':'AI Assistant required'}
+          </span>
+          {hasAiAssistant ? (
+            <button type="button" className="primary-button compact" disabled={!canWrite} onClick={()=>screenshotRef.current?.scrollIntoView({behavior:'smooth',block:'center'})}>
+              Upload screenshot
+            </button>
+          ) : (
+            <Link className="secondary-button compact" to="/app/settings?tab=modules">
+              <Sparkles size={14}/>Get AI Assistant
+            </Link>
+          )}
         </article>
 
         <article className="calendar-provider-card ready local-file">
           <span className="calendar-provider-icon file"><FileUp size={20}/></span>
           <div>
-            <span className="eyebrow">NO COMPANY CONNECTION</span>
+            <span className="eyebrow">NO AI NEEDED</span>
             <h2>Local .ics file</h2>
-            <p>Import a calendar file exported from Outlook or another calendar app. No public calendar link or company OAuth permission is needed.</p>
+            <p>Import a calendar file exported from Outlook or another calendar app. No AI, public calendar link or company OAuth permission is needed.</p>
           </div>
-          <span className="calendar-provider-status connected"><Check size={12}/>Available now</span>
+          <span className="calendar-provider-status connected"><Check size={12}/>Included with Calendar</span>
           <button type="button" className="primary-button compact" disabled={!canWrite} onClick={()=>fileRef.current?.scrollIntoView({behavior:'smooth',block:'center'})}>
             Import .ics file
           </button>
         </article>
 
-        <article className="calendar-provider-card ready">
+        <article className={'calendar-provider-card ready '+(!hasAiAssistant?'ai-locked':'')}>
           <span className="calendar-provider-icon paste"><FileText size={20}/></span>
           <div>
-            <span className="eyebrow">ONE APPOINTMENT OR SMALL LIST</span>
+            <span className="eyebrow">AI-ASSISTED IMPORT</span>
             <h2>Paste appointment</h2>
-            <p>Copy appointment text from Outlook, Teams, email or another source. Famioo turns it into editable event drafts.</p>
+            <p>Copy appointment text from Outlook, Teams, email or another source. AI Assistant turns it into editable event drafts.</p>
           </div>
-          <span className="calendar-provider-status connected"><Check size={12}/>Available now</span>
-          <button type="button" className="primary-button compact" disabled={!canWrite} onClick={()=>pasteRef.current?.scrollIntoView({behavior:'smooth',block:'center'})}>
-            Paste appointment
+          <span className={'calendar-provider-status '+(hasAiAssistant?'connected':'locked')}>
+            <Sparkles size={12}/>{hasAiAssistant?'AI Assistant included':'AI Assistant required'}
+          </span>
+          {hasAiAssistant ? (
+            <button type="button" className="primary-button compact" disabled={!canWrite} onClick={()=>pasteRef.current?.scrollIntoView({behavior:'smooth',block:'center'})}>
+              Paste appointment
+            </button>
+          ) : (
+            <Link className="secondary-button compact" to="/app/settings?tab=modules">
+              <Sparkles size={14}/>Get AI Assistant
+            </Link>
+          )}
+        </article>
+
+        <article className="calendar-provider-card ready manual-work-calendar">
+          <span className="calendar-provider-icon manual"><CalendarSync size={20}/></span>
+          <div>
+            <span className="eyebrow">NO AI NEEDED</span>
+            <h2>Manual Work Calendar</h2>
+            <p>Create a separate Work calendar and enter appointments yourself. Work and Family stay separate but can be viewed together in the same Calendar.</p>
+          </div>
+          <span className="calendar-provider-status connected"><Check size={12}/>{workCalendar?'Work Calendar ready':'Included with Calendar'}</span>
+          <button type="button" className="primary-button compact" disabled={!canWrite||creatingWorkCalendar} onClick={()=>void createWorkCalendar()}>
+            {creatingWorkCalendar?'Creating…':workCalendar?'Use Work Calendar':'Create Work Calendar'}
           </button>
         </article>
       </section>
@@ -538,7 +615,7 @@ export function CalendarConnectionsPage(){
           <div>
             <span className="eyebrow">IMPORT SETTINGS</span>
             <h2>Choose the destination and privacy level</h2>
-            <p>Busy only is the default for company appointments. It removes meeting subjects, notes and locations from the Famioo event.</p>
+            <p>Busy only is the default for company appointments. Screenshot and pasted-text extraction require AI Assistant; .ics and manual Work Calendar do not.</p>
           </div>
         </header>
 
@@ -580,10 +657,10 @@ export function CalendarConnectionsPage(){
         </div>
       </section>
 
-      <section className="work-import-card list-card" ref={screenshotRef}>
+      <section className={'work-import-card list-card '+(!hasAiAssistant?'ai-locked-panel':'')} ref={screenshotRef}>
         <header>
           <div>
-            <span className="eyebrow">SCREENSHOT IMPORT</span>
+            <span className="eyebrow">SCREENSHOT IMPORT · AI ASSISTANT</span>
             <h2>Upload a work-calendar screenshot</h2>
             <p>A week or month view works best. Famioo analyzes the image, then shows every detected block for confirmation before creating events.</p>
           </div>
@@ -596,7 +673,7 @@ export function CalendarConnectionsPage(){
             <input
               type="file"
               accept="image/png,image/jpeg,image/webp"
-              disabled={!canWrite||Boolean(extracting)}
+              disabled={!canWrite||!hasAiAssistant||Boolean(extracting)}
               onChange={(event)=>setScreenshotFile(event.target.files?.[0]??null)}
             />
             <small className="field-hint">Use a clear screenshot with the day/date and time grid visible.</small>
@@ -606,12 +683,23 @@ export function CalendarConnectionsPage(){
             <input
               type="date"
               value={screenshotReferenceDate}
-              disabled={!canWrite||Boolean(extracting)}
+              disabled={!canWrite||!hasAiAssistant||Boolean(extracting)}
               onChange={(event)=>setScreenshotReferenceDate(event.target.value)}
             />
             <small className="field-hint">Used only when the screenshot does not show a complete date.</small>
           </label>
         </div>
+
+        {!hasAiAssistant&&(
+          <div className="work-calendar-ai-required">
+            <Sparkles size={17}/>
+            <span>
+              <strong>AI Assistant required</strong>
+              <small>Screenshot recognition is an AI feature. The option stays visible, but it becomes available only when AI Assistant is purchased for this household.</small>
+            </span>
+            <Link className="secondary-button compact" to="/app/settings?tab=modules">View AI Assistant</Link>
+          </div>
+        )}
 
         <div className="calendar-file-privacy-note">
           <strong>Nothing is imported automatically</strong>
@@ -619,17 +707,17 @@ export function CalendarConnectionsPage(){
         </div>
 
         <div className="composer-footer-right">
-          <button type="button" className="primary-button compact" disabled={!canWrite||!screenshotFile||Boolean(extracting)} onClick={()=>void extractDrafts('image')}>
+          <button type="button" className="primary-button compact" disabled={!canWrite||!hasAiAssistant||!screenshotFile||Boolean(extracting)} onClick={()=>void extractDrafts('image')}>
             <Sparkles size={14}/>
             {extracting==='image'?'Reading screenshot…':'Detect calendar events'}
           </button>
         </div>
       </section>
 
-      <section className="work-import-card list-card" ref={pasteRef}>
+      <section className={'work-import-card list-card '+(!hasAiAssistant?'ai-locked-panel':'')} ref={pasteRef}>
         <header>
           <div>
-            <span className="eyebrow">PASTE APPOINTMENT</span>
+            <span className="eyebrow">PASTE APPOINTMENT · AI ASSISTANT</span>
             <h2>Paste one appointment or a small calendar list</h2>
             <p>Useful when Outlook lets you copy the event details even though company policy blocks external calendar access.</p>
           </div>
@@ -639,13 +727,24 @@ export function CalendarConnectionsPage(){
         <textarea
           className="work-calendar-paste"
           value={pasteText}
-          disabled={!canWrite||Boolean(extracting)}
+          disabled={!canWrite||!hasAiAssistant||Boolean(extracting)}
           onChange={(event)=>setPasteText(event.target.value)}
           placeholder={"Example:\nProject meeting\nTuesday 14:00–15:30\nHamburg Office"}
         />
 
+        {!hasAiAssistant&&(
+          <div className="work-calendar-ai-required">
+            <Sparkles size={17}/>
+            <span>
+              <strong>AI Assistant required</strong>
+              <small>Turning copied appointment text into calendar fields uses AI Assistant. Manual event entry and .ics import remain available without AI.</small>
+            </span>
+            <Link className="secondary-button compact" to="/app/settings?tab=modules">View AI Assistant</Link>
+          </div>
+        )}
+
         <div className="composer-footer-right">
-          <button type="button" className="primary-button compact" disabled={!canWrite||!pasteText.trim()||Boolean(extracting)} onClick={()=>void extractDrafts('text')}>
+          <button type="button" className="primary-button compact" disabled={!canWrite||!hasAiAssistant||!pasteText.trim()||Boolean(extracting)} onClick={()=>void extractDrafts('text')}>
             <Sparkles size={14}/>
             {extracting==='text'?'Reading appointment…':'Create event draft'}
           </button>
@@ -833,9 +932,9 @@ export function CalendarConnectionsPage(){
       <section className="work-calendar-future-note list-card">
         <span className="calendar-provider-icon future"><CalendarSync size={19}/></span>
         <div>
-          <span className="eyebrow">LATER: MOBILE SHARE</span>
-          <h2>What “Share to Famioo” means</h2>
-          <p>In a future native mobile app, Famioo can appear in the phone share menu. Then an Outlook event could be shared to Famioo as a one-off import. The current web/PWA version cannot reliably register that Outlook share action, so it is not shown as a working option yet.</p>
+          <span className="eyebrow">FAMILY + WORK TOGETHER</span>
+          <h2>Separate calendars, one combined view</h2>
+          <p>Work and Family remain separate calendars, so the user controls what belongs where. In the normal Calendar view both are shown together by default, and each calendar can be switched on or off with its calendar chip.</p>
         </div>
       </section>
 
