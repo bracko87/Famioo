@@ -11,6 +11,7 @@ import { AuthPage } from './pages/AuthPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { HomePage } from './pages/HomePage'
 import { CalendarPage } from './pages/CalendarPage'
+import { CalendarConnectionsPage } from './pages/CalendarConnectionsPage'
 import { TasksPage } from './pages/TasksPage'
 import { TaskArchivePage } from './pages/TaskArchivePage'
 import { ChecklistsPage } from './pages/ChecklistsPage'
@@ -139,6 +140,7 @@ function AuthenticatedApp({ user }: { user: User }) {
         <Route path="/app" element={<AppShell />}>
           <Route index element={<HomePage />} />
           <Route path="calendar" element={<CalendarPage />} />
+          <Route path="calendar/connections" element={<CalendarConnectionsPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="tasks/archive" element={<TaskArchivePage />} />
           <Route path="checklists" element={<ChecklistsPage />} />
