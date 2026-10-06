@@ -2,6 +2,7 @@ import { Archive, ArchiveRestore, CalendarDays, ClipboardCheck, GripVertical, Pl
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { Select } from '../components/ui/Select'
+import { PrivacyNotice } from '../components/PrivacyNotice'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
 import { supabase } from '../lib/supabase'
@@ -465,6 +466,8 @@ export function ShoppingPage() {
           </button>
         )}
       </div>
+
+      <PrivacyNotice compact />
 
       {!access?.enabled && <div className="module-access-note">Shopping is not enabled for this household.</div>}
       {access?.enabled && !canWrite && <div className="module-access-note">Read-only access</div>}
