@@ -11,6 +11,7 @@ import {
 import { supabase } from '../../lib/supabase'
 import { Select } from '../ui/Select'
 import { TimePicker } from '../ui/TimePicker'
+import { ConfirmDialog } from '../ui/ConfirmDialog'
 
 type PreferenceRow = {
   push_enabled:boolean
@@ -59,6 +60,7 @@ export function NotificationsSecuritySettings() {
   const [error,setError]=useState('')
   const [passkeys,setPasskeys]=useState<PasskeyRow[]>([])
   const [passkeyBusy,setPasskeyBusy]=useState(false)
+  const [passkeyDelete,setPasskeyDelete]=useState<{id:string;name:string}|null>(null)
   const [passkeySupported,setPasskeySupported]=useState(false)
   const [passkeyServerEnabled,setPasskeyServerEnabled]=useState(true)
 
@@ -242,8 +244,6 @@ export function NotificationsSecuritySettings() {
   }
 
   async function deletePasskey(passkeyId:string,name:string) {
-    if (!window.confirm('Remove '+name+' from Famioo sign-in?')) return
-
     setPasskeyBusy(true)
     setError('')
     setMessage('')
@@ -417,6 +417,16 @@ export function NotificationsSecuritySettings() {
 
       {message && <div className="form-message notification-settings-message">{message}</div>}
       {error && <div className="form-message error notification-settings-message">{error}</div>}
+      <ConfirmDialog
+        open={Boolean(passkeyDelete)}
+        title="Remove device sign-in?"
+        message={passkeyDelete ? 'Remove '+passkeyDelete.name+' from Famioo sign-in?' : ''}
+        confirmLabel="Remove"
+        danger
+        busy={passkeyBusy}
+        onCancel={()=>setPasskeyDelete(null)}
+        onConfirm={()=>{ if(passkeyDelete) void deletePasskey(passkeyDelete.id,passkeyDelete.name).finally(()=>setPasskeyDelete(null)) }}
+      />
     </div>
   )
 }
