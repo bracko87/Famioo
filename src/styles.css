@@ -11750,3 +11750,60 @@ b {
     grid-column: 2;
   }
 }
+
+
+/* Synced external Calendar events */
+.external-event-notice {
+  margin: -1px 0 12px;
+  padding: 10px 11px;
+  border: 1px solid #d8e4df;
+  border-radius: 10px;
+  display: grid;
+  grid-template-columns: 22px minmax(0,1fr);
+  align-items: center;
+  gap: 8px;
+  color: #557164;
+  background: #f2f8f5;
+}
+
+.external-event-notice > svg {
+  color: #5f816f;
+}
+
+.external-event-notice > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.external-event-notice strong {
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.external-event-notice small {
+  color: #7c9187;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.external-event-local-note {
+  padding: 10px 11px;
+  border: 1px solid #e7dfea;
+  border-radius: 10px;
+  color: #8d8092;
+  background: #fbf9fc;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.event-composer input[readonly] {
+  color: #6f6473;
+  background: #faf8fb;
+}
+
+.event-composer .custom-select.disabled,
+.event-composer .date-picker.disabled,
+.event-composer .time-picker:has(.custom-select.disabled) {
+  opacity: .78;
+}
