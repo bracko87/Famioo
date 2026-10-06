@@ -172,7 +172,7 @@ Deno.serve(async(req)=>{
 
   const content:any[]=[{type:"input_text",text:prompt}]
   if(body.source_type==="image"){
-    content.push({type:"input_image",image_url:body.image_data_url})
+    content.push({type:"input_image",image_url:body.image_data_url,detail:"high"})
   }else{
     content.push({
       type:"input_text",
