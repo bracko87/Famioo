@@ -1569,6 +1569,283 @@ export function TicketWalletPage(){
         </div>
       )}
 
+      {scanReviewOpen&&scanDraft&&(
+        <div
+          className="modal-backdrop ticket-scan-review-backdrop"
+          role="presentation"
+          onMouseDown={(event)=>{
+            if(event.currentTarget===event.target&&!scanSaving){
+              setScanReviewOpen(false)
+              setScanDraft(null)
+              setScanFile(null)
+              setError('')
+            }
+          }}
+        >
+          <section className="modal-card ticket-scan-review-card">
+            <header>
+              <div>
+                <span className="eyebrow">RECOGNIZED FROM CODE</span>
+                <h2>Review scanned information</h2>
+                <p>{scanDraft.source_label} · edit anything that is missing or incorrect.</p>
+              </div>
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Close scanned information"
+                onClick={()=>{
+                  if(scanSaving) return
+                  setScanReviewOpen(false)
+                  setScanDraft(null)
+                  setScanFile(null)
+                  setError('')
+                }}
+              >
+                <X size={18}/>
+              </button>
+            </header>
+
+            {scanDraft.source_label==='Sensitive security code'&&(
+              <div className="notice error">
+                This looks like an authentication/2FA secret. Famioo will not offer automatic saving for security credentials.
+              </div>
+            )}
+
+            <div className="ticket-scan-recognition-strip">
+              <span><Check size={14}/>{scanDraft.source_label}</span>
+              {scanDraft.start_date&&<span><CalendarDays size={14}/>Date found</span>}
+              {scanDraft.location_text&&<span><MapPin size={14}/>Location found</span>}
+              {scanDraft.provider_text&&<span><FileText size={14}/>Provider found</span>}
+            </div>
+
+            <div className="composer-grid-two aligned-field-row">
+              <label>
+                Title
+                <input
+                  value={scanDraft.title}
+                  onChange={(event)=>setScanDraft((current)=>current?{...current,title:event.target.value}:current)}
+                  placeholder="What is this?"
+                  autoFocus
+                />
+              </label>
+
+              <label>
+                Best match
+                <Select
+                  value={scanDraft.ticket_type}
+                  onChange={(value)=>setScanDraft((current)=>current?{...current,ticket_type:value as TicketType}:current)}
+                  options={ticketTypes}
+                  ariaLabel="Choose recognized ticket or event type"
+                />
+              </label>
+            </div>
+
+            <div className="composer-grid-two aligned-field-row">
+              <label>
+                Date
+                <DatePicker
+                  value={scanDraft.start_date}
+                  onChange={(value)=>setScanDraft((current)=>current?{...current,start_date:value}:current)}
+                  format={household.date_format}
+                  ariaLabel="Choose recognized date"
+                />
+              </label>
+
+              <label>
+                Start time
+                <TimePicker
+                  value={scanDraft.start_time||'09:00'}
+                  onChange={(value)=>setScanDraft((current)=>current?{...current,start_time:value}:current)}
+                />
+                <button
+                  type="button"
+                  className="text-button ticket-scan-clear-time"
+                  onClick={()=>setScanDraft((current)=>current?{...current,start_time:'',end_time:''}:current)}
+                >
+                  No exact time
+                </button>
+              </label>
+            </div>
+
+            <div className="composer-grid-two aligned-field-row">
+              <label>
+                End date
+                <DatePicker
+                  value={scanDraft.end_date}
+                  onChange={(value)=>setScanDraft((current)=>current?{...current,end_date:value}:current)}
+                  min={scanDraft.start_date||undefined}
+                  format={household.date_format}
+                  ariaLabel="Choose recognized end date"
+                />
+              </label>
+
+              <label>
+                End time
+                <TimePicker
+                  value={scanDraft.end_time||scanDraft.start_time||'11:00'}
+                  onChange={(value)=>setScanDraft((current)=>current?{...current,end_time:value}:current)}
+                />
+                <button
+                  type="button"
+                  className="text-button ticket-scan-clear-time"
+                  onClick={()=>setScanDraft((current)=>current?{...current,end_time:''}:current)}
+                >
+                  No exact end time
+                </button>
+              </label>
+            </div>
+
+            <div className="composer-grid-two aligned-field-row">
+              <label>
+                Provider / organizer
+                <input
+                  value={scanDraft.provider_text}
+                  onChange={(event)=>setScanDraft((current)=>current?{...current,provider_text:event.target.value}:current)}
+                  placeholder="Airline, railway, venue, organization…"
+                />
+              </label>
+
+              <label>
+                Booking / reference
+                <input
+                  value={scanDraft.booking_reference}
+                  onChange={(event)=>setScanDraft((current)=>current?{...current,booking_reference:event.target.value}:current)}
+                  placeholder="Optional"
+                />
+              </label>
+            </div>
+
+            <label>
+              Location
+              <input
+                value={scanDraft.location_text}
+                onChange={(event)=>setScanDraft((current)=>current?{...current,location_text:event.target.value}:current)}
+                placeholder="Airport, station, venue or address"
+              />
+              {scanDraft.location_text.trim()&&(
+                <GoogleMapsLink
+                  location={scanDraft.location_text}
+                  label="Open in Google Maps"
+                  className="field-map-link"
+                />
+              )}
+            </label>
+
+            <label>
+              Notes
+              <textarea
+                value={scanDraft.notes}
+                onChange={(event)=>setScanDraft((current)=>current?{...current,notes:event.target.value}:current)}
+                placeholder="Any extra information"
+              />
+            </label>
+
+            <details className="ticket-scan-raw">
+              <summary><QrCode size={13}/>Raw scanned value</summary>
+              <pre>{scanDraft.raw_value}</pre>
+            </details>
+
+            {(canWriteCalendar&&scanDraft.start_date)&&(
+              <label className="ticket-scan-calendar-select">
+                Calendar
+                <Select
+                  value={calendarId}
+                  onChange={setCalendarId}
+                  options={calendars.map((calendar)=>({
+                    value:calendar.id,
+                    label:calendar.name+(calendar.is_default?' · Default':''),
+                    dotColor:categoryColor(calendar.color_key),
+                  }))}
+                  ariaLabel="Choose Calendar for scanned information"
+                />
+              </label>
+            )}
+
+            {error&&<div className="notice error">{error}</div>}
+
+            {scanDraft.source_label!=='Sensitive security code'&&(
+              <div className="ticket-scan-destinations">
+                <button
+                  type="button"
+                  className="ticket-scan-destination"
+                  disabled={scanSaving||!canWrite}
+                  onClick={()=>void saveScanToWallet(false)}
+                >
+                  <Ticket size={19}/>
+                  <span>
+                    <strong>Ticket Wallet</strong>
+                    <small>Save the code and recognized ticket information.</small>
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  className="ticket-scan-destination primary"
+                  disabled={scanSaving||!canWrite||!canWriteCalendar||!scanDraft.start_date}
+                  onClick={()=>void saveScanToWallet(true)}
+                >
+                  <Ticket size={19}/>
+                  <span>
+                    <strong>Wallet + Calendar</strong>
+                    <small>{scanDraft.start_date?'Keep the ticket and create its Calendar event.':'Add a date first.'}</small>
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  className="ticket-scan-destination"
+                  disabled={scanSaving||!canWriteCalendar||!scanDraft.start_date}
+                  onClick={()=>void saveScanToCalendar()}
+                >
+                  <CalendarDays size={19}/>
+                  <span>
+                    <strong>Calendar only</strong>
+                    <small>{scanDraft.start_date?'Create an event without keeping a wallet ticket.':'Add a date first.'}</small>
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  className="ticket-scan-destination"
+                  disabled={scanSaving||!canWriteLifeAdmin}
+                  onClick={()=>void saveScanToLifeAdmin()}
+                >
+                  <FileText size={19}/>
+                  <span>
+                    <strong>Life Admin · Reference</strong>
+                    <small>{canWriteLifeAdmin?'Keep useful non-event information as a household reference.':'Life Admin write access is required.'}</small>
+                  </span>
+                </button>
+              </div>
+            )}
+
+            <div className="ticket-scan-review-footer">
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={scanSaving||scanDraft.source_label==='Sensitive security code'}
+                onClick={openFullEditorFromScan}
+              >
+                More ticket details
+              </button>
+              <button
+                type="button"
+                className="text-button"
+                disabled={scanSaving}
+                onClick={()=>{
+                  setScanReviewOpen(false)
+                  setScanDraft(null)
+                  setScanFile(null)
+                  setError('')
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
       {scannerOpen&&(
         <div className="modal-backdrop ticket-scanner-backdrop" role="presentation">
           <section className="modal-card ticket-scanner-card">
