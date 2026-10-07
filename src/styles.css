@@ -14068,3 +14068,432 @@ b {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* =========================================================
+   Digital pass artwork, receipt intelligence, mobile reorder
+   ========================================================= */
+
+.ticket-digital-poster.has-artwork {
+  position: relative;
+  isolation: isolate;
+  min-height: 205px;
+  padding: 18px;
+  overflow: hidden;
+  border-color: rgba(255,255,255,.24);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  box-shadow: 0 12px 32px rgba(49,29,58,.16);
+}
+
+.ticket-digital-poster.has-artwork::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(180deg,rgba(24,16,30,.12),rgba(24,16,30,.70));
+}
+
+.ticket-digital-poster.has-artwork.logo-artwork {
+  background-position: right 22px center;
+  background-size: auto 58%;
+  background-color: #34243f;
+  background-repeat: no-repeat;
+}
+
+.ticket-digital-poster.has-artwork.logo-artwork::after {
+  background: linear-gradient(90deg,rgba(37,24,45,.96) 0%,rgba(37,24,45,.78) 48%,rgba(37,24,45,.20) 100%);
+}
+
+.ticket-digital-poster.has-artwork .ticket-digital-poster-top span,
+.ticket-digital-poster.has-artwork .ticket-digital-poster-top small,
+.ticket-digital-poster.has-artwork > strong,
+.ticket-digital-poster.has-artwork .ticket-digital-poster-meta,
+.ticket-digital-poster.has-artwork footer {
+  color: #fff;
+  text-shadow: 0 1px 7px rgba(0,0,0,.28);
+}
+
+.ticket-digital-poster.has-artwork .ticket-digital-poster-top span,
+.ticket-digital-poster.has-artwork .ticket-digital-poster-top small,
+.ticket-digital-poster.has-artwork footer {
+  color: rgba(255,255,255,.82);
+}
+
+.ticket-digital-poster.has-artwork footer {
+  border-top-color: rgba(255,255,255,.32);
+}
+
+/* Desktop keeps native drag as a convenience; mobile gets explicit controls. */
+.mobile-slot-actions,
+.task-reorder-controls {
+  display: none;
+}
+
+.shopping-finish-grid {
+  display: grid;
+  grid-template-columns: minmax(180px,.75fr) minmax(280px,1.25fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.shopping-receipt-upload {
+  min-height: 132px;
+  padding: 11px;
+  border: 1px solid #e4dbe7;
+  border-radius: 12px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  gap: 8px;
+  background: #fbf9fc;
+}
+
+.shopping-receipt-upload > div {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 28px minmax(0,1fr);
+  align-items: start;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+
+.shopping-receipt-upload > div > svg {
+  color: #765a82;
+}
+
+.shopping-receipt-upload > div > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.shopping-receipt-upload strong {
+  overflow: hidden;
+  color: #5d5062;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shopping-receipt-upload small {
+  color: #928596;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.receipt-assistant-lock {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #806b55 !important;
+}
+
+.receipt-review-panel {
+  padding: 12px;
+  border: 1px solid #dcd1e1;
+  border-radius: 12px;
+  display: grid;
+  gap: 11px;
+  background: #faf7fb;
+}
+
+.receipt-review-panel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.receipt-review-panel h3 {
+  margin: 3px 0 0;
+  color: #594c5e;
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.receipt-review-panel > header > small {
+  min-height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  color: #536f64;
+  background: #eaf3ef;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.receipt-review-items {
+  max-height: 330px;
+  padding-right: 3px;
+  display: grid;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+.receipt-review-item {
+  padding: 6px;
+  border: 1px solid #e5dce8;
+  border-radius: 9px;
+  display: grid;
+  grid-template-columns: minmax(160px,1fr) 70px 86px 86px 30px;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+}
+
+.receipt-review-item input {
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 7px;
+  font-size: 9px;
+}
+
+.shopping-archive-composer:has(.receipt-review-panel) {
+  width: min(920px,100%);
+}
+
+.shopping-receipt-insights {
+  margin-top: 16px;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.shopping-receipt-insights > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.shopping-receipt-insights > header h2 {
+  margin: 3px 0 3px;
+  color: #574b5b;
+  font-size: 14px;
+  font-weight: 630;
+}
+
+.shopping-receipt-insights > header p {
+  max-width: 720px;
+  margin: 0;
+  color: #938797;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.shopping-receipt-insights > header > svg {
+  color: #765a82;
+}
+
+.receipt-insight-summary {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 8px;
+}
+
+.receipt-insight-summary article {
+  min-height: 76px;
+  padding: 10px 11px;
+  border: 1px solid #e6dfe9;
+  border-radius: 10px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  background: #fcfafc;
+}
+
+.receipt-insight-summary span,
+.receipt-insight-summary small {
+  color: #948899;
+  font-size: 8px;
+}
+
+.receipt-insight-summary strong {
+  overflow: hidden;
+  color: #584c5d;
+  font-size: 13px;
+  font-weight: 630;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.receipt-insight-columns {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 10px;
+}
+
+.receipt-insight-columns > div {
+  padding: 10px;
+  border: 1px solid #e8e1ea;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.receipt-insight-columns h3 {
+  margin: 0 0 7px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #625466;
+  font-size: 10px;
+  font-weight: 620;
+}
+
+.receipt-insight-columns > div > small {
+  color: #988c9c;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.receipt-store-row,
+.receipt-price-row {
+  min-height: 34px;
+  padding: 5px 0;
+  border-top: 1px solid #f0ebf2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+}
+
+.receipt-store-row:first-of-type,
+.receipt-price-row:first-of-type {
+  border-top: 0;
+}
+
+.receipt-store-row span,
+.receipt-store-row strong,
+.receipt-price-row > span,
+.receipt-price-row strong {
+  color: #655869;
+  font-size: 9px;
+}
+
+.receipt-store-row strong,
+.receipt-price-row > span {
+  font-weight: 620;
+  white-space: nowrap;
+}
+
+.receipt-price-row > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.receipt-price-row strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.receipt-price-row small {
+  color: #998d9d;
+  font-size: 8px;
+}
+
+/* Keep task action menu at the far end when mobile reorder controls appear. */
+.task-reorder-controls {
+  align-items: center;
+  gap: 3px;
+}
+
+@media (max-width: 700px) {
+  .mobile-slot-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .mobile-slot-actions .secondary-button {
+    min-height: 30px;
+    padding: 0 8px;
+    font-size: 9px;
+  }
+
+  .compact-list-drag {
+    display: none;
+  }
+
+  .compact-list-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .shopping-card-head-actions,
+  .checklist-card-controls {
+    width: 100%;
+    align-items: flex-end !important;
+    flex-wrap: wrap !important;
+  }
+
+  .task-reorder-controls {
+    display: inline-flex;
+  }
+
+  .task-row {
+    grid-template-columns: auto minmax(0,1fr) auto !important;
+  }
+
+  .task-participant-stack {
+    grid-column: 2;
+  }
+
+  .task-reorder-controls {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .task-actions {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .shopping-finish-grid,
+  .receipt-insight-summary,
+  .receipt-insight-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .shopping-receipt-upload {
+    grid-template-columns: 1fr;
+  }
+
+  .shopping-receipt-upload > button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .receipt-review-panel > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .receipt-review-panel > header > small {
+    width: fit-content;
+  }
+
+  .receipt-review-item {
+    grid-template-columns: minmax(0,1fr) 58px 74px 74px 30px;
+    gap: 4px;
+  }
+
+  .receipt-review-items {
+    overflow-x: auto;
+  }
+
+  .ticket-digital-poster.has-artwork {
+    min-height: 190px;
+  }
+}
+
+@media (max-width: 500px) {
+  .receipt-review-item {
+    min-width: 560px;
+  }
+}
