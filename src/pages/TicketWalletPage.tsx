@@ -182,6 +182,142 @@ function hostTitle(value:string){
   }
 }
 
+function normalizeScannedDate(value:unknown){
+  if(typeof value!=='string') return ''
+  const clean=value.trim()
+
+  const iso=clean.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if(iso) return `${iso[1]}-${iso[2]}-${iso[3]}`
+
+  const german=clean.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/)
+  if(german){
+    return `${german[3]}-${String(Number(german[2])).padStart(2,'0')}-${String(Number(german[1])).padStart(2,'0')}`
+  }
+
+  const compact=clean.match(/^(\d{4})(\d{2})(\d{2})$/)
+  if(compact) return `${compact[1]}-${compact[2]}-${compact[3]}`
+
+  return ''
+}
+
+function normalizeScannedTime(value:unknown){
+  if(typeof value!=='string') return ''
+  const match=value.trim().match(/^(\d{1,2}):(\d{2})/)
+  if(!match) return ''
+  const hour=Number(match[1])
+  const minute=Number(match[2])
+  if(hour>23||minute>59) return ''
+  return `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`
+}
+
+function ticketTypeFromText(value:string):TicketType{
+  if(/flight|airline|boarding|airport/i.test(value)) return 'flight'
+  if(/train|rail|bahn/i.test(value)) return 'train'
+  if(/\bbus\b|coach/i.test(value)) return 'bus'
+  if(/concert|gig|festival/i.test(value)) return 'concert'
+  if(/cinema|movie|film/i.test(value)) return 'cinema'
+  if(/sport|match|stadium/i.test(value)) return 'sports'
+  if(/museum|attraction|zoo|park/i.test(value)) return 'attraction'
+  if(/parking/i.test(value)) return 'parking'
+  if(/ticket|event|booking|reservation|pass/i.test(value)) return 'event'
+  return 'other'
+}
+
+function objectValue(record:Record<string,unknown>,names:string[]){
+  const entries=Object.entries(record)
+  for(const name of names){
+    const direct=entries.find(([key])=>key.toLowerCase()===name.toLowerCase())
+    if(direct&&direct[1]!=null) return String(direct[1])
+  }
+  return ''
+}
+
+function parseJsonScan(raw:string):ScanDraft|null{
+  if(!raw.startsWith('{')||!raw.endsWith('}')) return null
+
+  try{
+    const value=JSON.parse(raw)
+    if(!value||typeof value!=='object'||Array.isArray(value)) return null
+    const record=value as Record<string,unknown>
+
+    const title=objectValue(record,['title','name','event','eventName','summary','description'])
+    const provider=objectValue(record,['provider','organizer','organisation','airline','carrier','issuer'])
+    const location=objectValue(record,['location','venue','address','airport','station'])
+    const reference=objectValue(record,['reference','bookingReference','booking_reference','pnr','booking','ticketId','ticket_id','id'])
+    const date=normalizeScannedDate(objectValue(record,['date','startDate','start_date','eventDate','departureDate']))
+    const time=normalizeScannedTime(objectValue(record,['time','startTime','start_time','departureTime']))
+    const endDate=normalizeScannedDate(objectValue(record,['endDate','end_date','arrivalDate']))
+    const endTime=normalizeScannedTime(objectValue(record,['endTime','end_time','arrivalTime']))
+    const typeText=objectValue(record,['type','ticketType','ticket_type','category'])+' '+title+' '+provider
+    const type=ticketTypeFromText(typeText)
+
+    return {
+      kind:type==='other'?'reference':'ticket',
+      title:title||provider||'Scanned information',
+      ticket_type:type,
+      start_date:date,
+      start_time:time,
+      end_date:endDate,
+      end_time:endTime,
+      location_text:location,
+      provider_text:provider,
+      booking_reference:reference,
+      notes:'',
+      raw_value:raw,
+      source_label:'Structured QR data',
+    }
+  }catch{
+    return null
+  }
+}
+
+function parseKeyValueScan(raw:string):ScanDraft|null{
+  const pairs=new Map<string,string>()
+  raw
+    .replace(/\r/g,'\n')
+    .split(/[\n;]+/)
+    .forEach((part)=>{
+      const match=part.trim().match(/^([A-Za-z][A-Za-z _-]{1,30})\s*[:=]\s*(.+)$/)
+      if(match) pairs.set(match[1].trim().toLowerCase().replace(/[ _-]+/g,''),match[2].trim())
+    })
+
+  if(pairs.size<2) return null
+
+  const get=(...keys:string[])=>{
+    for(const key of keys){
+      const value=pairs.get(key.toLowerCase().replace(/[ _-]+/g,''))
+      if(value) return value
+    }
+    return ''
+  }
+
+  const title=get('title','event','name','summary')
+  const provider=get('provider','organizer','organisation','airline','carrier')
+  const location=get('location','venue','address','airport','station')
+  const reference=get('reference','bookingreference','booking','pnr','ticketid')
+  const date=normalizeScannedDate(get('date','startdate','eventdate','departuredate'))
+  const time=normalizeScannedTime(get('time','starttime','departuretime'))
+  const endDate=normalizeScannedDate(get('enddate','arrivaldate'))
+  const endTime=normalizeScannedTime(get('endtime','arrivaltime'))
+  const type=ticketTypeFromText(get('type','tickettype','category')+' '+title+' '+provider)
+
+  return {
+    kind:type==='other'?'reference':'ticket',
+    title:title||provider||'Scanned information',
+    ticket_type:type,
+    start_date:date,
+    start_time:time,
+    end_date:endDate,
+    end_time:endTime,
+    location_text:location,
+    provider_text:provider,
+    booking_reference:reference,
+    notes:'',
+    raw_value:raw,
+    source_label:'Structured QR data',
+  }
+}
+
 function qrWifiField(raw:string,key:string){
   const body=raw.replace(/^WIFI:/i,'').replace(/;;$/,'')
   const parts=body.split(/(?<!\\);/)
@@ -208,6 +344,12 @@ function parseScannedPayload(rawValue:string):ScanDraft{
     raw_value:raw,
     source_label:'QR / barcode',
   }
+
+  const jsonDraft=parseJsonScan(raw)
+  if(jsonDraft) return jsonDraft
+
+  const keyValueDraft=parseKeyValueScan(raw)
+  if(keyValueDraft) return keyValueDraft
 
   if(/BEGIN:(VCALENDAR|VEVENT)/i.test(raw)){
     const summary=unescapePayloadText(payloadField(lines,'SUMMARY'))
@@ -266,17 +408,33 @@ function parseScannedPayload(rawValue:string):ScanDraft{
 
   if(/^https?:\/\//i.test(raw)){
     const host=hostTitle(raw)
-    const looksTicket=/ticket|event|concert|cinema|flight|airline|boarding|rail|train|bahn|booking|pass/i.test(raw)
+    let params=new URLSearchParams()
+    try{ params=new URL(raw).searchParams }catch{ /* keep empty params */ }
+    const param=(...names:string[])=>{
+      for(const name of names){
+        const value=params.get(name)
+        if(value) return value
+      }
+      return ''
+    }
+    const paramTitle=param('title','name','event','summary')
+    const paramProvider=param('provider','organizer','airline','carrier')
+    const paramLocation=param('location','venue','address')
+    const paramReference=param('reference','ref','booking','pnr','ticket')
+    const paramDate=normalizeScannedDate(param('date','startDate','start_date'))
+    const paramTime=normalizeScannedTime(param('time','startTime','start_time'))
+    const inferredType=ticketTypeFromText(raw+' '+paramTitle+' '+paramProvider)
+    const looksTicket=inferredType!=='other'
     return {
       ...blank,
       kind:looksTicket?'ticket':'link',
-      title:looksTicket?`Ticket · ${host}`:host,
-      ticket_type:/flight|airline|boarding/i.test(raw)
-        ?'flight'
-        :/train|rail|bahn/i.test(raw)
-          ?'train'
-          :looksTicket?'event':'other',
-      provider_text:host,
+      title:paramTitle||(looksTicket?`Ticket · ${host}`:host),
+      ticket_type:inferredType,
+      start_date:paramDate,
+      start_time:paramTime,
+      location_text:paramLocation,
+      provider_text:paramProvider||host,
+      booking_reference:paramReference,
       notes:raw,
       source_label:looksTicket?'Ticket link':'Web link',
     }
