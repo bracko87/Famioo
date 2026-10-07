@@ -13285,6 +13285,10 @@ b {
     justify-content: center;
   }
 
+  .ticket-wallet-heading-actions button:last-child {
+    grid-column: 1 / -1;
+  }
+
   .ticket-wallet-summary-grid {
     grid-template-columns: 1fr 1fr;
   }
