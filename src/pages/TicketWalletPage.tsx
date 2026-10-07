@@ -720,7 +720,7 @@ async function parsePkpassFile(file:File,timezone:string):Promise<ScanDraft>{
   if(!location&&pass.locations?.length){
     const first=pass.locations[0]
     if(first.relevantText) location=first.relevantText
-    else if(Number.isFinite(first.latitude)&&Number.isFinite(first.longitude)){
+    else if(typeof first.latitude==='number'&&typeof first.longitude==='number'){
       location=`${first.latitude}, ${first.longitude}`
     }
   }
@@ -1583,7 +1583,7 @@ export function TicketWalletPage(){
         <div>
           <div className="page-label">TICKET WALLET</div>
           <h1>Ticket Wallet</h1>
-          <p className="page-subtitle">Keep family travel, event and admission tickets together. Scan a QR/barcode, upload the original ticket and connect the appointment to Calendar.</p>
+          <p className="page-subtitle">Keep family travel, event and admission tickets together. Scan a QR/barcode, import an Apple Wallet .pkpass or upload the original ticket, then connect it to Calendar.</p>
         </div>
 
         {canWrite&&(
@@ -1620,7 +1620,7 @@ export function TicketWalletPage(){
         <QrCode size={18}/>
         <div>
           <strong>Private ticket data</strong>
-          <p>Ticket files and saved QR/barcode values are stored in private household storage. Access follows Famioo household permissions and the normal database security rules.</p>
+          <p>Ticket files and saved QR/barcode values are stored in private household storage. Apple Wallet .pkpass metadata is read locally in the browser; access follows Famioo household permissions and the normal database security rules.</p>
         </div>
       </section>
 
