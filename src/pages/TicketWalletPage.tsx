@@ -1772,6 +1772,11 @@ export function TicketWalletPage(){
     })
   },[tickets,filter])
 
+  const visibleDigitalTickets=visibleTickets.filter((ticket)=>Boolean(ticket.file_path))
+  const visibleManualTickets=visibleTickets.filter((ticket)=>!ticket.file_path)
+  const digitalTickets=tickets.filter((ticket)=>Boolean(ticket.file_path))
+  const manualTickets=tickets.filter((ticket)=>!ticket.file_path)
+
   const activeTickets=tickets.filter((ticket)=>ticket.status==='active')
   const upcomingTickets=activeTickets.filter((ticket)=>!ticket.start_date||ticket.start_date>=todayKey())
   const datedUpcoming=activeTickets
@@ -1880,11 +1885,11 @@ export function TicketWalletPage(){
       <section className="ticket-wallet-summary-grid">
         <article className="list-card ticket-wallet-summary">
           <span><Ticket size={18}/></span>
-          <div><strong>{upcomingTickets.length}</strong><small>active tickets</small></div>
+          <div><strong>{digitalTickets.filter((ticket)=>ticket.status==='active').length}</strong><small>digital passes</small></div>
         </article>
         <article className="list-card ticket-wallet-summary">
           <span><QrCode size={18}/></span>
-          <div><strong>{tickets.filter((ticket)=>Boolean(ticket.qr_value)).length}</strong><small>codes stored</small></div>
+          <div><strong>{manualTickets.filter((ticket)=>ticket.status==='active').length}</strong><small>active manual tickets</small></div>
         </article>
         <article className="list-card ticket-wallet-summary wide">
           <span><CalendarDays size={18}/></span>
@@ -1901,8 +1906,8 @@ export function TicketWalletPage(){
       <section className="ticket-wallet-section">
         <header className="ticket-wallet-section-head">
           <div>
-            <span className="eyebrow">FAMILY WALLET</span>
-            <h2>Saved tickets</h2>
+            <span className="eyebrow">TICKETS</span>
+            <h2>Digital Wallet & active tickets</h2>
           </div>
 
           <Select
@@ -1914,91 +1919,134 @@ export function TicketWalletPage(){
               {value:'archived',label:'Archived'},
               {value:'all',label:'All tickets'},
             ]}
-            ariaLabel="Filter Ticket Wallet"
+            ariaLabel="Filter tickets"
             className="ticket-wallet-filter"
           />
         </header>
 
-        {visibleTickets.length===0 ? (
-          <div className="list-card empty-state ticket-wallet-empty">
-            <Ticket size={26}/>
-            <span className="empty-state-title">Nothing saved in the wallet yet.</span>
-            <span>{canWrite?'Scan any QR code, import a pass/file or add the first wallet item manually.':'No wallet items are available.'}</span>
-          </div>
-        ) : (
-          <div className="ticket-wallet-list">
-            {visibleTickets.map((ticket)=>{
-              const holder=ticket.holder_profile_id?profileById.get(ticket.holder_profile_id):undefined
-              const fileUrl=fileUrls[ticket.id]
+        <div className="ticket-wallet-groups">
+          {[
+            {
+              key:'digital',
+              eyebrow:'DIGITAL WALLET',
+              title:'Imported digital passes',
+              empty:'No digital ticket files imported yet.',
+              rows:visibleDigitalTickets,
+            },
+            {
+              key:'manual',
+              eyebrow:'ACTIVE TICKETS',
+              title:'Manual ticket records',
+              empty:'No manual tickets in this filter.',
+              rows:visibleManualTickets,
+            },
+          ].map((group)=>(
+            <section className={'ticket-wallet-group '+group.key} key={group.key}>
+              <header className="ticket-wallet-group-head">
+                <div>
+                  <span className="eyebrow">{group.eyebrow}</span>
+                  <h3>{group.title}</h3>
+                </div>
+                <small>{group.rows.length}</small>
+              </header>
 
-              return (
-                <article className={'list-card ticket-wallet-card '+ticket.status} key={ticket.id}>
-                  <div className="ticket-wallet-card-mark">
-                    <Ticket size={18}/>
-                  </div>
+              {group.rows.length===0 ? (
+                <div className="list-card empty-state ticket-wallet-group-empty">
+                  {group.key==='digital'?<Upload size={22}/>:<Ticket size={22}/>}
+                  <span className="empty-state-title">{group.empty}</span>
+                </div>
+              ) : (
+                <div className="ticket-wallet-list">
+                  {group.rows.map((ticket)=>{
+                    const holder=ticket.holder_profile_id?profileById.get(ticket.holder_profile_id):undefined
+                    const fileUrl=fileUrls[ticket.id]
+                    const digital=Boolean(ticket.file_path)
 
-                  <div className="ticket-wallet-card-main">
-                    <div className="ticket-wallet-card-title">
-                      <div>
-                        <span>{ticketTypeLabel(ticket.ticket_type)}</span>
-                        <h3>{ticket.title}</h3>
-                      </div>
-                      <em>{ticket.status}</em>
-                    </div>
+                    return (
+                      <article className={'list-card ticket-wallet-card '+ticket.status+(digital?' digital-pass':' manual-ticket')} key={ticket.id}>
+                        <div className="ticket-wallet-card-mark">
+                          {digital?<Upload size={18}/>:<Ticket size={18}/>}
+                        </div>
 
-                    <div className="ticket-wallet-meta">
-                      {ticket.start_date&&(
-                        <span><CalendarDays size={12}/>{formatDate(ticket.start_date)}{ticket.start_time?' · '+ticket.start_time.slice(0,5):''}</span>
-                      )}
-                      {ticket.location_text&&<GoogleMapsLink location={ticket.location_text}/>}
-                      {holder&&(
-                        <span className="ticket-holder">
-                          <ProfileAvatar avatarPath={holder.avatar_path} name={holder.display_name} size="sm"/>
-                          {holder.display_name}
-                        </span>
-                      )}
-                      {ticket.provider_text&&<span>{ticket.provider_text}</span>}
-                      {ticket.qr_value&&<span><QrCode size={12}/>Code saved</span>}
-                      {ticket.linked_event_id&&<span><CalendarDays size={12}/>In Calendar</span>}
-                    </div>
+                        <div className="ticket-wallet-card-main">
+                          <div className="ticket-wallet-card-title">
+                            <div>
+                              <span>{digital?'Digital pass · ':'Active ticket · '}{ticketTypeLabel(ticket.ticket_type)}</span>
+                              <h3>{ticket.title}</h3>
+                            </div>
+                            <em>{ticket.status}</em>
+                          </div>
 
-                    {(ticket.booking_reference||ticket.notes)&&(
-                      <div className="ticket-wallet-details">
-                        {ticket.booking_reference&&<small>Reference: {ticket.booking_reference}</small>}
-                        {ticket.notes&&<p>{ticket.notes}</p>}
-                      </div>
-                    )}
+                          {digital&&(
+                            <div className="ticket-digital-poster">
+                              <div className="ticket-digital-poster-top">
+                                <span>{ticketTypeLabel(ticket.ticket_type)}</span>
+                                <small>DIGITAL PASS</small>
+                              </div>
+                              <strong>{ticket.title}</strong>
+                              <div className="ticket-digital-poster-meta">
+                                {ticket.start_date&&<span><CalendarDays size={12}/>{formatDate(ticket.start_date)}{ticket.start_time?' · '+ticket.start_time.slice(0,5):''}</span>}
+                                {ticket.location_text&&<span><MapPin size={12}/>{ticket.location_text}</span>}
+                              </div>
+                              <footer>
+                                <span>{ticket.provider_text||'Famioo Ticket Wallet'}</span>
+                                <span>
+                                  {ticket.booking_reference&&<>Ref. {ticket.booking_reference}</>}
+                                  {ticket.qr_value&&<QrCode size={14}/>}
+                                </span>
+                              </footer>
+                            </div>
+                          )}
 
-                    {fileUrl&&ticket.file_mime_type?.startsWith('image/')&&(
-                      <a className="ticket-wallet-image-preview" href={fileUrl} target="_blank" rel="noreferrer" aria-label="Open saved QR or ticket image">
-                        <img src={fileUrl} alt={ticket.qr_value?'Saved QR code image':'Saved ticket image'}/>
-                        {ticket.qr_value&&<span><QrCode size={12}/>Saved QR image</span>}
-                      </a>
-                    )}
+                          <div className="ticket-wallet-meta">
+                            {ticket.start_date&&(
+                              <span><CalendarDays size={12}/>{formatDate(ticket.start_date)}{ticket.start_time?' · '+ticket.start_time.slice(0,5):''}</span>
+                            )}
+                            {ticket.location_text&&<GoogleMapsLink location={ticket.location_text}/>}
+                            {holder&&(
+                              <span className="ticket-holder">
+                                <ProfileAvatar avatarPath={holder.avatar_path} name={holder.display_name} size="sm"/>
+                                {holder.display_name}
+                              </span>
+                            )}
+                            {ticket.provider_text&&<span>{ticket.provider_text}</span>}
+                            {ticket.qr_value&&<span><QrCode size={12}/>Code stored</span>}
+                            {ticket.linked_event_id&&<span><CalendarDays size={12}/>In Calendar</span>}
+                          </div>
 
-                    {fileUrl&&(
-                      <a className="ticket-wallet-file" href={fileUrl} target="_blank" rel="noreferrer">
-                        {ticket.file_mime_type?.startsWith('image/')?<ImageIcon size={13}/>:<FileText size={13}/>}
-                        {ticket.file_name??'Open saved file'}
-                      </a>
-                    )}
-                  </div>
+                          {(ticket.booking_reference||ticket.notes)&&(
+                            <div className="ticket-wallet-details">
+                              {ticket.booking_reference&&<small>Reference: {ticket.booking_reference}</small>}
+                              {ticket.notes&&<p>{ticket.notes}</p>}
+                            </div>
+                          )}
 
-                  {canWrite&&ticket.status!=='archived'&&(
-                    <div className="ticket-wallet-card-actions">
-                      <button type="button" className="icon-button compact-icon" onClick={()=>openEdit(ticket)} aria-label={'Edit '+ticket.title}>
-                        <Pencil size={14}/>
-                      </button>
-                      <button type="button" className="icon-button compact-icon" onClick={()=>setArchiveTarget(ticket)} aria-label={'Archive '+ticket.title}>
-                        <Trash2 size={14}/>
-                      </button>
-                    </div>
-                  )}
-                </article>
-              )
-            })}
-          </div>
-        )}
+                          {fileUrl&&(
+                            <a className="ticket-wallet-file" href={fileUrl} target="_blank" rel="noreferrer">
+                              {ticket.file_mime_type?.startsWith('image/')?<ImageIcon size={13}/>:<FileText size={13}/>}
+                              {ticket.file_name??'Open original digital ticket'}
+                            </a>
+                          )}
+                        </div>
+
+                        {canWrite&&ticket.status!=='archived'&&(
+                          <div className="ticket-wallet-card-actions">
+                            <button type="button" className="icon-button compact-icon" onClick={()=>openEdit(ticket)} aria-label={'Edit '+ticket.title}>
+                              <Pencil size={14}/>
+                            </button>
+                            <button type="button" className="icon-button compact-icon" onClick={()=>setArchiveTarget(ticket)} aria-label={'Archive '+ticket.title}>
+                              <Trash2 size={14}/>
+                            </button>
+                          </div>
+                        )}
+                      </article>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
+          ))}
+        </div>
       </section>
 
       {composerOpen&&canWrite&&(
@@ -2015,8 +2063,8 @@ export function TicketWalletPage(){
           <form className="modal-card ticket-wallet-composer" onSubmit={saveTicket}>
             <header>
               <div>
-                <span className="eyebrow">{editing?'EDIT TICKET':'NEW TICKET'}</span>
-                <h2>{editing?'Edit Ticket Wallet entry':'Add to Ticket Wallet'}</h2>
+                <span className="eyebrow">{editing?(editing.file_path?'EDIT DIGITAL PASS':'EDIT ACTIVE TICKET'):'NEW ACTIVE TICKET'}</span>
+                <h2>{editing?'Edit ticket':'Add active ticket manually'}</h2>
               </div>
               <button type="button" className="icon-button" aria-label="Close Ticket Wallet form" onClick={()=>{
                 setComposerOpen(false)
@@ -2185,36 +2233,39 @@ export function TicketWalletPage(){
               <small>QR recognition runs locally in the browser and does not use AI. Other barcode formats use the browser’s native detector when available.</small>
             </section>
 
-            <section className="ticket-wallet-file-panel">
-              <header>
-                <div>
-                  <span className="eyebrow">TICKET FILE</span>
-                  <strong>{pendingFile?.name??(!removeExistingFile?existingFileName:null)??'No file attached'}</strong>
-                </div>
-                <button type="button" className="secondary-button compact" onClick={()=>fileInputRef.current?.click()}>
-                  <Upload size={14}/>Choose file
-                </button>
-              </header>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pkpass,application/vnd.apple.pkpass,image/jpeg,image/png,image/webp,application/pdf"
-                hidden
-                onChange={(event)=>void chooseFile(event.target.files?.[0]??null)}
-              />
-
-              {(pendingFile||existingFilePath)&&!removeExistingFile&&(
-                <button type="button" className="text-button ticket-remove-file" onClick={()=>{
-                  setPendingFile(null)
-                  setRemoveExistingFile(Boolean(existingFilePath))
-                }}>
-                  Remove attached file
-                </button>
+            {(editing?.file_path||existingFilePath)&&(
+              <section className="ticket-wallet-file-panel">
+                <header>
+                  <div>
+                    <span className="eyebrow">TICKET FILE</span>
+                    <strong>{pendingFile?.name??(!removeExistingFile?existingFileName:null)??'No file attached'}</strong>
+                  </div>
+                  <button type="button" className="secondary-button compact" onClick={()=>fileInputRef.current?.click()}>
+                    <Upload size={14}/>Choose file
+                  </button>
+                </header>
+  
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pkpass,application/vnd.apple.pkpass,image/jpeg,image/png,image/webp,application/pdf"
+                  hidden
+                  onChange={(event)=>void chooseFile(event.target.files?.[0]??null)}
+                />
+  
+                {(pendingFile||existingFilePath)&&!removeExistingFile&&(
+                  <button type="button" className="text-button ticket-remove-file" onClick={()=>{
+                    setPendingFile(null)
+                    setRemoveExistingFile(Boolean(existingFilePath))
+                  }}>
+                    Remove attached file
+                  </button>
+                )}
+  
+                <small>JPG, PNG, WebP, PDF or Apple Wallet .pkpass · maximum 15 MB. Apple Wallet passes are read locally from pass.json; images are checked locally for QR codes.</small>
+              </section>
+  
               )}
-
-              <small>JPG, PNG, WebP, PDF or Apple Wallet .pkpass · maximum 15 MB. Apple Wallet passes are read locally from pass.json; images are checked locally for QR codes.</small>
-            </section>
 
             <label>
               Notes
@@ -2260,7 +2311,7 @@ export function TicketWalletPage(){
                 resetForm()
               }}>Cancel</button>
               <button className="primary-button" disabled={saving||!title.trim()||(syncCalendar&&!startDate)}>
-                {saving?'Saving…':'Save ticket'}
+                {saving?'Saving…':editing?.file_path?'Save digital pass':'Save active ticket'}
               </button>
             </div>
           </form>
