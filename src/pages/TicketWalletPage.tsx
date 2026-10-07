@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react'
 import jsQR from 'jsqr'
+import { strFromU8, unzipSync } from 'fflate'
 import {
   useEffect,
   useMemo,
@@ -523,6 +524,237 @@ function zonedLocalToIso(date:string,time:string,timezone:string){
   return new Date(guess).toISOString()
 }
 
+type PkPassField={
+  key?:string
+  label?:string
+  value?:unknown
+}
+
+type PkPassStyle={
+  headerFields?:PkPassField[]
+  primaryFields?:PkPassField[]
+  secondaryFields?:PkPassField[]
+  auxiliaryFields?:PkPassField[]
+  backFields?:PkPassField[]
+  transitType?:string
+}
+
+type PkPassData={
+  description?:string
+  organizationName?:string
+  logoText?:string
+  serialNumber?:string
+  relevantDate?:string
+  expirationDate?:string
+  boardingPass?:PkPassStyle
+  eventTicket?:PkPassStyle
+  coupon?:PkPassStyle
+  storeCard?:PkPassStyle
+  generic?:PkPassStyle
+  barcode?:{message?:string;altText?:string;format?:string}
+  barcodes?:Array<{message?:string;altText?:string;format?:string}>
+  locations?:Array<{latitude?:number;longitude?:number;relevantText?:string}>
+}
+
+function isPkpassFile(file:File){
+  return file.name.toLowerCase().endsWith('.pkpass')
+    ||file.type==='application/vnd.apple.pkpass'
+}
+
+function ticketFileMime(file:File){
+  return isPkpassFile(file)
+    ?'application/vnd.apple.pkpass'
+    :(file.type||'application/octet-stream')
+}
+
+function textValue(value:unknown){
+  if(value==null) return ''
+  if(typeof value==='string'||typeof value==='number'||typeof value==='boolean') return String(value)
+  return ''
+}
+
+function localPartsFromIso(value:string|undefined,timezone:string){
+  if(!value) return {date:'',time:''}
+  const parsed=new Date(value)
+  if(Number.isNaN(parsed.getTime())){
+    return {
+      date:normalizeScannedDate(value),
+      time:normalizeScannedTime(value),
+    }
+  }
+
+  const parts=new Intl.DateTimeFormat('en-CA',{
+    timeZone:timezone,
+    year:'numeric',
+    month:'2-digit',
+    day:'2-digit',
+    hour:'2-digit',
+    minute:'2-digit',
+    hourCycle:'h23',
+  }).formatToParts(parsed)
+  const get=(type:string)=>parts.find((part)=>part.type===type)?.value??''
+  return {
+    date:`${get('year')}-${get('month')}-${get('day')}`,
+    time:`${get('hour')}:${get('minute')}`,
+  }
+}
+
+function pkpassFields(pass:PkPassData){
+  const style=pass.boardingPass
+    ??pass.eventTicket
+    ??pass.coupon
+    ??pass.storeCard
+    ??pass.generic
+  if(!style) return [] as PkPassField[]
+
+  return [
+    ...(style.headerFields??[]),
+    ...(style.primaryFields??[]),
+    ...(style.secondaryFields??[]),
+    ...(style.auxiliaryFields??[]),
+    ...(style.backFields??[]),
+  ]
+}
+
+function findPkpassField(fields:PkPassField[],pattern:RegExp){
+  return fields.find((field)=>pattern.test(
+    [field.key,field.label].filter(Boolean).join(' '),
+  ))
+}
+
+function pkpassFieldLine(field:PkPassField){
+  const value=textValue(field.value).trim()
+  if(!value) return ''
+  const label=(field.label||field.key||'Detail').trim()
+  return `${label}: ${value}`
+}
+
+function pkpassTicketType(pass:PkPassData,fields:PkPassField[]):TicketType{
+  if(pass.boardingPass){
+    const transit=pass.boardingPass.transitType??''
+    if(/Air/i.test(transit)) return 'flight'
+    if(/Train/i.test(transit)) return 'train'
+    if(/Bus/i.test(transit)) return 'bus'
+    return 'event'
+  }
+
+  if(pass.eventTicket){
+    const text=[
+      pass.description,
+      pass.organizationName,
+      pass.logoText,
+      ...fields.map((field)=>textValue(field.value)),
+    ].filter(Boolean).join(' ')
+    const inferred=ticketTypeFromText(text)
+    return inferred==='other'?'event':inferred
+  }
+
+  return ticketTypeFromText([
+    pass.description,
+    pass.organizationName,
+    pass.logoText,
+  ].filter(Boolean).join(' '))
+}
+
+async function parsePkpassFile(file:File,timezone:string):Promise<ScanDraft>{
+  const bytes=new Uint8Array(await file.arrayBuffer())
+  let files:Record<string,Uint8Array>
+
+  try{
+    files=unzipSync(bytes,{
+      filter(entry){
+        return entry.name==='pass.json'&&entry.originalSize<=1_500_000
+      },
+    })
+  }catch{
+    throw new Error('This Apple Wallet pass could not be opened.')
+  }
+
+  const passBytes=files['pass.json']
+  if(!passBytes) throw new Error('This file does not contain a valid Apple Wallet pass.json.')
+
+  let pass:PkPassData
+  try{
+    pass=JSON.parse(strFromU8(passBytes)) as PkPassData
+  }catch{
+    throw new Error('The Apple Wallet pass metadata is not valid JSON.')
+  }
+
+  const fields=pkpassFields(pass)
+  const primary=(pass.boardingPass
+    ??pass.eventTicket
+    ??pass.coupon
+    ??pass.storeCard
+    ??pass.generic)?.primaryFields??[]
+
+  const primaryValues=primary
+    .map((field)=>textValue(field.value).trim())
+    .filter(Boolean)
+
+  const relevant=localPartsFromIso(pass.relevantDate,timezone)
+  const startField=findPkpassField(fields,/start|depart|departure|event.?date|date|time/i)
+  const endField=findPkpassField(fields,/end|arrival|arrive|until|finish/i)
+
+  const startRaw=textValue(startField?.value)
+  const endRaw=textValue(endField?.value)
+  const startFromField=localPartsFromIso(startRaw||undefined,timezone)
+  const endFromField=localPartsFromIso(endRaw||undefined,timezone)
+
+  const locationField=findPkpassField(fields,/venue|location|address|airport|station|gate/i)
+  const referenceField=findPkpassField(fields,/pnr|booking|confirmation|reference|reservation|ticket.?id|order/i)
+
+  const barcode=(pass.barcodes??[]).find((item)=>item.message)
+    ??(pass.barcode?.message?pass.barcode:undefined)
+
+  const routeTitle=pass.boardingPass&&primaryValues.length>=2
+    ?primaryValues.slice(0,2).join(' → ')
+    :''
+  const title=routeTitle
+    ||primaryValues[0]
+    ||pass.logoText
+    ||pass.description
+    ||pass.organizationName
+    ||'Apple Wallet pass'
+
+  let location=textValue(locationField?.value).trim()
+  if(!location&&pass.locations?.length){
+    const first=pass.locations[0]
+    if(first.relevantText) location=first.relevantText
+    else if(Number.isFinite(first.latitude)&&Number.isFinite(first.longitude)){
+      location=`${first.latitude}, ${first.longitude}`
+    }
+  }
+
+  const detailLines=fields
+    .map(pkpassFieldLine)
+    .filter(Boolean)
+    .filter((line,index,array)=>array.indexOf(line)===index)
+    .slice(0,24)
+
+  const description=pass.description?.trim()??''
+  const notes=[
+    description&&description!==title?description:'',
+    ...detailLines,
+    barcode?.altText?`Barcode text: ${barcode.altText}`:'',
+  ].filter(Boolean).join('\n')
+
+  return {
+    kind:'ticket',
+    title,
+    ticket_type:pkpassTicketType(pass,fields),
+    start_date:relevant.date||startFromField.date,
+    start_time:relevant.time||startFromField.time,
+    end_date:endFromField.date,
+    end_time:endFromField.time,
+    location_text:location,
+    provider_text:pass.organizationName?.trim()??'',
+    booking_reference:textValue(referenceField?.value).trim()||pass.serialNumber?.trim()||'',
+    notes,
+    raw_value:barcode?.message?.trim()??'',
+    source_label:'Apple Wallet pass',
+  }
+}
+
 function safeFileName(name:string){
   const clean=name.replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/-+/g,'-')
   return clean.slice(0,120)||'ticket'
@@ -932,9 +1164,26 @@ export function TicketWalletPage(){
       return
     }
 
-    if(!['image/jpeg','image/png','image/webp','application/pdf'].includes(file.type)){
-      setError('Use a JPG, PNG, WebP or PDF ticket file.')
+    const pkpass=isPkpassFile(file)
+    const allowedMime=['image/jpeg','image/png','image/webp','application/pdf']
+    if(!pkpass&&!allowedMime.includes(file.type)){
+      setError('Use a JPG, PNG, WebP, PDF or Apple Wallet .pkpass ticket file.')
       return
+    }
+
+    if(pkpass){
+      try{
+        const draft=await parsePkpassFile(file,household.timezone)
+        setQrValue(draft.raw_value)
+        setScanDraft(draft)
+        setScanFile(file)
+        setScannerMessage('Apple Wallet pass recognized. Review the imported information below.')
+        setScanReviewOpen(true)
+        return
+      }catch(reason){
+        setError(reason instanceof Error?reason.message:'Famioo could not read this Apple Wallet pass.')
+        return
+      }
     }
 
     setPendingFile(file)
@@ -995,7 +1244,7 @@ export function TicketWalletPage(){
     const upload=await supabase.storage
       .from('ticket-wallet')
       .upload(path,scanFile,{
-        contentType:scanFile.type,
+        contentType:ticketFileMime(scanFile),
         upsert:false,
       })
 
@@ -1004,7 +1253,7 @@ export function TicketWalletPage(){
     return {
       path,
       name:scanFile.name,
-      mime:scanFile.type,
+      mime:ticketFileMime(scanFile),
       size:scanFile.size,
     }
   }
@@ -1214,7 +1463,7 @@ export function TicketWalletPage(){
       const upload=await supabase.storage
         .from('ticket-wallet')
         .upload(path,pendingFile,{
-          contentType:pendingFile.type,
+          contentType:ticketFileMime(pendingFile),
           upsert:false,
         })
 
@@ -1227,7 +1476,7 @@ export function TicketWalletPage(){
       uploadedPath=path
       finalPath=path
       finalName=pendingFile.name
-      finalMime=pendingFile.type
+      finalMime=ticketFileMime(pendingFile)
       finalSize=pendingFile.size
     }
 
@@ -1358,7 +1607,7 @@ export function TicketWalletPage(){
       <input
         ref={scanFileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,application/pdf"
+        accept=".pkpass,application/vnd.apple.pkpass,image/jpeg,image/png,image/webp,application/pdf"
         hidden
         onChange={(event)=>{
           const file=event.target.files?.[0]??null
@@ -1693,7 +1942,7 @@ export function TicketWalletPage(){
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp,application/pdf"
+                accept=".pkpass,application/vnd.apple.pkpass,image/jpeg,image/png,image/webp,application/pdf"
                 hidden
                 onChange={(event)=>void chooseFile(event.target.files?.[0]??null)}
               />
@@ -1707,7 +1956,7 @@ export function TicketWalletPage(){
                 </button>
               )}
 
-              <small>JPG, PNG, WebP or PDF · maximum 15 MB. Ticket images are checked locally for QR codes; supported browsers can also detect additional barcode formats.</small>
+              <small>JPG, PNG, WebP, PDF or Apple Wallet .pkpass · maximum 15 MB. Apple Wallet passes are read locally from pass.json; ticket images are checked locally for QR codes.</small>
             </section>
 
             <label>
@@ -1777,7 +2026,7 @@ export function TicketWalletPage(){
           <section className="modal-card ticket-scan-review-card">
             <header>
               <div>
-                <span className="eyebrow">RECOGNIZED FROM CODE</span>
+                <span className="eyebrow">{scanDraft.source_label==='Apple Wallet pass'?'IMPORTED FROM APPLE WALLET PASS':'RECOGNIZED FROM CODE'}</span>
                 <h2>Review scanned information</h2>
                 <p>{scanDraft.source_label} · edit anything that is missing or incorrect.</p>
               </div>
