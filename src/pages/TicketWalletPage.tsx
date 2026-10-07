@@ -1796,33 +1796,15 @@ export function TicketWalletPage(){
     <div className="page ticket-wallet-page">
       <div className="page-heading-row">
         <div>
-          <div className="page-label">TICKET WALLET</div>
-          <h1>Ticket Wallet</h1>
-          <p className="page-subtitle">Keep family travel, event and admission tickets together. Scan a QR/barcode, import an Apple Wallet .pkpass or upload the original ticket, then connect it to Calendar.</p>
+          <div className="page-label">QR & TICKETS</div>
+          <h1>QR & Ticket Wallet</h1>
+          <p className="page-subtitle">Scan a QR code to open its page, import a real digital ticket into the Wallet, or keep a manually entered active ticket when no digital file exists.</p>
         </div>
-
-        {canWrite&&(
-          <div className="ticket-wallet-heading-actions">
-            <button type="button" className="secondary-button compact" onClick={()=>openNew(true)}>
-              <ScanLine size={15}/>Scan QR code
-            </button>
-            <button type="button" className="secondary-button compact" onClick={()=>{
-              resetForm()
-              scanFileInputRef.current?.click()
-            }}>
-              <Upload size={15}/>Import file
-            </button>
-            <button type="button" className="primary-button compact" onClick={()=>openNew(false)}>
-              <Ticket size={15}/>Add ticket
-            </button>
-          </div>
-        )}
       </div>
 
       <input
         ref={scanFileInputRef}
         type="file"
-        accept=".pkpass,application/vnd.apple.pkpass,image/jpeg,image/png,image/webp,application/pdf"
         hidden
         onChange={(event)=>{
           const file=event.target.files?.[0]??null
@@ -1831,11 +1813,64 @@ export function TicketWalletPage(){
         }}
       />
 
+      {canWrite&&(
+        <section className="ticket-entry-actions">
+          <article className="list-card ticket-entry-action qr">
+            <span className="ticket-entry-action-icon"><ScanLine size={21}/></span>
+            <div>
+              <span className="eyebrow">1 · GENERAL QR SCANNER</span>
+              <h2>Scan QR code</h2>
+              <p>Scan any QR code. If it contains a web link, Famioo opens that page. AI Assistant can then read the page and prepare a Calendar event without typing all the details.</p>
+              <div className="ticket-entry-action-note">
+                <span>QR scanning is included.</span>
+                <span className={hasAiAssistant?'ready':'locked'}>
+                  <Sparkles size={11}/>{hasAiAssistant?'Assistant ready':'Assistant required for page → event'}
+                </span>
+              </div>
+            </div>
+            <button type="button" className="primary-button compact" onClick={()=>openNew(true)}>
+              <ScanLine size={14}/>Scan QR code
+            </button>
+          </article>
+
+          <article className="list-card ticket-entry-action digital">
+            <span className="ticket-entry-action-icon"><Upload size={21}/></span>
+            <div>
+              <span className="eyebrow">2 · DIGITAL WALLET</span>
+              <h2>Import digital ticket</h2>
+              <p>Import the real ticket or pass file from your phone. Famioo keeps the digital file in the private Wallet and can link the ticket to Calendar.</p>
+              <div className="ticket-entry-action-note">
+                <span>.pkpass · PDF · JPG · PNG · WebP</span>
+                <span>Private household storage</span>
+              </div>
+            </div>
+            <button type="button" className="primary-button compact" onClick={()=>{
+              resetForm()
+              scanFileInputRef.current?.click()
+            }}>
+              <Upload size={14}/>Import digital ticket
+            </button>
+          </article>
+
+          <article className="list-card ticket-entry-action manual">
+            <span className="ticket-entry-action-icon"><Ticket size={21}/></span>
+            <div>
+              <span className="eyebrow">3 · NO DIGITAL FILE</span>
+              <h2>Add active ticket</h2>
+              <p>Enter ticket details manually when there is no digital file. It stays as an active ticket record and can optionally be added to Calendar, but it is not presented as a digital Wallet pass.</p>
+            </div>
+            <button type="button" className="secondary-button compact" onClick={()=>openNew(false)}>
+              <Ticket size={14}/>Add active ticket
+            </button>
+          </article>
+        </section>
+      )}
+
       <section className="list-card ticket-wallet-security">
         <QrCode size={18}/>
         <div>
-          <strong>Private ticket data</strong>
-          <p>Ticket files and saved QR/barcode values are stored in private household storage. Apple Wallet .pkpass metadata is read locally in the browser; access follows Famioo household permissions and the normal database security rules.</p>
+          <strong>Private digital-ticket storage</strong>
+          <p>Imported ticket files are stored in private household storage. Apple Wallet .pkpass metadata and QR codes in imported images are read locally in the browser. General QR scanning does not save the scanned page automatically.</p>
         </div>
       </section>
 
