@@ -2215,7 +2215,7 @@ export function TicketWalletPage(){
               <div className="ticket-scan-destinations">
                 <button
                   type="button"
-                  className="ticket-scan-destination"
+                  className={'ticket-scan-destination '+(scanDraft.kind==='ticket'&&!scanDraft.start_date?'primary':'')}
                   disabled={scanSaving||!canWrite}
                   onClick={()=>void saveScanToWallet(false)}
                 >
@@ -2228,7 +2228,7 @@ export function TicketWalletPage(){
 
                 <button
                   type="button"
-                  className="ticket-scan-destination primary"
+                  className={'ticket-scan-destination '+(scanDraft.kind==='ticket'&&Boolean(scanDraft.start_date)?'primary':'')}
                   disabled={scanSaving||!canWrite||!canWriteCalendar||!scanDraft.start_date}
                   onClick={()=>void saveScanToWallet(true)}
                 >
@@ -2241,7 +2241,7 @@ export function TicketWalletPage(){
 
                 <button
                   type="button"
-                  className="ticket-scan-destination"
+                  className={'ticket-scan-destination '+(scanDraft.kind==='event'?'primary':'')}
                   disabled={scanSaving||!canWriteCalendar||!scanDraft.start_date}
                   onClick={()=>void saveScanToCalendar()}
                 >
@@ -2254,7 +2254,7 @@ export function TicketWalletPage(){
 
                 <button
                   type="button"
-                  className="ticket-scan-destination"
+                  className={'ticket-scan-destination '+(['reference','link','contact','wifi'].includes(scanDraft.kind)?'primary':'')}
                   disabled={scanSaving||!canWriteLifeAdmin}
                   onClick={()=>void saveScanToLifeAdmin()}
                 >
