@@ -505,6 +505,10 @@ export function ChecklistsPage() {
           <div className="checklist-card-controls">
             {canWrite && (
               <>
+                <span className="mobile-slot-actions" aria-label={'Pin ' + list.title}>
+                  <button type="button" className="secondary-button compact" disabled={list.expanded_slot === 1} onClick={() => void setExpandedSlot(list.id, 1)}>Top 1</button>
+                  <button type="button" className="secondary-button compact" disabled={list.expanded_slot === 2} onClick={() => void setExpandedSlot(list.id, 2)}>Top 2</button>
+                </span>
                 <button type="button" className="icon-button compact-icon" aria-label={'Edit ' + list.title} onClick={() => openEdit(list)}>
                   <Pencil size={14} />
                 </button>
@@ -594,6 +598,10 @@ export function ChecklistsPage() {
         <span className="compact-list-progress">{completed}/{listItems.length}</span>
         {canWrite && (
           <div className="compact-list-actions">
+            <span className="mobile-slot-actions" aria-label={'Pin ' + list.title}>
+              <button type="button" className="secondary-button compact" onClick={() => void setExpandedSlot(list.id, 1)}>Top 1</button>
+              <button type="button" className="secondary-button compact" onClick={() => void setExpandedSlot(list.id, 2)}>Top 2</button>
+            </span>
             <button type="button" className="icon-button compact-icon" aria-label={'Edit ' + list.title} onClick={() => openEdit(list)}>
               <Pencil size={14} />
             </button>
@@ -662,7 +670,7 @@ export function ChecklistsPage() {
                   ) : (
                     <div className="list-drop-placeholder">
                       <GripVertical size={18} />
-                      <span>Drag a checklist here to keep it expanded.</span>
+                      <span>Drop a checklist here on desktop. On mobile, use Top 1 / Top 2.</span>
                     </div>
                   )}
                 </div>
@@ -677,7 +685,7 @@ export function ChecklistsPage() {
                   <span className="eyebrow">MORE CHECKLISTS</span>
                   <h2>Other active checklists</h2>
                 </div>
-                <small>Drag any checklist onto one of the two expanded cards above.</small>
+                <small>Desktop: drag a checklist above. Mobile: use Top 1 / Top 2.</small>
               </div>
               <div className="collapsed-list-stack">
                 {collapsedLists.map((list) => renderCollapsedChecklist(list))}
