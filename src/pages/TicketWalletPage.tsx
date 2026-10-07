@@ -2435,10 +2435,8 @@ export function TicketWalletPage(){
           className="modal-backdrop qr-page-backdrop"
           role="presentation"
           onMouseDown={(event)=>{
-            if(event.currentTarget===event.target&&!qrAiLoading&&!qrEventSaving){
-              setQrPageOpen(false)
-              setQrAiDraft(null)
-              setError('')
+            if(event.currentTarget===event.target&&!qrAiLoading&&!qrEventSaving&&!qrLinkSaving){
+              closeQrPageActions()
             }
           }}
         >
@@ -2455,21 +2453,24 @@ export function TicketWalletPage(){
                 type="button"
                 className="icon-button"
                 aria-label="Close QR page dialog"
-                disabled={qrAiLoading||qrEventSaving}
-                onClick={()=>{
-                  setQrPageOpen(false)
-                  setQrAiDraft(null)
-                  setError('')
-                }}
+                disabled={qrAiLoading||qrEventSaving||qrLinkSaving}
+                onClick={closeQrPageActions}
               >
                 <X size={18}/>
               </button>
             </header>
 
-            <a className="qr-page-url" href={qrPageUrl} target="_blank" rel="noreferrer">
-              <ExternalLink size={14}/>
-              <span>{qrPageUrl}</span>
-            </a>
+            <div className="qr-page-source">
+              <div>
+                <span className="eyebrow">{qrMetaLoading?'READING PAGE…':'WEB PAGE'}</span>
+                <strong>{qrPageTitle||hostTitle(qrPageUrl)}</strong>
+                {qrPageDescription&&<p>{qrPageDescription}</p>}
+              </div>
+              <a className="qr-page-url" href={qrPageUrl} target="_blank" rel="noreferrer">
+                <ExternalLink size={14}/>
+                <span>{qrPageUrl}</span>
+              </a>
+            </div>
 
             {!qrAiDraft ? (
               <>
@@ -2495,36 +2496,80 @@ export function TicketWalletPage(){
 
                 {error&&<div className="notice error">{error}</div>}
 
-                <div className="qr-page-actions">
-                  <a className="secondary-button" href={qrPageUrl} target="_blank" rel="noreferrer">
-                    <ExternalLink size={14}/>Open page
+                <div className="qr-page-choice-grid">
+                  <a className="qr-page-choice" href={qrPageUrl} target="_blank" rel="noreferrer">
+                    <ExternalLink size={18}/>
+                    <span>
+                      <strong>Open website</strong>
+                      <small>Return to the QR destination page.</small>
+                    </span>
                   </a>
+
+                  <button
+                    type="button"
+                    className="qr-page-choice"
+                    disabled={!canWriteFiles||qrLinkSaving||qrLinkSaved}
+                    onClick={()=>void saveQrPageLink()}
+                  >
+                    <FileText size={18}/>
+                    <span>
+                      <strong>{qrLinkSaved?'Saved in Files':'Save link in Files'}</strong>
+                      <small>{qrLinkSaved?'Available under Files · Links.':'Keep this website as a family bookmark. No storage quota is used.'}</small>
+                    </span>
+                  </button>
 
                   {hasAiAssistant ? (
                     <button
                       type="button"
-                      className="primary-button"
+                      className="qr-page-choice primary"
                       disabled={qrAiLoading||!canWriteCalendar}
                       onClick={()=>void readQrPageWithAssistant()}
                     >
-                      <Sparkles size={14}/>
-                      {qrAiLoading?'Reading page…':'Create event with Assistant'}
+                      <Sparkles size={18}/>
+                      <span>
+                        <strong>{qrAiLoading?'Reading page…':'Create event with Assistant'}</strong>
+                        <small>Assistant reads the page and prepares date, time, location and description for review.</small>
+                      </span>
                     </button>
                   ) : (
-                    <Link className="primary-button" to="/app/settings?tab=modules">
-                      <Sparkles size={14}/>Get AI Assistant
+                    <Link className="qr-page-choice locked" to="/app/settings?tab=modules">
+                      <Sparkles size={18}/>
+                      <span>
+                        <strong>Get AI Assistant</strong>
+                        <small>Automatic page-to-event extraction is a paid Assistant feature.</small>
+                      </span>
                     </Link>
                   )}
+
+                  <Link
+                    className="qr-page-choice"
+                    to="/app/calendar"
+                    state={{
+                      prefillEvent:{
+                        title:qrPageTitle||hostTitle(qrPageUrl),
+                        description:qrPageUrl,
+                        sourceUrl:qrPageUrl,
+                      },
+                    }}
+                    onClick={()=>{
+                      try{ sessionStorage.removeItem('famioo:pending-qr-page') }catch{ /* ignore */ }
+                    }}
+                  >
+                    <CalendarDays size={18}/>
+                    <span>
+                      <strong>Create event manually</strong>
+                      <small>Open the normal Calendar form with the page name and link already filled when available.</small>
+                    </span>
+                  </Link>
                 </div>
 
                 {!canWriteCalendar&&(
                   <div className="module-access-note">Calendar write access is required to create an event.</div>
                 )}
 
-                <div className="qr-page-manual">
-                  <span>Prefer to type it yourself?</span>
-                  <Link className="text-button" to="/app/calendar">Create event manually in Calendar</Link>
-                </div>
+                {!canWriteFiles&&(
+                  <div className="module-access-note">Files write access is required to save the link.</div>
+                )}
               </>
             ) : (
               <>
