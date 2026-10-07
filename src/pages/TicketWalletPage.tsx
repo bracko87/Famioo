@@ -653,6 +653,7 @@ export function TicketWalletPage(){
   const [archiveTarget,setArchiveTarget]=useState<TicketEntry|null>(null)
 
   const fileInputRef=useRef<HTMLInputElement>(null)
+  const scanFileInputRef=useRef<HTMLInputElement>(null)
   const videoRef=useRef<HTMLVideoElement>(null)
 
   const currentProfile=useMemo(
@@ -883,7 +884,7 @@ export function TicketWalletPage(){
   },[scannerOpen])
 
   async function detectCodeInImage(file:File){
-    if(!file.type.startsWith('image/')) return
+    if(!file.type.startsWith('image/')) return false
 
     let raw=''
     const Detector=getBarcodeDetector()
@@ -916,7 +917,10 @@ export function TicketWalletPage(){
       setScanFile(file)
       setScannerMessage('Code detected from the uploaded image. Famioo recognized the information below.')
       setScanReviewOpen(true)
+      return true
     }
+
+    return false
   }
 
   async function chooseFile(file:File|null){
@@ -935,7 +939,14 @@ export function TicketWalletPage(){
 
     setPendingFile(file)
     setRemoveExistingFile(false)
-    await detectCodeInImage(file)
+    const detected=await detectCodeInImage(file)
+
+    if(!detected&&!composerOpen){
+      resetForm()
+      setPendingFile(file)
+      setComposerOpen(true)
+      setScannerMessage('No readable code was found in the file. Add or confirm the ticket details manually.')
+    }
   }
 
   function scanNotes(draft:ScanDraft){
@@ -1331,12 +1342,30 @@ export function TicketWalletPage(){
             <button type="button" className="secondary-button compact" onClick={()=>openNew(true)}>
               <ScanLine size={15}/>Scan ticket
             </button>
+            <button type="button" className="secondary-button compact" onClick={()=>{
+              resetForm()
+              scanFileInputRef.current?.click()
+            }}>
+              <Upload size={15}/>Import file
+            </button>
             <button type="button" className="primary-button compact" onClick={()=>openNew(false)}>
               <Ticket size={15}/>Add ticket
             </button>
           </div>
         )}
       </div>
+
+      <input
+        ref={scanFileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,application/pdf"
+        hidden
+        onChange={(event)=>{
+          const file=event.target.files?.[0]??null
+          event.target.value=''
+          void chooseFile(file)
+        }}
+      />
 
       <section className="list-card ticket-wallet-security">
         <QrCode size={18}/>
@@ -2036,7 +2065,7 @@ export function TicketWalletPage(){
                 <p>{scannerError}</p>
                 <button type="button" className="primary-button compact" onClick={()=>{
                   setScannerOpen(false)
-                  window.setTimeout(()=>fileInputRef.current?.click(),0)
+                  window.setTimeout(()=>scanFileInputRef.current?.click(),0)
                 }}>
                   <Upload size={14}/>Upload ticket image
                 </button>
