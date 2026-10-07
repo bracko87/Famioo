@@ -662,7 +662,7 @@ async function parsePkpassFile(file:File,timezone:string):Promise<ScanDraft>{
 
   try{
     files=unzipSync(bytes,{
-      filter(entry){
+      filter(entry:{name:string;originalSize:number}){
         return entry.name==='pass.json'&&entry.originalSize<=1_500_000
       },
     })
