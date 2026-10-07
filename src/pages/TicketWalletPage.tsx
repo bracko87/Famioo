@@ -2063,8 +2063,8 @@ export function TicketWalletPage(){
           <form className="modal-card ticket-wallet-composer" onSubmit={saveTicket}>
             <header>
               <div>
-                <span className="eyebrow">{editing?(editing.file_path?'EDIT DIGITAL PASS':'EDIT ACTIVE TICKET'):'NEW ACTIVE TICKET'}</span>
-                <h2>{editing?'Edit ticket':'Add active ticket manually'}</h2>
+                <span className="eyebrow">{(pendingFile||editing?.file_path)?(editing?'EDIT DIGITAL PASS':'IMPORT DIGITAL TICKET'):(editing?'EDIT ACTIVE TICKET':'NEW ACTIVE TICKET')}</span>
+                <h2>{editing?'Edit ticket':pendingFile?'Confirm digital ticket details':'Add active ticket manually'}</h2>
               </div>
               <button type="button" className="icon-button" aria-label="Close Ticket Wallet form" onClick={()=>{
                 setComposerOpen(false)
@@ -2233,7 +2233,7 @@ export function TicketWalletPage(){
               <small>QR recognition runs locally in the browser and does not use AI. Other barcode formats use the browser’s native detector when available.</small>
             </section>
 
-            {(editing?.file_path||existingFilePath)&&(
+            {(pendingFile||editing?.file_path||existingFilePath)&&(
               <section className="ticket-wallet-file-panel">
                 <header>
                   <div>
@@ -2311,10 +2311,260 @@ export function TicketWalletPage(){
                 resetForm()
               }}>Cancel</button>
               <button className="primary-button" disabled={saving||!title.trim()||(syncCalendar&&!startDate)}>
-                {saving?'Saving…':editing?.file_path?'Save digital pass':'Save active ticket'}
+                {saving?'Saving…':(pendingFile||editing?.file_path)?'Save digital pass':'Save active ticket'}
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {qrPageOpen&&(
+        <div
+          className="modal-backdrop qr-page-backdrop"
+          role="presentation"
+          onMouseDown={(event)=>{
+            if(event.currentTarget===event.target&&!qrAiLoading&&!qrEventSaving){
+              setQrPageOpen(false)
+              setQrAiDraft(null)
+              setError('')
+            }
+          }}
+        >
+          <section className="modal-card qr-page-card">
+            <header>
+              <div>
+                <span className="eyebrow">QR DESTINATION</span>
+                <h2>{qrAiDraft?'Review Calendar event':'QR page opened'}</h2>
+                <p>{qrAiDraft
+                  ?'Assistant read the destination page. Check the details before saving anything to Calendar.'
+                  :'Famioo found a web link in the QR code. The page can be opened normally; Assistant is optional and only used if you want an event created automatically.'}</p>
+              </div>
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Close QR page dialog"
+                disabled={qrAiLoading||qrEventSaving}
+                onClick={()=>{
+                  setQrPageOpen(false)
+                  setQrAiDraft(null)
+                  setError('')
+                }}
+              >
+                <X size={18}/>
+              </button>
+            </header>
+
+            <a className="qr-page-url" href={qrPageUrl} target="_blank" rel="noreferrer">
+              <ExternalLink size={14}/>
+              <span>{qrPageUrl}</span>
+            </a>
+
+            {!qrAiDraft ? (
+              <>
+                <div className="qr-page-flow">
+                  <div className="qr-page-step done">
+                    <span>1</span>
+                    <div><strong>QR code read</strong><small>The web address was decoded locally.</small></div>
+                  </div>
+                  <div className="qr-page-step done">
+                    <span>2</span>
+                    <div><strong>Open destination page</strong><small>Use the page exactly as the QR publisher intended.</small></div>
+                  </div>
+                  <div className={'qr-page-step '+(hasAiAssistant?'ready':'locked')}>
+                    <span>3</span>
+                    <div>
+                      <strong>Create Calendar event with Assistant</strong>
+                      <small>{hasAiAssistant
+                        ?'Assistant can read the page and prepare the event fields for review.'
+                        :'This optional step requires the paid AI Assistant module.'}</small>
+                    </div>
+                  </div>
+                </div>
+
+                {error&&<div className="notice error">{error}</div>}
+
+                <div className="qr-page-actions">
+                  <a className="secondary-button" href={qrPageUrl} target="_blank" rel="noreferrer">
+                    <ExternalLink size={14}/>Open page
+                  </a>
+
+                  {hasAiAssistant ? (
+                    <button
+                      type="button"
+                      className="primary-button"
+                      disabled={qrAiLoading||!canWriteCalendar}
+                      onClick={()=>void readQrPageWithAssistant()}
+                    >
+                      <Sparkles size={14}/>
+                      {qrAiLoading?'Reading page…':'Create event with Assistant'}
+                    </button>
+                  ) : (
+                    <Link className="primary-button" to="/app/settings?tab=modules">
+                      <Sparkles size={14}/>Get AI Assistant
+                    </Link>
+                  )}
+                </div>
+
+                {!canWriteCalendar&&(
+                  <div className="module-access-note">Calendar write access is required to create an event.</div>
+                )}
+
+                <div className="qr-page-manual">
+                  <span>Prefer to type it yourself?</span>
+                  <Link className="text-button" to="/app/calendar">Create event manually in Calendar</Link>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="ticket-scan-recognition-strip">
+                  <span><Sparkles size={14}/>Assistant draft</span>
+                  <span>{Math.round(qrAiDraft.confidence*100)}% confidence</span>
+                  {qrAiDraft.location&&<span><MapPin size={14}/>Location found</span>}
+                </div>
+
+                <div className="composer-grid-two aligned-field-row">
+                  <label>
+                    Event name
+                    <input
+                      value={qrAiDraft.title}
+                      onChange={(event)=>setQrAiDraft((current)=>current?{...current,title:event.target.value}:current)}
+                      autoFocus
+                    />
+                  </label>
+
+                  <label className="ticket-wallet-checkbox qr-all-day">
+                    <input
+                      type="checkbox"
+                      checked={qrAiDraft.all_day}
+                      onChange={(event)=>setQrAiDraft((current)=>current?{
+                        ...current,
+                        all_day:event.target.checked,
+                        start_time:event.target.checked?'':current.start_time,
+                        end_time:event.target.checked?'':current.end_time,
+                      }:current)}
+                    />
+                    <span>All-day event</span>
+                  </label>
+                </div>
+
+                <div className="composer-grid-two aligned-field-row">
+                  <label>
+                    Date
+                    <DatePicker
+                      value={qrAiDraft.date}
+                      onChange={(value)=>setQrAiDraft((current)=>current?{...current,date:value}:current)}
+                      format={household.date_format}
+                      ariaLabel="Choose QR event date"
+                    />
+                  </label>
+
+                  <label>
+                    End date
+                    <DatePicker
+                      value={qrAiDraft.end_date}
+                      onChange={(value)=>setQrAiDraft((current)=>current?{...current,end_date:value}:current)}
+                      min={qrAiDraft.date||undefined}
+                      format={household.date_format}
+                      ariaLabel="Choose QR event end date"
+                    />
+                  </label>
+                </div>
+
+                {!qrAiDraft.all_day&&(
+                  <div className="composer-grid-two aligned-field-row">
+                    <label>
+                      Start time
+                      <TimePicker
+                        value={qrAiDraft.start_time||'09:00'}
+                        onChange={(value)=>setQrAiDraft((current)=>current?{...current,start_time:value}:current)}
+                      />
+                    </label>
+                    <label>
+                      End time
+                      <TimePicker
+                        value={qrAiDraft.end_time||'10:00'}
+                        onChange={(value)=>setQrAiDraft((current)=>current?{...current,end_time:value}:current)}
+                      />
+                      {!qrAiDraft.end_time&&<small className="field-hint">Assistant did not find an end time. Confirm it before saving.</small>}
+                    </label>
+                  </div>
+                )}
+
+                <label>
+                  Location
+                  <input
+                    value={qrAiDraft.location}
+                    onChange={(event)=>setQrAiDraft((current)=>current?{...current,location:event.target.value}:current)}
+                    placeholder="Optional"
+                  />
+                  {qrAiDraft.location.trim()&&<GoogleMapsLink location={qrAiDraft.location} label="Open in Google Maps" className="field-map-link"/>}
+                </label>
+
+                <label>
+                  Description
+                  <textarea
+                    value={qrAiDraft.description}
+                    onChange={(event)=>setQrAiDraft((current)=>current?{...current,description:event.target.value}:current)}
+                    placeholder="Optional event details"
+                  />
+                </label>
+
+                <div className="composer-grid-two aligned-field-row">
+                  <label>
+                    Calendar
+                    <Select
+                      value={calendarId}
+                      onChange={setCalendarId}
+                      options={calendars.map((calendar)=>({
+                        value:calendar.id,
+                        label:calendar.name+(calendar.is_default?' · Default':''),
+                        dotColor:categoryColor(calendar.color_key),
+                      }))}
+                      ariaLabel="Choose Calendar for QR event"
+                    />
+                  </label>
+
+                  <label>
+                    Reminder
+                    <Select
+                      value={qrReminder}
+                      onChange={setQrReminder}
+                      options={[
+                        {value:'none',label:'No reminder'},
+                        {value:'15',label:'15 minutes before'},
+                        {value:'60',label:'1 hour before'},
+                        {value:'1440',label:'1 day before'},
+                        {value:'morning',label:'Morning of event · 08:00'},
+                      ]}
+                      ariaLabel="Choose reminder for QR event"
+                    />
+                  </label>
+                </div>
+
+                {error&&<div className="notice error">{error}</div>}
+
+                <div className="modal-actions qr-event-actions">
+                  <button type="button" className="secondary-button" disabled={qrEventSaving} onClick={()=>setQrAiDraft(null)}>
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    className="primary-button"
+                    disabled={
+                      qrEventSaving
+                      ||!qrAiDraft.title.trim()
+                      ||!qrAiDraft.date
+                      ||(!qrAiDraft.all_day&&(!qrAiDraft.start_time||!qrAiDraft.end_time))
+                    }
+                    onClick={()=>void saveQrAssistantEvent()}
+                  >
+                    <CalendarDays size={14}/>
+                    {qrEventSaving?'Saving…':'Add to Calendar'}
+                  </button>
+                </div>
+              </>
+            )}
+          </section>
         </div>
       )}
 
@@ -2628,7 +2878,7 @@ export function TicketWalletPage(){
                 </button>
               </div>
             ) : (
-              <p className="ticket-scanner-help">Point the camera at any QR code or supported barcode. Famioo recognizes the content and opens a review popup automatically.</p>
+              <p className="ticket-scanner-help">Point the camera at a QR code. Web links open their destination page; non-web QR content is shown for review.</p>
             )}
           </section>
         </div>
