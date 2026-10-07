@@ -335,6 +335,34 @@ function parseScannedPayload(rawValue:string):ScanDraft{
   }
 }
 
+function zonedLocalToIso(date:string,time:string,timezone:string){
+  const [year,month,day]=date.split('-').map(Number)
+  const [hour,minute]=time.split(':').map(Number)
+  let guess=Date.UTC(year,month-1,day,hour,minute,0)
+
+  for(let pass=0;pass<3;pass+=1){
+    const parts=new Intl.DateTimeFormat('en-CA',{
+      timeZone:timezone,
+      year:'numeric',
+      month:'2-digit',
+      day:'2-digit',
+      hour:'2-digit',
+      minute:'2-digit',
+      second:'2-digit',
+      hourCycle:'h23',
+    }).formatToParts(new Date(guess))
+    const get=(type:string)=>Number(parts.find((part)=>part.type===type)?.value??0)
+    const represented=Date.UTC(
+      get('year'),get('month')-1,get('day'),
+      get('hour'),get('minute'),get('second'),
+    )
+    const desired=Date.UTC(year,month-1,day,hour,minute,0)
+    guess+=desired-represented
+  }
+
+  return new Date(guess).toISOString()
+}
+
 function safeFileName(name:string){
   const clean=name.replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/-+/g,'-')
   return clean.slice(0,120)||'ticket'
@@ -748,6 +776,244 @@ export function TicketWalletPage(){
     setPendingFile(file)
     setRemoveExistingFile(false)
     await detectCodeInImage(file)
+  }
+
+  function scanNotes(draft:ScanDraft){
+    const pieces=[
+      draft.notes.trim(),
+      draft.raw_value&&draft.notes.trim()!==draft.raw_value
+        ?'Scanned value:\n'+draft.raw_value
+        :'',
+    ].filter(Boolean)
+    return pieces.join('\n\n')
+  }
+
+  function openFullEditorFromScan(){
+    if(!scanDraft) return
+
+    resetForm()
+    setTitle(scanDraft.title)
+    setTicketType(scanDraft.ticket_type)
+    setHolderProfileId(currentProfile?.id??'')
+    setStartDate(scanDraft.start_date)
+    setStartTime(scanDraft.start_time||'09:00')
+    setHasStartTime(Boolean(scanDraft.start_time))
+    setEndDate(scanDraft.end_date)
+    setEndTime(scanDraft.end_time||'11:00')
+    setHasEndTime(Boolean(scanDraft.end_time))
+    setLocationText(scanDraft.location_text)
+    setProviderText(scanDraft.provider_text)
+    setBookingReference(scanDraft.booking_reference)
+    setQrValue(scanDraft.raw_value)
+    setNotes(scanDraft.notes)
+    setPendingFile(scanFile)
+    setSyncCalendar(false)
+    setScanReviewOpen(false)
+    setComposerOpen(true)
+  }
+
+  async function uploadScanFile(){
+    if(!scanFile) return {
+      path:null as string|null,
+      name:null as string|null,
+      mime:null as string|null,
+      size:null as number|null,
+    }
+
+    const path=`${household.id}/${crypto.randomUUID()}/${safeFileName(scanFile.name)}`
+    const upload=await supabase.storage
+      .from('ticket-wallet')
+      .upload(path,scanFile,{
+        contentType:scanFile.type,
+        upsert:false,
+      })
+
+    if(upload.error) throw upload.error
+
+    return {
+      path,
+      name:scanFile.name,
+      mime:scanFile.type,
+      size:scanFile.size,
+    }
+  }
+
+  async function saveScanToWallet(withCalendar:boolean){
+    if(!scanDraft||scanSaving) return
+    if(withCalendar&&!scanDraft.start_date){
+      setError('Add the event or ticket date before saving it to Calendar.')
+      return
+    }
+
+    setScanSaving(true)
+    setError('')
+    setMessage('')
+
+    let uploaded:{path:string|null;name:string|null;mime:string|null;size:number|null}|null=null
+
+    try{
+      uploaded=await uploadScanFile()
+
+      const result=await supabase.rpc('save_ticket_wallet_entry_v1',{
+        p_id:null,
+        p_household_id:household.id,
+        p_title:scanDraft.title.trim()||'Scanned ticket',
+        p_ticket_type:scanDraft.ticket_type,
+        p_holder_profile_id:currentProfile?.id??null,
+        p_start_date:scanDraft.start_date||null,
+        p_start_time:scanDraft.start_time||null,
+        p_end_date:scanDraft.end_date||null,
+        p_end_time:scanDraft.end_time||null,
+        p_location_text:scanDraft.location_text.trim()||null,
+        p_provider_text:scanDraft.provider_text.trim()||null,
+        p_booking_reference:scanDraft.booking_reference.trim()||null,
+        p_qr_value:scanDraft.raw_value,
+        p_notes:scanDraft.notes.trim()||null,
+        p_status:'active',
+        p_calendar_id:withCalendar?(calendarId||null):null,
+        p_sync_calendar:withCalendar,
+        p_file_path:uploaded.path,
+        p_file_name:uploaded.name,
+        p_file_mime_type:uploaded.mime,
+        p_file_size:uploaded.size,
+      })
+
+      if(result.error) throw result.error
+
+      setScanReviewOpen(false)
+      setScanDraft(null)
+      setScanFile(null)
+      setMessage(withCalendar
+        ?'Scan saved to Ticket Wallet and Calendar.'
+        :'Scan saved to Ticket Wallet.')
+      await load()
+    }catch(reason){
+      if(uploaded?.path){
+        await supabase.storage.from('ticket-wallet').remove([uploaded.path])
+      }
+      setError(reason instanceof Error?reason.message:'Could not save the scanned ticket.')
+    }finally{
+      setScanSaving(false)
+    }
+  }
+
+  async function saveScanToCalendar(){
+    if(!scanDraft||scanSaving) return
+    if(!scanDraft.start_date){
+      setError('Add a date before saving this scan to Calendar.')
+      return
+    }
+
+    const targetCalendar=calendars.find((calendar)=>calendar.id===calendarId)
+      ??calendars.find((calendar)=>calendar.is_default)
+      ??calendars[0]
+
+    if(!targetCalendar){
+      setError('No active Calendar is available.')
+      return
+    }
+
+    setScanSaving(true)
+    setError('')
+    setMessage('')
+
+    const allDay=!scanDraft.start_time
+    const startAt=allDay
+      ?null
+      :zonedLocalToIso(scanDraft.start_date,scanDraft.start_time,household.timezone)
+
+    let endAt:string|null=null
+    if(startAt){
+      if(scanDraft.end_time){
+        endAt=zonedLocalToIso(
+          scanDraft.end_date||scanDraft.start_date,
+          scanDraft.end_time,
+          household.timezone,
+        )
+      }else{
+        endAt=new Date(new Date(startAt).getTime()+2*60*60*1000).toISOString()
+      }
+    }
+
+    const participants=currentProfile
+      ?[{profile_id:currentProfile.id,participant_role:'participant',can_edit:false}]
+      :[]
+
+    const result=await supabase.rpc('save_event_v1',{
+      p_event_id:null,
+      p_household_id:household.id,
+      p_calendar_id:targetCalendar.id,
+      p_title:scanDraft.title.trim()||'Scanned event',
+      p_description:scanNotes(scanDraft)||null,
+      p_all_day:allDay,
+      p_start_at:startAt,
+      p_end_at:endAt,
+      p_start_date:allDay?scanDraft.start_date:null,
+      p_end_date:allDay?(scanDraft.end_date||scanDraft.start_date):null,
+      p_timezone:household.timezone,
+      p_location_text:scanDraft.location_text.trim()||null,
+      p_category_id:null,
+      p_visibility:'household',
+      p_participants:participants,
+      p_rrule:null,
+      p_reminders:[],
+    })
+
+    setScanSaving(false)
+
+    if(result.error){
+      setError(result.error.message)
+      return
+    }
+
+    setScanReviewOpen(false)
+    setScanDraft(null)
+    setScanFile(null)
+    setMessage('Scanned information saved to Calendar.')
+  }
+
+  async function saveScanToLifeAdmin(){
+    if(!scanDraft||scanSaving) return
+
+    setScanSaving(true)
+    setError('')
+    setMessage('')
+
+    const result=await supabase.rpc('save_life_admin_item_v2',{
+      p_id:null,
+      p_household_id:household.id,
+      p_item_type:'reference',
+      p_title:scanDraft.title.trim()||'Scanned reference',
+      p_provider:scanDraft.provider_text.trim()||null,
+      p_reference_number:scanDraft.booking_reference.trim()||null,
+      p_start_date:scanDraft.start_date||null,
+      p_due_date:null,
+      p_renewal_date:null,
+      p_expiry_date:null,
+      p_amount:null,
+      p_currency:'EUR',
+      p_frequency:'none',
+      p_auto_renew:false,
+      p_cancellation_notice_days:null,
+      p_responsible_profile_id:currentProfile?.id??null,
+      p_notes:scanNotes(scanDraft)||null,
+      p_add_to_calendar:false,
+      p_flow_type:'expense',
+      p_include_in_finance:false,
+      p_sync_task:false,
+    })
+
+    setScanSaving(false)
+
+    if(result.error){
+      setError(result.error.message)
+      return
+    }
+
+    setScanReviewOpen(false)
+    setScanDraft(null)
+    setScanFile(null)
+    setMessage('Scanned information saved to Life Admin · Reference.')
   }
 
   async function saveTicket(event:FormEvent){
