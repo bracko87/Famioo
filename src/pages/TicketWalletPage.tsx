@@ -1734,7 +1734,11 @@ export function TicketWalletPage(){
 
     setSaving(false)
     setComposerOpen(false)
-    setMessage(editing?'Ticket updated.':'Ticket saved to the family wallet.')
+    setMessage(editing
+      ?'Ticket updated.'
+      :pendingFile
+        ?'Digital ticket saved to Ticket Wallet.'
+        :'Active ticket saved.')
     resetForm()
     await load()
   }
@@ -2248,7 +2252,6 @@ export function TicketWalletPage(){
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".pkpass,application/vnd.apple.pkpass,image/jpeg,image/png,image/webp,application/pdf"
                   hidden
                   onChange={(event)=>void chooseFile(event.target.files?.[0]??null)}
                 />
