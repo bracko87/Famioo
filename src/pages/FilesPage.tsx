@@ -2,10 +2,12 @@ import {
   Archive,
   Camera,
   Download,
+  ExternalLink,
   File as FileIcon,
   FileImage,
   FileText,
   FolderOpen,
+  Link2,
   Pencil,
   Plus,
   RotateCcw,
@@ -21,7 +23,7 @@ import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
 
 type FileCategory='document'|'photo'|'receipt'|'school'|'home'|'other'
-type FilesTab='all'|'photos'|'documents'|'archive'
+type FilesTab='all'|'photos'|'documents'|'links'|'archive'
 
 type HouseholdFile={
   id:string
@@ -34,6 +36,16 @@ type HouseholdFile={
   notes:string|null
   source_module:string|null
   source_record_id:string|null
+  archived_at:string|null
+  created_at:string
+}
+
+type HouseholdLink={
+  id:string
+  title:string
+  url:string
+  notes:string|null
+  source_module:string|null
   archived_at:string|null
   created_at:string
 }
@@ -86,6 +98,7 @@ export function FilesPage(){
 
   const [tab,setTab]=useState<FilesTab>('all')
   const [files,setFiles]=useState<HouseholdFile[]>([])
+  const [links,setLinks]=useState<HouseholdLink[]>([])
   const [urls,setUrls]=useState<Record<string,string>>({})
   const [storage,setStorage]=useState<StorageEntitlement|null>(null)
   const [error,setError]=useState('')
@@ -106,13 +119,18 @@ export function FilesPage(){
   async function load(){
     setError('')
 
-    const [fileResult,storageResult]=await Promise.all([
+    const [fileResult,linkResult,storageResult]=await Promise.all([
       supabase
         .from('household_files')
         .select('id,title,file_name,storage_path,mime_type,file_size,category,notes,source_module,source_record_id,archived_at,created_at')
         .eq('household_id',household.id)
         .eq('status','active')
         .order('created_at',{ ascending:false }),
+      supabase
+        .from('household_links')
+        .select('id,title,url,notes,source_module,archived_at,created_at')
+        .eq('household_id',household.id)
+        .order('created_at',{ascending:false}),
       supabase.rpc('files_storage_entitlement_v1',{ p_household_id:household.id }),
     ])
 
@@ -129,6 +147,12 @@ export function FilesPage(){
       setUrls(Object.fromEntries(signed))
     }
 
+    if(linkResult.error){
+      setError((current)=>current||linkResult.error.message)
+    }else{
+      setLinks((linkResult.data??[]) as HouseholdLink[])
+    }
+
     if(storageResult.error){
       setError((current)=>current||storageResult.error.message)
     } else {
@@ -141,6 +165,8 @@ export function FilesPage(){
 
   const activeFiles=useMemo(()=>files.filter((file)=>!file.archived_at),[files])
   const archivedFiles=useMemo(()=>files.filter((file)=>Boolean(file.archived_at)),[files])
+  const activeLinks=useMemo(()=>links.filter((link)=>!link.archived_at),[links])
+  const archivedLinks=useMemo(()=>links.filter((link)=>Boolean(link.archived_at)),[links])
 
   const visibleFiles=useMemo(()=>{
     if(tab==='archive') return archivedFiles
@@ -405,6 +431,34 @@ export function FilesPage(){
     )
   }
 
+  function renderLink(link:HouseholdLink){
+    let host=''
+    try{ host=new URL(link.url).hostname.replace(/^www\./,'') }catch{ host='Website' }
+
+    return (
+      <article className="files-row files-link-row list-card" key={link.id}>
+        <div className="files-preview link"><Link2 size={22}/></div>
+
+        <div className="files-main">
+          <strong>{link.title}</strong>
+          <div className="files-meta">
+            <span>Link</span>
+            <span>{host}</span>
+            <span>{new Date(link.created_at).toLocaleDateString()}</span>
+          </div>
+          <small className="files-link-url">{link.url}</small>
+          {link.notes&&<p>{link.notes}</p>}
+        </div>
+
+        <div className="files-actions">
+          <a className="secondary-button compact" href={link.url} target="_blank" rel="noreferrer">
+            <ExternalLink size={14}/>Open website
+          </a>
+        </div>
+      </article>
+    )
+  }
+
   return (
     <div className="page files-page">
       <input
@@ -426,7 +480,7 @@ export function FilesPage(){
         <div>
           <div className="page-label">FILES</div>
           <h1>Files</h1>
-          <p className="page-subtitle">Keep household documents and photos together. Files is included in the free Famioo core.</p>
+          <p className="page-subtitle">Keep household documents, photos and useful web links together. Files is included in the free Famioo core.</p>
         </div>
 
         {canWrite && (
@@ -478,18 +532,36 @@ export function FilesPage(){
         <button type="button" className={tab==='all'?'active':''} onClick={()=>setTab('all')}>All <span>{activeFiles.length}</span></button>
         <button type="button" className={tab==='photos'?'active':''} onClick={()=>setTab('photos')}>Photos <span>{activeFiles.filter((file)=>fileKind(file)==='photo').length}</span></button>
         <button type="button" className={tab==='documents'?'active':''} onClick={()=>setTab('documents')}>Documents <span>{activeFiles.filter((file)=>fileKind(file)!=='photo').length}</span></button>
-        <button type="button" className={tab==='archive'?'active':''} onClick={()=>setTab('archive')}>Archive <span>{archivedFiles.length}</span></button>
+        <button type="button" className={tab==='links'?'active':''} onClick={()=>setTab('links')}>Links <span>{activeLinks.length}</span></button>
+        <button type="button" className={tab==='archive'?'active':''} onClick={()=>setTab('archive')}>Archive <span>{archivedFiles.length+archivedLinks.length}</span></button>
       </nav>
 
-      {visibleFiles.length ? (
+      {tab==='links' ? (
+        activeLinks.length ? (
+          <section className="files-list files-links-list">
+            {activeLinks.map(renderLink)}
+          </section>
+        ) : (
+          <div className="list-card empty-state files-empty">
+            <Link2 size={28}/>
+            <span className="empty-state-title">No saved links yet.</span>
+            <span>Links saved from the QR scanner will appear here without using Files storage quota.</span>
+          </div>
+        )
+      ) : visibleFiles.length ? (
         <section className="files-list">
           {visibleFiles.map(renderFile)}
+          {tab==='archive'&&archivedLinks.map(renderLink)}
+        </section>
+      ) : tab==='archive'&&archivedLinks.length ? (
+        <section className="files-list files-links-list">
+          {archivedLinks.map(renderLink)}
         </section>
       ) : (
         <div className="list-card empty-state files-empty">
           <FileIcon size={28}/>
-          <span className="empty-state-title">{tab==='archive'?'No archived files.':'No files here yet.'}</span>
-          <span>{tab==='archive'?'Archived files stay here until restored or permanently deleted.':'Upload a document or take a photo with your phone.'}</span>
+          <span className="empty-state-title">{tab==='archive'?'Nothing archived.':'No files here yet.'}</span>
+          <span>{tab==='archive'?'Archived files and links stay here until restored or permanently deleted.':'Upload a document, take a photo, or save a website from the QR scanner.'}</span>
         </div>
       )}
 
