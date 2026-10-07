@@ -19,6 +19,7 @@ type RequestBody={
   household_id?:string
   url?:string
   timezone?:string
+  metadata_only?:boolean
 }
 
 function publishableKey(){
@@ -185,22 +186,6 @@ Deno.serve(async(req)=>{
     return json({error:"This household is not accessible."},403)
   }
 
-  const assistantAccess=await userClient.rpc("household_module_enabled_v1",{
-    p_household_id:householdId,
-    p_module_code:"assistant",
-  })
-
-  if(assistantAccess.error){
-    console.error("AI Assistant entitlement check failed",assistantAccess.error)
-    return json({error:"Famioo could not verify AI Assistant access. Please try again."},503)
-  }
-  if(assistantAccess.data!==true){
-    return json({
-      error:"AI Assistant is required to read a QR destination page and create an event draft.",
-      code:"AI_ASSISTANT_REQUIRED",
-    },403)
-  }
-
   let url:URL
   try{
     url=await ensurePublicUrl(rawUrl)
@@ -261,7 +246,34 @@ Deno.serve(async(req)=>{
 
   const page=pageText(html)
   if(!page.body&&!page.title){
-    return json({error:"Famioo opened the page, but there was no readable event information."},422)
+    return json({error:"Famioo opened the page, but there was no readable information."},422)
+  }
+
+  if(body.metadata_only===true){
+    return json({
+      ok:true,
+      metadata:{
+        title:page.title.slice(0,200)||new URL(response.url||url.toString()).hostname.replace(/^www\./,""),
+        description:page.description.slice(0,700)||null,
+        source_url:response.url||url.toString(),
+      },
+    })
+  }
+
+  const assistantAccess=await userClient.rpc("household_module_enabled_v1",{
+    p_household_id:householdId,
+    p_module_code:"assistant",
+  })
+
+  if(assistantAccess.error){
+    console.error("AI Assistant entitlement check failed",assistantAccess.error)
+    return json({error:"Famioo could not verify AI Assistant access. Please try again."},503)
+  }
+  if(assistantAccess.data!==true){
+    return json({
+      error:"AI Assistant is required to read the QR destination page and create an event draft.",
+      code:"AI_ASSISTANT_REQUIRED",
+    },403)
   }
 
   const apiKey=Deno.env.get("OPENAI_API_KEY")
