@@ -191,7 +191,7 @@ values(
   'ticket-wallet',
   false,
   15728640,
-  array['image/jpeg','image/png','image/webp','application/pdf']
+  array['image/jpeg','image/png','image/webp','application/pdf','application/vnd.apple.pkpass']
 )
 on conflict(id) do update set
   public=false,
