@@ -102,6 +102,8 @@ type TicketEntry={
   file_name:string|null
   file_mime_type:string|null
   file_size:number|null
+  preview_image_path:string|null
+  preview_image_mime_type:string|null
   created_at:string
   updated_at:string
 }
@@ -572,6 +574,11 @@ type PkPassData={
   locations?:Array<{latitude?:number;longitude?:number;relevantText?:string}>
 }
 
+type PkPassImport={
+  draft:ScanDraft
+  previewFile:File|null
+}
+
 function isPkpassFile(file:File){
   return file.name.toLowerCase().endsWith('.pkpass')
     ||file.type==='application/vnd.apple.pkpass'
@@ -619,6 +626,58 @@ function localPartsFromIso(value:string|undefined,timezone:string){
     date:`${get('year')}-${get('month')}-${get('day')}`,
     time:`${get('hour')}:${get('minute')}`,
   }
+}
+
+function sourceLocalParts(value:string|undefined,timezone:string){
+  if(!value) return {date:'',time:''}
+  const direct=value.trim().match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+  if(direct){
+    return {
+      date:`${direct[1]}-${direct[2]}-${direct[3]}`,
+      time:`${direct[4]}:${direct[5]}`,
+    }
+  }
+  return localPartsFromIso(value,timezone)
+}
+
+function looseDate(value:string){
+  const normalized=normalizeScannedDate(value)
+  if(normalized) return normalized
+  const parsed=new Date(value)
+  if(Number.isNaN(parsed.getTime())) return ''
+  return [
+    parsed.getUTCFullYear(),
+    String(parsed.getUTCMonth()+1).padStart(2,'0'),
+    String(parsed.getUTCDate()).padStart(2,'0'),
+  ].join('-')
+}
+
+function previewMime(name:string){
+  const lower=name.toLowerCase()
+  if(lower.endsWith('.jpg')||lower.endsWith('.jpeg')) return 'image/jpeg'
+  if(lower.endsWith('.webp')) return 'image/webp'
+  return 'image/png'
+}
+
+function bestPkpassPreview(files:Record<string,Uint8Array>){
+  const candidates=[
+    'background@3x.png','background@2x.png','background.png',
+    'strip@3x.png','strip@2x.png','strip.png',
+    'thumbnail@3x.png','thumbnail@2x.png','thumbnail.png',
+    'logo@3x.png','logo@2x.png','logo.png',
+  ]
+
+  const name=candidates.find((candidate)=>files[candidate])
+    ??Object.keys(files).find((candidate)=>/^(background|strip|thumbnail|logo).*\.(png|jpe?g|webp)$/i.test(candidate))
+
+  if(!name) return null
+
+  const bytes=files[name]
+  return new File(
+    [new Blob([bytes],{type:previewMime(name)})],
+    'wallet-preview-'+name.replace(/[^a-zA-Z0-9._-]+/g,'-'),
+    {type:previewMime(name)},
+  )
 }
 
 function pkpassFields(pass:PkPassData){
@@ -678,14 +737,16 @@ function pkpassTicketType(pass:PkPassData,fields:PkPassField[]):TicketType{
   ].filter(Boolean).join(' '))
 }
 
-async function parsePkpassFile(file:File,timezone:string):Promise<ScanDraft>{
+async function parsePkpassFile(file:File,timezone:string):Promise<PkPassImport>{
   const bytes=new Uint8Array(await file.arrayBuffer())
   let files:Record<string,Uint8Array>
 
   try{
     files=unzipSync(bytes,{
       filter(entry:{name:string;originalSize:number}){
-        return entry.name==='pass.json'&&entry.originalSize<=1_500_000
+        const wanted=entry.name==='pass.json'
+          ||/^(background|strip|thumbnail|logo)(?:@[23]x)?\.(?:png|jpe?g|webp)$/i.test(entry.name)
+        return wanted&&entry.originalSize<=5_000_000
       },
     })
   }catch{
@@ -703,26 +764,33 @@ async function parsePkpassFile(file:File,timezone:string):Promise<ScanDraft>{
   }
 
   const fields=pkpassFields(pass)
-  const primary=(pass.boardingPass
+  const style=pass.boardingPass
     ??pass.eventTicket
     ??pass.coupon
     ??pass.storeCard
-    ??pass.generic)?.primaryFields??[]
+    ??pass.generic
+  const primary=style?.primaryFields??[]
 
   const primaryValues=primary
     .map((field)=>textValue(field.value).trim())
     .filter(Boolean)
 
-  const relevant=localPartsFromIso(pass.relevantDate,timezone)
+  const relevant=sourceLocalParts(pass.relevantDate,timezone)
+  const expiry=sourceLocalParts(pass.expirationDate,timezone)
   const startField=findPkpassField(fields,/start|depart|departure|event.?date|date|time/i)
   const endField=findPkpassField(fields,/end|arrival|arrive|until|finish/i)
 
   const startRaw=textValue(startField?.value)
+  const startLabel=textValue(startField?.label)
   const endRaw=textValue(endField?.value)
-  const startFromField=localPartsFromIso(startRaw||undefined,timezone)
-  const endFromField=localPartsFromIso(endRaw||undefined,timezone)
+  const endLabel=textValue(endField?.label)
 
-  const locationField=findPkpassField(fields,/venue|location|address|airport|station|gate/i)
+  const startDateFromField=looseDate(startRaw)
+  const startTimeFromField=normalizeScannedTime(startRaw)||normalizeScannedTime(startLabel)
+  const endDateFromField=looseDate(endRaw)
+  const endTimeFromField=normalizeScannedTime(endRaw)||normalizeScannedTime(endLabel)
+
+  const locationField=findPkpassField(fields,/venue|location|address|airport|station/i)
   const referenceField=findPkpassField(fields,/pnr|booking|confirmation|reference|reservation|ticket.?id|order/i)
 
   const barcode=(pass.barcodes??[]).find((item)=>item.message)
@@ -760,20 +828,25 @@ async function parsePkpassFile(file:File,timezone:string):Promise<ScanDraft>{
     barcode?.altText?`Barcode text: ${barcode.altText}`:'',
   ].filter(Boolean).join('\n')
 
-  return {
+  const draft:ScanDraft={
     kind:'ticket',
     title,
     ticket_type:pkpassTicketType(pass,fields),
-    start_date:relevant.date||startFromField.date,
-    start_time:relevant.time||startFromField.time,
-    end_date:endFromField.date,
-    end_time:endFromField.time,
+    start_date:startDateFromField||relevant.date,
+    start_time:startTimeFromField||relevant.time,
+    end_date:endDateFromField||expiry.date,
+    end_time:endTimeFromField||expiry.time,
     location_text:location,
     provider_text:pass.organizationName?.trim()??'',
     booking_reference:textValue(referenceField?.value).trim()||pass.serialNumber?.trim()||'',
     notes,
     raw_value:barcode?.message?.trim()??'',
     source_label:'Apple Wallet pass',
+  }
+
+  return {
+    draft,
+    previewFile:bestPkpassPreview(files),
   }
 }
 
@@ -870,6 +943,7 @@ export function TicketWalletPage(){
   const [tickets,setTickets]=useState<TicketEntry[]>([])
   const [calendars,setCalendars]=useState<CalendarRow[]>([])
   const [fileUrls,setFileUrls]=useState<Record<string,string>>({})
+  const [previewUrls,setPreviewUrls]=useState<Record<string,string>>({})
   const [filter,setFilter]=useState<'active'|'used'|'archived'|'all'>('active')
 
   const [composerOpen,setComposerOpen]=useState(false)
@@ -904,6 +978,7 @@ export function TicketWalletPage(){
   const [scanReviewOpen,setScanReviewOpen]=useState(false)
   const [scanDraft,setScanDraft]=useState<ScanDraft|null>(null)
   const [scanFile,setScanFile]=useState<File|null>(null)
+  const [scanPreviewFile,setScanPreviewFile]=useState<File|null>(null)
   const [scanSaving,setScanSaving]=useState(false)
   const [qrPageOpen,setQrPageOpen]=useState(false)
   const [qrPageUrl,setQrPageUrl]=useState('')
@@ -1049,7 +1124,7 @@ export function TicketWalletPage(){
     const [ticketResult,calendarResult]=await Promise.all([
       supabase
         .from('ticket_wallet_entries')
-        .select('id,household_id,title,ticket_type,holder_profile_id,start_date,start_time,end_date,end_time,location_text,provider_text,booking_reference,qr_value,notes,status,calendar_id,linked_event_id,file_path,file_name,file_mime_type,file_size,created_at,updated_at')
+        .select('id,household_id,title,ticket_type,holder_profile_id,start_date,start_time,end_date,end_time,location_text,provider_text,booking_reference,qr_value,notes,status,calendar_id,linked_event_id,file_path,file_name,file_mime_type,file_size,preview_image_path,preview_image_mime_type,created_at,updated_at')
         .eq('household_id',household.id)
         .order('start_date',{ascending:true,nullsFirst:false})
         .order('created_at',{ascending:false}),
@@ -1069,14 +1144,23 @@ export function TicketWalletPage(){
       setTickets(rows)
 
       const urls:Record<string,string>={}
+      const previews:Record<string,string>={}
       await Promise.all(rows.map(async(row)=>{
-        if(!row.file_path) return
-        const signed=await supabase.storage
-          .from('ticket-wallet')
-          .createSignedUrl(row.file_path,3600)
-        if(signed.data?.signedUrl) urls[row.id]=signed.data.signedUrl
+        if(row.file_path){
+          const signed=await supabase.storage
+            .from('ticket-wallet')
+            .createSignedUrl(row.file_path,3600)
+          if(signed.data?.signedUrl) urls[row.id]=signed.data.signedUrl
+        }
+        if(row.preview_image_path){
+          const signedPreview=await supabase.storage
+            .from('ticket-wallet')
+            .createSignedUrl(row.preview_image_path,3600)
+          if(signedPreview.data?.signedUrl) previews[row.id]=signedPreview.data.signedUrl
+        }
       }))
       setFileUrls(urls)
+      setPreviewUrls(previews)
     }
 
     if(calendarResult.error){
@@ -1154,6 +1238,7 @@ export function TicketWalletPage(){
     resetForm()
     setScanDraft(null)
     setScanFile(null)
+    setScanPreviewFile(null)
     setScanReviewOpen(false)
     if(scan){
       setComposerOpen(false)
@@ -1351,10 +1436,11 @@ export function TicketWalletPage(){
 
     if(pkpass){
       try{
-        const draft=await parsePkpassFile(file,household.timezone)
-        setQrValue(draft.raw_value)
-        setScanDraft(draft)
+        const imported=await parsePkpassFile(file,household.timezone)
+        setQrValue(imported.draft.raw_value)
+        setScanDraft(imported.draft)
         setScanFile(file)
+        setScanPreviewFile(imported.previewFile)
         setScannerMessage('Apple Wallet pass recognized. Review the imported information below.')
         setScanReviewOpen(true)
         return
@@ -1568,9 +1654,12 @@ export function TicketWalletPage(){
       name:null as string|null,
       mime:null as string|null,
       size:null as number|null,
+      previewPath:null as string|null,
+      previewMime:null as string|null,
     }
 
-    const path=`${household.id}/${crypto.randomUUID()}/${safeFileName(scanFile.name)}`
+    const folder=`${household.id}/${crypto.randomUUID()}`
+    const path=`${folder}/${safeFileName(scanFile.name)}`
     const upload=await supabase.storage
       .from('ticket-wallet')
       .upload(path,ticketUploadBody(scanFile),{
@@ -1580,11 +1669,32 @@ export function TicketWalletPage(){
 
     if(upload.error) throw upload.error
 
+    let previewPath:string|null=null
+    let previewMimeType:string|null=null
+
+    if(scanPreviewFile){
+      previewPath=`${folder}/${safeFileName(scanPreviewFile.name)}`
+      previewMimeType=scanPreviewFile.type||'image/png'
+      const previewUpload=await supabase.storage
+        .from('ticket-wallet')
+        .upload(previewPath,scanPreviewFile,{
+          contentType:previewMimeType,
+          upsert:false,
+        })
+
+      if(previewUpload.error){
+        await supabase.storage.from('ticket-wallet').remove([path])
+        throw previewUpload.error
+      }
+    }
+
     return {
       path,
       name:scanFile.name,
       mime:ticketFileMime(scanFile),
       size:scanFile.size,
+      previewPath,
+      previewMime:previewMimeType,
     }
   }
 
@@ -1599,7 +1709,7 @@ export function TicketWalletPage(){
     setError('')
     setMessage('')
 
-    let uploaded:{path:string|null;name:string|null;mime:string|null;size:number|null}|null=null
+    let uploaded:{path:string|null;name:string|null;mime:string|null;size:number|null;previewPath:string|null;previewMime:string|null}|null=null
 
     try{
       uploaded=await uploadScanFile()
@@ -1630,17 +1740,33 @@ export function TicketWalletPage(){
 
       if(result.error) throw result.error
 
+      if(uploaded.previewPath&&result.data){
+        const previewUpdate=await supabase
+          .from('ticket_wallet_entries')
+          .update({
+            preview_image_path:uploaded.previewPath,
+            preview_image_mime_type:uploaded.previewMime,
+            updated_at:new Date().toISOString(),
+          })
+          .eq('household_id',household.id)
+          .eq('id',String(result.data))
+
+        if(previewUpdate.error) throw previewUpdate.error
+      }
+
       setScanReviewOpen(false)
       setComposerOpen(false)
       setScanDraft(null)
       setScanFile(null)
+      setScanPreviewFile(null)
       setMessage(withCalendar
         ?'Scan saved to Ticket Wallet and Calendar.'
         :'Scan saved to Ticket Wallet.')
       await load()
     }catch(reason){
-      if(uploaded?.path){
-        await supabase.storage.from('ticket-wallet').remove([uploaded.path])
+      const cleanup=[uploaded?.path,uploaded?.previewPath].filter(Boolean) as string[]
+      if(cleanup.length){
+        await supabase.storage.from('ticket-wallet').remove(cleanup)
       }
       setError(reason instanceof Error?reason.message:'Could not save the scanned ticket.')
     }finally{
@@ -2079,6 +2205,7 @@ export function TicketWalletPage(){
                   {group.rows.map((ticket)=>{
                     const holder=ticket.holder_profile_id?profileById.get(ticket.holder_profile_id):undefined
                     const fileUrl=fileUrls[ticket.id]
+                    const previewUrl=previewUrls[ticket.id]
                     const digital=Boolean(ticket.file_path)
 
                     return (
@@ -2097,7 +2224,10 @@ export function TicketWalletPage(){
                           </div>
 
                           {digital&&(
-                            <div className="ticket-digital-poster">
+                            <div
+                              className={'ticket-digital-poster '+(previewUrl?'has-artwork':'')}
+                              style={previewUrl?{backgroundImage:`linear-gradient(90deg,rgba(30,20,38,.72),rgba(30,20,38,.20)),url("${previewUrl}")`}:undefined}
+                            >
                               <div className="ticket-digital-poster-top">
                                 <span>{ticketTypeLabel(ticket.ticket_type)}</span>
                                 <small>DIGITAL PASS</small>
