@@ -1,6 +1,6 @@
 import { Archive, CalendarSync, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, EyeOff, FolderKanban, LockKeyhole, Pencil, Plus, Settings2, Trash2, WalletCards, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
 import { supabase } from '../lib/supabase'
@@ -230,6 +230,7 @@ function parseRrule(rrule: string | null) {
 export function CalendarPage() {
   const { household, profiles, modules, user } = useHousehold()
   const routeNavigate = useNavigate()
+  const routeLocation = useLocation()
   const calendarAccess = modules.find((module) => module.code === 'calendar')
   const canWrite = Boolean(calendarAccess?.can_write)
   const mondayFirst = household.week_starts_on === 1
@@ -478,6 +479,30 @@ export function CalendarPage() {
     setSaveTemplate(false)
     setError('')
   }
+
+  useEffect(() => {
+    const state=routeLocation.state as {
+      prefillEvent?:{
+        title?:string
+        description?:string
+        sourceUrl?:string
+      }
+    }|null
+    const prefill=state?.prefillEvent
+
+    if(!prefill||!canWrite||calendars.length===0) return
+
+    const day=dateKey(new Date())
+    openComposer(day)
+    setTitle((prefill.title??'').slice(0,200))
+    setDescription(
+      prefill.sourceUrl
+        ?'Source: '+prefill.sourceUrl
+        :(prefill.description??'').slice(0,1200),
+    )
+
+    routeNavigate(routeLocation.pathname,{replace:true,state:null})
+  },[routeLocation.state,routeLocation.pathname,routeNavigate,canWrite,calendars.length])
 
   async function openEventEditor(item: CalendarOccurrence) {
     if (!canWrite) return
