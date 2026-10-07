@@ -1,4 +1,4 @@
-import { Archive, CalendarDays, FolderKanban, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { Archive, ArrowDown, ArrowUp, CalendarDays, FolderKanban, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { DatePicker } from '../components/ui/DatePicker'
@@ -21,6 +21,7 @@ type Task = {
   location_text: string | null
   linked_event_id: string | null
   cost_amount: number | null
+  sort_order: number
   created_at: string
 }
 
@@ -169,7 +170,7 @@ export function TasksPage() {
     const [taskResult, participantResult, categoryResult, availabilityResult, templateResult, archiveResult] = await Promise.all([
       supabase
         .from('tasks')
-        .select('id,title,status,priority,due_date,category_id,location_text,linked_event_id,cost_amount,created_at')
+        .select('id,title,status,priority,due_date,category_id,location_text,linked_event_id,cost_amount,sort_order,created_at')
         .eq('household_id', household.id)
         .is('archived_at', null)
         .order('created_at', { ascending: false }),
@@ -248,7 +249,7 @@ export function TasksPage() {
       .filter((task) => task.due_date && (task.due_date ?? '') >= todayKey)
       .sort((a, b) => {
         const byDate = (a.due_date ?? '').localeCompare(b.due_date ?? '')
-        return byDate || a.title.localeCompare(b.title)
+        return byDate || a.sort_order - b.sort_order || a.title.localeCompare(b.title)
       })
 
     return {
@@ -256,7 +257,7 @@ export function TasksPage() {
       later: dated.filter((task) => (task.due_date ?? '') > boundary),
       undated: tasks
         .filter((task) => !task.due_date)
-        .sort((a, b) => b.created_at.localeCompare(a.created_at)),
+        .sort((a, b) => a.sort_order - b.sort_order || b.created_at.localeCompare(a.created_at)),
     }
   }, [tasks])
 
@@ -432,7 +433,26 @@ export function TasksPage() {
     else await load()
   }
 
-  function TaskRow({ task }: { task: Task }) {
+  async function moveTask(rows: Task[], taskId: string, direction: -1 | 1) {
+    if (!canWrite) return
+    const index = rows.findIndex((task) => task.id === taskId)
+    const target = index + direction
+    if (index < 0 || target < 0 || target >= rows.length) return
+
+    const ordered = [...rows]
+    const [moved] = ordered.splice(index, 1)
+    ordered.splice(target, 0, moved)
+
+    const result = await supabase.rpc('reorder_tasks_v1', {
+      p_household_id: household.id,
+      p_task_ids: ordered.map((task) => task.id),
+    })
+
+    if (result.error) setError(result.error.message)
+    else await load()
+  }
+
+  function TaskRow({ task, rows, index }: { task: Task; rows: Task[]; index: number }) {
     const category = task.category_id ? categoryById.get(task.category_id) : undefined
     const taskProfiles = participants
       .filter((item) => item.task_id === task.id)
@@ -480,6 +500,29 @@ export function TasksPage() {
           ))}
         </span>
 
+        {canWrite && (
+          <span className="task-reorder-controls" aria-label={'Reorder ' + task.title}>
+            <button
+              type="button"
+              className="icon-button compact-icon"
+              disabled={index === 0}
+              onClick={() => void moveTask(rows, task.id, -1)}
+              aria-label={'Move ' + task.title + ' up'}
+            >
+              <ArrowUp size={13}/>
+            </button>
+            <button
+              type="button"
+              className="icon-button compact-icon"
+              disabled={index === rows.length - 1}
+              onClick={() => void moveTask(rows, task.id, 1)}
+              aria-label={'Move ' + task.title + ' down'}
+            >
+              <ArrowDown size={13}/>
+            </button>
+          </span>
+        )}
+
         <TaskActions
           task={task}
           canWrite={canWrite}
@@ -514,7 +557,7 @@ export function TasksPage() {
 
         {rows.length > 0 ? (
           <div className="task-section-list">
-            {rows.map((task) => <TaskRow task={task} key={task.id} />)}
+            {rows.map((task, index) => <TaskRow task={task} rows={rows} index={index} key={task.id} />)}
           </div>
         ) : (
           <div className="task-section-empty">No tasks in this section.</div>
@@ -561,7 +604,7 @@ export function TasksPage() {
           />
           <TaskSection
             title="Without date"
-            subtitle="Tasks without a date stay below the divider until a date is added."
+            subtitle="Tasks without a date stay below the divider until a date is added. On mobile, use the arrows to reorder tasks inside a section."
             rows={taskGroups.undated}
             variant="undated"
           />
