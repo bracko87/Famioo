@@ -13526,3 +13526,34 @@ b {
     justify-content: center;
   }
 }
+
+
+.ticket-wallet-image-preview {
+  margin-top: 8px;
+  width: min(260px,100%);
+  border: 1px solid #e1d7e5;
+  border-radius: 10px;
+  overflow: hidden;
+  display: grid;
+  background: #fff;
+  text-decoration: none;
+}
+
+.ticket-wallet-image-preview img {
+  width: 100%;
+  max-height: 220px;
+  display: block;
+  object-fit: contain;
+  background: #f8f5f9;
+}
+
+.ticket-wallet-image-preview span {
+  min-height: 28px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #755f7e;
+  font-size: 9px;
+  background: #faf7fb;
+}
