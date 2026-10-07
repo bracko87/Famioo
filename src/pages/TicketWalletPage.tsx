@@ -2,12 +2,14 @@ import {
   CalendarDays,
   Camera,
   Check,
+  ExternalLink,
   FileText,
   Image as ImageIcon,
   MapPin,
   Pencil,
   QrCode,
   ScanLine,
+  Sparkles,
   Ticket,
   Trash2,
   Upload,
@@ -22,6 +24,7 @@ import {
   useState,
   type FormEvent,
 } from 'react'
+import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { DatePicker } from '../components/ui/DatePicker'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
@@ -47,6 +50,19 @@ type TicketType=
 
 type TicketStatus='active'|'used'|'archived'
 type ScanKind='event'|'ticket'|'link'|'contact'|'wifi'|'reference'
+
+type QrEventDraft={
+  title:string
+  date:string
+  end_date:string
+  start_time:string
+  end_time:string
+  all_day:boolean
+  location:string
+  description:string
+  confidence:number
+  source_url:string
+}
 
 type ScanDraft={
   kind:ScanKind
@@ -837,9 +853,11 @@ async function captureVideoFrame(video:HTMLVideoElement){
 export function TicketWalletPage(){
   const { household,modules,profiles,user }=useHousehold()
   const access=modules.find((module)=>module.code==='tickets')
+  const assistantAccess=modules.find((module)=>module.code==='assistant')
   const canWrite=Boolean(access?.enabled&&access.can_write)
   const canWriteCalendar=Boolean(modules.find((module)=>module.code==='calendar')?.can_write)
   const canWriteLifeAdmin=Boolean(modules.find((module)=>module.code==='life_admin')?.can_write)
+  const hasAiAssistant=Boolean(assistantAccess?.enabled)
 
   const [tickets,setTickets]=useState<TicketEntry[]>([])
   const [calendars,setCalendars]=useState<CalendarRow[]>([])
@@ -879,6 +897,12 @@ export function TicketWalletPage(){
   const [scanDraft,setScanDraft]=useState<ScanDraft|null>(null)
   const [scanFile,setScanFile]=useState<File|null>(null)
   const [scanSaving,setScanSaving]=useState(false)
+  const [qrPageOpen,setQrPageOpen]=useState(false)
+  const [qrPageUrl,setQrPageUrl]=useState('')
+  const [qrAiDraft,setQrAiDraft]=useState<QrEventDraft|null>(null)
+  const [qrAiLoading,setQrAiLoading]=useState(false)
+  const [qrEventSaving,setQrEventSaving]=useState(false)
+  const [qrReminder,setQrReminder]=useState('60')
   const [saving,setSaving]=useState(false)
   const [error,setError]=useState('')
   const [message,setMessage]=useState('')
@@ -897,6 +921,42 @@ export function TicketWalletPage(){
     ()=>new Map(profiles.map((profile)=>[profile.id,profile])),
     [profiles],
   )
+
+  function isWebQr(value:string){
+    try{
+      const url=new URL(value)
+      return url.protocol==='https:'||url.protocol==='http:'
+    }catch{
+      return false
+    }
+  }
+
+  async function functionError(result:{error:any;data:any},fallback:string){
+    let detail=result.data?.error||result.error?.message||fallback
+    const context=(result.error as {context?:Response}|null)?.context
+    if(context){
+      try{
+        const payload=await context.clone().json() as {error?:string}
+        if(payload.error) detail=payload.error
+      }catch{
+        // Keep the normal function error.
+      }
+    }
+    return String(detail)
+  }
+
+  function openQrPage(value:string){
+    setQrPageUrl(value)
+    setQrAiDraft(null)
+    setQrPageOpen(true)
+    setError('')
+    setScannerMessage('QR destination found. The page has been opened; return to Famioo to create an event with Assistant if you want.')
+    try{
+      window.open(value,'_blank','noopener,noreferrer')
+    }catch{
+      // The review dialog always keeps an explicit Open page button.
+    }
+  }
 
   async function load(){
     if(!access?.enabled) return
@@ -1066,12 +1126,18 @@ export function TicketWalletPage(){
       }
 
       if(raw){
+        setScannerOpen(false)
+
+        if(isWebQr(raw)){
+          openQrPage(raw)
+          return
+        }
+
         const snapshot=await captureVideoFrame(video)
         const draft=parseScannedPayload(raw)
         setScanFile(snapshot)
         setScanDraft(draft)
-        setScannerMessage('Code detected. Famioo recognized the information below.')
-        setScannerOpen(false)
+        setScannerMessage('This QR code contains data rather than a web page. Review it below and decide whether it is a digital ticket or another reference.')
         setScanReviewOpen(true)
         return
       }
@@ -1196,6 +1262,155 @@ export function TicketWalletPage(){
       setComposerOpen(true)
       setScannerMessage('No readable code was found in the file. Add or confirm the ticket details manually.')
     }
+  }
+
+  async function readQrPageWithAssistant(){
+    if(!qrPageUrl||qrAiLoading) return
+    if(!hasAiAssistant){
+      setError('AI Assistant is required to read the QR destination page and create an event draft.')
+      return
+    }
+
+    setQrAiLoading(true)
+    setError('')
+    setMessage('')
+
+    const result=await supabase.functions.invoke('extract-qr-page',{
+      body:{
+        household_id:household.id,
+        url:qrPageUrl,
+        timezone:household.timezone,
+      },
+    })
+
+    setQrAiLoading(false)
+
+    if(result.error||result.data?.error){
+      setError(await functionError(result,'Assistant could not read the QR destination page.'))
+      return
+    }
+
+    const event=result.data?.event
+    if(!event?.found_event){
+      setError('Assistant opened the page but did not find one clear calendar event. You can still use the page normally or create an event manually in Calendar.')
+      return
+    }
+
+    setQrAiDraft({
+      title:String(event.title||'').slice(0,200),
+      date:String(event.date||''),
+      end_date:String(event.end_date||''),
+      start_time:event.start_time?String(event.start_time).slice(0,5):'',
+      end_time:event.end_time?String(event.end_time).slice(0,5):'',
+      all_day:Boolean(event.all_day),
+      location:event.location?String(event.location).slice(0,300):'',
+      description:event.description?String(event.description).slice(0,1400):'',
+      confidence:Math.max(0,Math.min(1,Number(event.confidence??0))),
+      source_url:String(result.data?.source_url||qrPageUrl),
+    })
+  }
+
+  async function saveQrAssistantEvent(){
+    if(!qrAiDraft||qrEventSaving||!canWriteCalendar) return
+
+    if(!qrAiDraft.title.trim()||!/^\d{4}-\d{2}-\d{2}$/.test(qrAiDraft.date)){
+      setError('Event name and date are required.')
+      return
+    }
+
+    if(!qrAiDraft.all_day&&(!qrAiDraft.start_time||!qrAiDraft.end_time)){
+      setError('For a timed event, confirm both start and end time before saving.')
+      return
+    }
+
+    const targetCalendar=calendars.find((calendar)=>calendar.id===calendarId)
+      ??calendars.find((calendar)=>calendar.is_default)
+      ??calendars[0]
+
+    if(!targetCalendar){
+      setError('No active Calendar is available.')
+      return
+    }
+
+    let startAt:string|null=null
+    let endAt:string|null=null
+
+    if(!qrAiDraft.all_day){
+      startAt=zonedLocalToIso(qrAiDraft.date,qrAiDraft.start_time,household.timezone)
+      endAt=zonedLocalToIso(
+        qrAiDraft.end_date||qrAiDraft.date,
+        qrAiDraft.end_time,
+        household.timezone,
+      )
+      if(new Date(endAt).getTime()<=new Date(startAt).getTime()){
+        setError('Event end time must be later than the start time.')
+        return
+      }
+    }
+
+    const reminders=currentProfile&&qrReminder!=='none'
+      ?[qrReminder==='morning'
+        ?{
+          profile_id:currentProfile.id,
+          reminder_kind:'morning_of',
+          offset_minutes:null,
+          exact_at:null,
+          morning_time:'08:00:00',
+          delivery_channel:'push',
+          enabled:true,
+        }
+        :{
+          profile_id:currentProfile.id,
+          reminder_kind:'offset',
+          offset_minutes:Number(qrReminder),
+          exact_at:null,
+          morning_time:null,
+          delivery_channel:'push',
+          enabled:true,
+        }]
+      :[]
+
+    setQrEventSaving(true)
+    setError('')
+
+    const result=await supabase.rpc('save_event_v1',{
+      p_event_id:null,
+      p_household_id:household.id,
+      p_calendar_id:targetCalendar.id,
+      p_title:qrAiDraft.title.trim(),
+      p_description:[
+        qrAiDraft.description.trim(),
+        qrAiDraft.source_url?'Created from QR page: '+qrAiDraft.source_url:'',
+      ].filter(Boolean).join('\n\n')||null,
+      p_all_day:qrAiDraft.all_day,
+      p_start_at:startAt,
+      p_end_at:endAt,
+      p_start_date:qrAiDraft.all_day?qrAiDraft.date:null,
+      p_end_date:qrAiDraft.all_day?(qrAiDraft.end_date||qrAiDraft.date):null,
+      p_timezone:household.timezone,
+      p_location_text:qrAiDraft.location.trim()||null,
+      p_category_id:null,
+      p_visibility:'household',
+      p_participants:currentProfile?[{
+        profile_id:currentProfile.id,
+        participant_role:'participant',
+        can_edit:false,
+      }]:[],
+      p_rrule:null,
+      p_reminders:reminders,
+    })
+
+    setQrEventSaving(false)
+
+    if(result.error){
+      setError(result.error.message)
+      return
+    }
+
+    setQrPageOpen(false)
+    setQrAiDraft(null)
+    setQrPageUrl('')
+    setMessage('Calendar event created from the QR destination page.')
   }
 
   function scanNotes(draft:ScanDraft){
