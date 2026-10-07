@@ -1,5 +1,5 @@
-import { Archive, ArchiveRestore, CalendarDays, ClipboardCheck, GripVertical, Plus, ShoppingBag, Trash2, X } from 'lucide-react'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Archive, ArchiveRestore, BarChart3, CalendarDays, Camera, ClipboardCheck, GripVertical, Plus, ReceiptText, ShoppingBag, Sparkles, Store, Trash2, Upload, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { Select } from '../components/ui/Select'
 import { PrivacyNotice } from '../components/PrivacyNotice'
@@ -33,6 +33,53 @@ type ShoppingItem = {
   checked: boolean
 }
 
+type ShoppingReceipt = {
+  id: string
+  shopping_list_id: string | null
+  linked_cost_id: string | null
+  store_name: string | null
+  purchase_date: string
+  total_amount: number | null
+  currency: string
+  file_path: string | null
+  file_name: string | null
+  extraction_status: 'manual' | 'pending' | 'reviewed' | 'failed'
+  ai_model: string | null
+  created_at: string
+}
+
+type ShoppingReceiptItem = {
+  id: string
+  receipt_id: string
+  product_name: string
+  normalized_name: string
+  quantity: number | null
+  unit: string | null
+  unit_price: number | null
+  line_total: number | null
+  category: string | null
+}
+
+type ReceiptDraftItem = {
+  product_name: string
+  normalized_name: string
+  quantity: number | null
+  unit: string | null
+  unit_price: number | null
+  line_total: number | null
+  category: string | null
+  confidence: number
+}
+
+type ReceiptDraft = {
+  store_name: string
+  purchase_date: string
+  total_amount: number | null
+  currency: string
+  confidence: number
+  items: ReceiptDraftItem[]
+}
+
 type ListSource = 'standalone' | 'event'
 
 function occurrenceDate(event: CalendarOccurrence) {
@@ -41,20 +88,49 @@ function occurrenceDate(event: CalendarOccurrence) {
   return ''
 }
 
+function safeReceiptFileName(name: string) {
+  return name.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/-+/g, '-').slice(0, 120) || 'receipt'
+}
+
+async function fileToDataUrl(file: File) {
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result ?? ''))
+    reader.onerror = () => reject(new Error('Receipt image could not be read.'))
+    reader.readAsDataURL(file)
+  })
+}
+
+function moneyValue(value: number, currency = 'EUR') {
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: currency || 'EUR',
+  }).format(value)
+}
+
 export function ShoppingPage() {
   const { household, modules } = useHousehold()
   const access = modules.find((module) => module.code === 'shopping')
+  const assistantAccess = modules.find((module) => module.code === 'assistant')
   const canWrite = Boolean(access?.can_write)
   const canSyncTasks = Boolean(modules.find((module) => module.code === 'tasks')?.can_write)
+  const hasAiAssistant = Boolean(assistantAccess?.enabled)
 
   const [lists, setLists] = useState<ShoppingList[]>([])
   const [items, setItems] = useState<ShoppingItem[]>([])
   const [categories, setCategories] = useState<EventCategory[]>([])
   const [events, setEvents] = useState<CalendarOccurrence[]>([])
+  const [receipts, setReceipts] = useState<ShoppingReceipt[]>([])
+  const [receiptItems, setReceiptItems] = useState<ShoppingReceiptItem[]>([])
   const [composerOpen, setComposerOpen] = useState(false)
   const [archiveOpen, setArchiveOpen] = useState(false)
   const [archiveTarget, setArchiveTarget] = useState<ShoppingList | null>(null)
   const [archiveCost, setArchiveCost] = useState('')
+  const [receiptFile, setReceiptFile] = useState<File | null>(null)
+  const [receiptDraft, setReceiptDraft] = useState<ReceiptDraft | null>(null)
+  const [receiptModel, setReceiptModel] = useState('')
+  const [receiptAiLoading, setReceiptAiLoading] = useState(false)
+  const receiptInputRef = useRef<HTMLInputElement>(null)
   const [sourceType, setSourceType] = useState<ListSource>('standalone')
   const [sourceEventKey, setSourceEventKey] = useState('')
   const [title, setTitle] = useState('')
@@ -78,7 +154,7 @@ export function ShoppingPage() {
     const future = new Date()
     future.setDate(future.getDate() + 365)
 
-    const [listResult, itemResult, categoryResult, eventResult] = await Promise.all([
+    const [listResult, itemResult, categoryResult, eventResult, receiptResult, receiptItemResult] = await Promise.all([
       supabase
         .from('shopping_lists')
         .select('id,title,status,linked_event_id,sync_task,linked_task_id,category_id,scheduled_date,location_text,total_cost,currency,archived_at,expanded_slot,created_at')
@@ -101,6 +177,17 @@ export function ShoppingPage() {
         p_range_start: today,
         p_range_end: future.toISOString().slice(0, 10),
       }),
+      supabase
+        .from('shopping_receipts')
+        .select('id,shopping_list_id,linked_cost_id,store_name,purchase_date,total_amount,currency,file_path,file_name,extraction_status,ai_model,created_at')
+        .eq('household_id', household.id)
+        .order('purchase_date', { ascending: false })
+        .limit(500),
+      supabase
+        .from('shopping_receipt_items')
+        .select('id,receipt_id,product_name,normalized_name,quantity,unit,unit_price,line_total,category')
+        .eq('household_id', household.id)
+        .limit(4000),
     ])
 
     if (listResult.error) setError(listResult.error.message)
@@ -124,6 +211,12 @@ export function ShoppingPage() {
         (event) => Boolean(event.category_id && shoppingCategoryIds.has(event.category_id)),
       ))
     }
+
+    if (receiptResult.error) setError((current) => current || receiptResult.error.message)
+    else setReceipts((receiptResult.data ?? []) as ShoppingReceipt[])
+
+    if (receiptItemResult.error) setError((current) => current || receiptItemResult.error.message)
+    else setReceiptItems((receiptItemResult.data ?? []) as ShoppingReceiptItem[])
   }
 
   useEffect(() => { void load() }, [household.id])
@@ -159,6 +252,81 @@ export function ShoppingPage() {
       .sort((a, b) => (b.archived_at ?? b.created_at).localeCompare(a.archived_at ?? a.created_at)),
     [lists],
   )
+
+  const receiptById = useMemo(
+    () => new Map(receipts.map((receipt) => [receipt.id, receipt])),
+    [receipts],
+  )
+
+  const currentMonthKey = new Date().toISOString().slice(0, 7)
+
+  const monthlyReceipts = useMemo(
+    () => receipts.filter((receipt) => receipt.purchase_date.startsWith(currentMonthKey)),
+    [receipts, currentMonthKey],
+  )
+
+  const receiptInsights = useMemo(() => {
+    const storeTotals = new Map<string, number>()
+    for (const receipt of monthlyReceipts) {
+      const store = receipt.store_name?.trim() || 'Unknown store'
+      storeTotals.set(store, (storeTotals.get(store) ?? 0) + Number(receipt.total_amount ?? 0))
+    }
+
+    const stores = Array.from(storeTotals.entries())
+      .map(([store, total]) => ({ store, total }))
+      .sort((a, b) => b.total - a.total)
+
+    const monthlyReceiptIds = new Set(monthlyReceipts.map((receipt) => receipt.id))
+    const monthlyItems = receiptItems.filter((item) => monthlyReceiptIds.has(item.receipt_id))
+    const mostExpensive = [...monthlyItems]
+      .filter((item) => item.line_total != null)
+      .sort((a, b) => Number(b.line_total) - Number(a.line_total))[0] ?? null
+
+    const productMap = new Map<string, Array<{ price: number; store: string; date: string }>>()
+    for (const item of receiptItems) {
+      if (item.unit_price == null || !item.normalized_name.trim()) continue
+      const receipt = receiptById.get(item.receipt_id)
+      if (!receipt) continue
+      const key = item.normalized_name.trim().toLowerCase()
+      const rows = productMap.get(key) ?? []
+      rows.push({
+        price: Number(item.unit_price),
+        store: receipt.store_name?.trim() || 'Unknown store',
+        date: receipt.purchase_date,
+      })
+      productMap.set(key, rows)
+    }
+
+    const comparisons = Array.from(productMap.entries())
+      .filter(([, rows]) => rows.length >= 2)
+      .map(([name, rows]) => {
+        const sorted = [...rows].sort((a, b) => a.date.localeCompare(b.date))
+        const prices = rows.map((row) => row.price)
+        return {
+          name,
+          observations: rows.length,
+          min: Math.min(...prices),
+          max: Math.max(...prices),
+          last: sorted[sorted.length - 1],
+        }
+      })
+      .sort((a, b) => (b.max - b.min) - (a.max - a.min))
+      .slice(0, 6)
+
+    return {
+      total: monthlyReceipts.reduce((sum, receipt) => sum + Number(receipt.total_amount ?? 0), 0),
+      stores,
+      mostExpensive,
+      comparisons,
+    }
+  }, [monthlyReceipts, receiptItems, receiptById])
+
+  function resetReceiptState() {
+    setReceiptFile(null)
+    setReceiptDraft(null)
+    setReceiptModel('')
+    setReceiptAiLoading(false)
+  }
 
   function resetComposer() {
     setSourceType('standalone')
@@ -289,7 +457,104 @@ export function ShoppingPage() {
   function beginArchive(list: ShoppingList) {
     setArchiveTarget(list)
     setArchiveCost('')
+    resetReceiptState()
     setError('')
+  }
+
+  function chooseReceiptFile(file: File | null) {
+    setError('')
+    if (!file) return
+
+    if (file.size > 15 * 1024 * 1024) {
+      setError('Receipt files can be up to 15 MB.')
+      return
+    }
+
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+    if (!allowed.includes(file.type)) {
+      setError('Use a JPG, PNG, WebP or PDF receipt.')
+      return
+    }
+
+    setReceiptFile(file)
+    setReceiptDraft(null)
+    setReceiptModel('')
+  }
+
+  async function extractReceiptWithAssistant() {
+    if (!receiptFile || receiptAiLoading) return
+    if (!hasAiAssistant) {
+      setError('AI Assistant is required to read receipt products automatically.')
+      return
+    }
+    if (!receiptFile.type.startsWith('image/')) {
+      setError('Assistant receipt extraction currently supports receipt photos (JPG, PNG or WebP). PDFs can still be stored with a manual total.')
+      return
+    }
+
+    setReceiptAiLoading(true)
+    setError('')
+
+    try {
+      const imageData = await fileToDataUrl(receiptFile)
+      const result = await supabase.functions.invoke('extract-shopping-receipt', {
+        body: {
+          household_id: household.id,
+          image_data_url: imageData,
+          reference_date: archiveTarget?.scheduled_date ?? new Date().toISOString().slice(0, 10),
+        },
+      })
+
+      if (result.error || result.data?.error) {
+        setError(String(result.data?.error || result.error?.message || 'Assistant could not read this receipt.'))
+        return
+      }
+
+      const receipt = result.data?.receipt
+      if (!receipt) {
+        setError('Assistant returned no receipt information.')
+        return
+      }
+
+      const draft: ReceiptDraft = {
+        store_name: String(receipt.store_name ?? ''),
+        purchase_date: String(receipt.purchase_date ?? archiveTarget?.scheduled_date ?? new Date().toISOString().slice(0, 10)),
+        total_amount: receipt.total_amount == null ? null : Number(receipt.total_amount),
+        currency: String(receipt.currency || 'EUR'),
+        confidence: Number(receipt.confidence ?? 0),
+        items: Array.isArray(receipt.items) ? receipt.items.map((item: ReceiptDraftItem) => ({
+          ...item,
+          product_name: String(item.product_name ?? ''),
+          normalized_name: String(item.normalized_name ?? item.product_name ?? ''),
+          quantity: item.quantity == null ? null : Number(item.quantity),
+          unit_price: item.unit_price == null ? null : Number(item.unit_price),
+          line_total: item.line_total == null ? null : Number(item.line_total),
+          confidence: Number(item.confidence ?? 0),
+        })) : [],
+      }
+
+      setReceiptDraft(draft)
+      setReceiptModel(String(result.data?.model ?? ''))
+      if (draft.total_amount != null) setArchiveCost(String(draft.total_amount.toFixed(2)))
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Assistant could not read this receipt.')
+    } finally {
+      setReceiptAiLoading(false)
+    }
+  }
+
+  function updateReceiptItem(index: number, patch: Partial<ReceiptDraftItem>) {
+    setReceiptDraft((current) => current ? {
+      ...current,
+      items: current.items.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item),
+    } : current)
+  }
+
+  function removeReceiptItem(index: number) {
+    setReceiptDraft((current) => current ? {
+      ...current,
+      items: current.items.filter((_, itemIndex) => itemIndex !== index),
+    } : current)
   }
 
   async function confirmArchive(event: FormEvent) {
@@ -307,23 +572,59 @@ export function ShoppingPage() {
     setSaving(true)
     setError('')
 
-    const result = await supabase.rpc('archive_shopping_list_v1', {
-      p_shopping_list_id: archiveTarget.id,
-      p_household_id: household.id,
-      p_total_cost: amount,
-      p_currency: 'EUR',
-    })
+    let uploadedPath: string | null = null
 
-    setSaving(false)
+    try {
+      if (receiptFile) {
+        uploadedPath = `${household.id}/${crypto.randomUUID()}/${safeReceiptFileName(receiptFile.name)}`
+        const upload = await supabase.storage
+          .from('shopping-receipts')
+          .upload(uploadedPath, receiptFile, {
+            contentType: receiptFile.type,
+            upsert: false,
+          })
 
-    if (result.error) {
-      setError(result.error.message)
-      return
+        if (upload.error) throw upload.error
+      }
+
+      const result = await supabase.rpc('finalize_shopping_v2', {
+        p_shopping_list_id: archiveTarget.id,
+        p_household_id: household.id,
+        p_total_cost: amount,
+        p_currency: receiptDraft?.currency || 'EUR',
+        p_receipt_store: receiptDraft?.store_name.trim() || null,
+        p_purchase_date: receiptDraft?.purchase_date || archiveTarget.scheduled_date || new Date().toISOString().slice(0, 10),
+        p_file_path: uploadedPath,
+        p_file_name: receiptFile?.name ?? null,
+        p_mime_type: receiptFile?.type ?? null,
+        p_file_size: receiptFile?.size ?? null,
+        p_extraction_status: receiptDraft ? 'reviewed' : 'manual',
+        p_ai_model: receiptDraft ? receiptModel || null : null,
+        p_items: receiptDraft?.items.map((item) => ({
+          product_name: item.product_name.trim(),
+          normalized_name: item.normalized_name.trim() || item.product_name.trim(),
+          quantity: item.quantity,
+          unit: item.unit,
+          unit_price: item.unit_price,
+          line_total: item.line_total,
+          category: item.category,
+        })) ?? [],
+      })
+
+      if (result.error) throw result.error
+
+      setArchiveTarget(null)
+      setArchiveCost('')
+      resetReceiptState()
+      await load()
+    } catch (reason) {
+      if (uploadedPath) {
+        await supabase.storage.from('shopping-receipts').remove([uploadedPath])
+      }
+      setError(reason instanceof Error ? reason.message : 'Shopping could not be finished.')
+    } finally {
+      setSaving(false)
     }
-
-    setArchiveTarget(null)
-    setArchiveCost('')
-    await load()
   }
 
   async function restoreList(list: ShoppingList) {
@@ -477,10 +778,16 @@ export function ShoppingPage() {
         </div>
         <span className="compact-list-progress">{completed}/{listItems.length}</span>
         {canWrite && (
-          <button className="secondary-button compact" type="button" onClick={() => beginArchive(list)}>
-            <Archive size={14} />
-            Archive
-          </button>
+          <div className="compact-list-actions">
+            <div className="mobile-slot-actions" aria-label="Pin shopping list">
+              <button type="button" className="secondary-button compact" onClick={() => void setExpandedSlot(list.id, 1)}>Top 1</button>
+              <button type="button" className="secondary-button compact" onClick={() => void setExpandedSlot(list.id, 2)}>Top 2</button>
+            </div>
+            <button className="secondary-button compact" type="button" onClick={() => beginArchive(list)}>
+              <Archive size={14} />
+              Archive
+            </button>
+          </div>
         )}
       </article>
     )
@@ -546,7 +853,7 @@ export function ShoppingPage() {
                   ) : (
                     <div className="list-drop-placeholder">
                       <GripVertical size={18} />
-                      <span>Drag a shopping list here to keep it expanded.</span>
+                      <span>Drop a shopping list here on desktop. On mobile, use Top 1 / Top 2.</span>
                     </div>
                   )}
                 </div>
@@ -561,7 +868,7 @@ export function ShoppingPage() {
                   <span className="eyebrow">MORE SHOPPING LISTS</span>
                   <h2>Other active shopping lists</h2>
                 </div>
-                <small>Drag any list onto one of the two expanded cards above.</small>
+                <small>Desktop: drag a list above. Mobile: use Top 1 / Top 2.</small>
               </div>
               <div className="collapsed-list-stack">
                 {collapsedLists.map((list) => renderCollapsedShoppingList(list))}
@@ -569,6 +876,62 @@ export function ShoppingPage() {
             </section>
           )}
         </>
+      )}
+
+      {receipts.length > 0 && (
+        <section className="shopping-receipt-insights list-card">
+          <header>
+            <div>
+              <span className="eyebrow">RECEIPT INSIGHTS</span>
+              <h2>Shopping spend & price history</h2>
+              <p>Built from reviewed receipt data. Household Costs keeps the total; Shopping keeps the store and product detail.</p>
+            </div>
+            <BarChart3 size={21}/>
+          </header>
+
+          <div className="receipt-insight-summary">
+            <article>
+              <span>This month</span>
+              <strong>{moneyValue(receiptInsights.total)}</strong>
+              <small>{monthlyReceipts.length} receipt{monthlyReceipts.length === 1 ? '' : 's'}</small>
+            </article>
+            <article>
+              <span>Top store</span>
+              <strong>{receiptInsights.stores[0]?.store ?? '—'}</strong>
+              <small>{receiptInsights.stores[0] ? moneyValue(receiptInsights.stores[0].total) : 'No store data'}</small>
+            </article>
+            <article>
+              <span>Highest line item</span>
+              <strong>{receiptInsights.mostExpensive?.product_name ?? '—'}</strong>
+              <small>{receiptInsights.mostExpensive?.line_total != null ? moneyValue(Number(receiptInsights.mostExpensive.line_total)) : 'No item data'}</small>
+            </article>
+          </div>
+
+          <div className="receipt-insight-columns">
+            <div>
+              <h3><Store size={14}/>Spend by store · this month</h3>
+              {receiptInsights.stores.length ? receiptInsights.stores.slice(0, 6).map((row) => (
+                <div className="receipt-store-row" key={row.store}>
+                  <span>{row.store}</span>
+                  <strong>{moneyValue(row.total)}</strong>
+                </div>
+              )) : <small>No store totals this month.</small>}
+            </div>
+
+            <div>
+              <h3>Price comparisons</h3>
+              {receiptInsights.comparisons.length ? receiptInsights.comparisons.map((row) => (
+                <div className="receipt-price-row" key={row.name}>
+                  <div>
+                    <strong>{row.name}</strong>
+                    <small>{row.observations} observations · latest at {row.last.store}</small>
+                  </div>
+                  <span>{moneyValue(row.min)} – {moneyValue(row.max)}</span>
+                </div>
+              )) : <small>Price comparisons appear after the same product is detected on at least two receipts.</small>}
+            </div>
+          </div>
+        </section>
       )}
 
       <div className="archive-repository-bar">
@@ -650,22 +1013,132 @@ export function ShoppingPage() {
               </button>
             </header>
 
-            <p className="form-intro">Enter the final cost if you want this shopping trip recorded automatically in Household Costs.</p>
+            <p className="form-intro">Enter the total manually, or attach a receipt. With AI Assistant, Famioo can read the store, products and prices for review before saving.</p>
 
-            <label>
-              Total cost
-              <div className="money-input">
-                <span>€</span>
+            <div className="shopping-finish-grid">
+              <label>
+                Total cost
+                <div className="money-input">
+                  <span>€</span>
+                  <input
+                    inputMode="decimal"
+                    value={archiveCost}
+                    onChange={(event) => setArchiveCost(event.target.value)}
+                    placeholder="0.00"
+                    autoFocus
+                  />
+                </div>
+                <small className="field-hint">If entered, Famioo creates one Shopping entry in Household Costs.</small>
+              </label>
+
+              <section className="shopping-receipt-upload">
                 <input
-                  inputMode="decimal"
-                  value={archiveCost}
-                  onChange={(event) => setArchiveCost(event.target.value)}
-                  placeholder="0.00"
-                  autoFocus
+                  ref={receiptInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  hidden
+                  onChange={(event) => {
+                    chooseReceiptFile(event.target.files?.[0] ?? null)
+                    event.target.value = ''
+                  }}
                 />
-              </div>
-              <small className="field-hint">Optional. If entered, Famioo creates an additional Household Cost entry.</small>
-            </label>
+                <div>
+                  <ReceiptText size={18}/>
+                  <span>
+                    <strong>{receiptFile?.name ?? 'Receipt photo / PDF'}</strong>
+                    <small>Keep the receipt with this shopping trip and build price history.</small>
+                  </span>
+                </div>
+                <button type="button" className="secondary-button compact" onClick={() => receiptInputRef.current?.click()}>
+                  <Upload size={14}/>{receiptFile ? 'Change receipt' : 'Upload receipt'}
+                </button>
+                {receiptFile && receiptFile.type.startsWith('image/') && (
+                  hasAiAssistant ? (
+                    <button type="button" className="primary-button compact" disabled={receiptAiLoading} onClick={() => void extractReceiptWithAssistant()}>
+                      <Sparkles size={14}/>{receiptAiLoading ? 'Reading receipt…' : 'Read with Assistant'}
+                    </button>
+                  ) : (
+                    <small className="receipt-assistant-lock"><Sparkles size={11}/>AI Assistant is required for automatic product extraction.</small>
+                  )
+                )}
+              </section>
+            </div>
+
+            {receiptDraft && (
+              <section className="receipt-review-panel">
+                <header>
+                  <div>
+                    <span className="eyebrow">ASSISTANT REVIEW</span>
+                    <h3>Check receipt data before saving</h3>
+                  </div>
+                  <small>{Math.round(receiptDraft.confidence * 100)}% extraction confidence</small>
+                </header>
+
+                <div className="composer-grid-two aligned-field-row">
+                  <label>
+                    Store
+                    <input
+                      value={receiptDraft.store_name}
+                      onChange={(event) => setReceiptDraft((current) => current ? { ...current, store_name: event.target.value } : current)}
+                      placeholder="Store name"
+                    />
+                  </label>
+                  <label>
+                    Purchase date
+                    <input
+                      type="date"
+                      value={receiptDraft.purchase_date}
+                      onChange={(event) => setReceiptDraft((current) => current ? { ...current, purchase_date: event.target.value } : current)}
+                    />
+                  </label>
+                </div>
+
+                <div className="receipt-review-items">
+                  {receiptDraft.items.map((item, index) => (
+                    <div className="receipt-review-item" key={index}>
+                      <input
+                        value={item.product_name}
+                        onChange={(event) => updateReceiptItem(index, {
+                          product_name: event.target.value,
+                          normalized_name: item.normalized_name || event.target.value,
+                        })}
+                        aria-label={'Receipt product ' + (index + 1)}
+                      />
+                      <input
+                        inputMode="decimal"
+                        value={item.quantity ?? ''}
+                        onChange={(event) => updateReceiptItem(index, {
+                          quantity: event.target.value ? Number(event.target.value.replace(',', '.')) : null,
+                        })}
+                        placeholder="Qty"
+                        aria-label="Quantity"
+                      />
+                      <input
+                        inputMode="decimal"
+                        value={item.unit_price ?? ''}
+                        onChange={(event) => updateReceiptItem(index, {
+                          unit_price: event.target.value ? Number(event.target.value.replace(',', '.')) : null,
+                        })}
+                        placeholder="Unit €"
+                        aria-label="Unit price"
+                      />
+                      <input
+                        inputMode="decimal"
+                        value={item.line_total ?? ''}
+                        onChange={(event) => updateReceiptItem(index, {
+                          line_total: event.target.value ? Number(event.target.value.replace(',', '.')) : null,
+                        })}
+                        placeholder="Total €"
+                        aria-label="Line total"
+                      />
+                      <button type="button" className="icon-button compact-icon" onClick={() => removeReceiptItem(index)} aria-label={'Remove ' + item.product_name}>
+                        <Trash2 size={13}/>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             <label className="composer-option">
               <input
@@ -683,7 +1156,7 @@ export function ShoppingPage() {
             {error && <div className="form-message error">{error}</div>}
 
             <button className="primary-button" disabled={saving}>
-              {saving ? 'Archiving…' : 'Archive shopping list'}
+              {saving ? 'Finishing…' : 'Finish shopping'}
             </button>
           </form>
         </div>
