@@ -1093,25 +1093,31 @@ export function TicketWalletPage(){
   useEffect(()=>{ void load() },[household.id,access?.enabled])
 
   useEffect(()=>{
-    let parsed:{url?:string;at?:number}|null=null
-    try{
-      const raw=sessionStorage.getItem('famioo:pending-qr-page')
-      parsed=raw?JSON.parse(raw):null
-    }catch{
-      parsed=null
+    const restoreQrPage=()=>{
+      let parsed:{url?:string;at?:number}|null=null
+      try{
+        const raw=sessionStorage.getItem('famioo:pending-qr-page')
+        parsed=raw?JSON.parse(raw):null
+      }catch{
+        parsed=null
+      }
+
+      if(!parsed?.url||!isWebQr(parsed.url)) return
+      if(parsed.at&&Date.now()-parsed.at>24*60*60*1000){
+        try{ sessionStorage.removeItem('famioo:pending-qr-page') }catch{ /* ignore */ }
+        return
+      }
+
+      setQrPageUrl(parsed.url)
+      setQrPageTitle(hostTitle(parsed.url))
+      setQrPageOpen(true)
+      setQrLinkSaved(false)
+      void inspectQrPageMetadata(parsed.url)
     }
 
-    if(!parsed?.url||!isWebQr(parsed.url)) return
-    if(parsed.at&&Date.now()-parsed.at>24*60*60*1000){
-      try{ sessionStorage.removeItem('famioo:pending-qr-page') }catch{ /* ignore */ }
-      return
-    }
-
-    setQrPageUrl(parsed.url)
-    setQrPageTitle(hostTitle(parsed.url))
-    setQrPageOpen(true)
-    setQrLinkSaved(false)
-    void inspectQrPageMetadata(parsed.url)
+    restoreQrPage()
+    window.addEventListener('pageshow',restoreQrPage)
+    return ()=>window.removeEventListener('pageshow',restoreQrPage)
   },[household.id])
 
   function resetForm(){
