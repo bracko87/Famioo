@@ -1146,19 +1146,6 @@ export function ShoppingPage() {
               </section>
             )}
 
-            <label className="composer-option">
-              <input
-                type="checkbox"
-                checked={syncTask}
-                disabled={!canSyncTasks}
-                onChange={(event) => setSyncTask(event.target.checked)}
-              />
-              <span>
-                <span>Show this shopping list in Tasks</span>
-                <small>{canSyncTasks ? 'Creates one linked household Task. Archiving the shopping list completes the Task; restoring it reopens the Task.' : 'Tasks write access is required.'}</small>
-              </span>
-            </label>
-
             {error && <div className="form-message error">{error}</div>}
 
             <button className="primary-button" disabled={saving}>
