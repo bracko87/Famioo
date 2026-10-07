@@ -583,6 +583,12 @@ function ticketFileMime(file:File){
     :(file.type||'application/octet-stream')
 }
 
+function ticketUploadBody(file:File){
+  return isPkpassFile(file)
+    ?new Blob([file],{type:'application/vnd.apple.pkpass'})
+    :file
+}
+
 function textValue(value:unknown){
   if(value==null) return ''
   if(typeof value==='string'||typeof value==='number'||typeof value==='boolean') return String(value)
@@ -854,9 +860,11 @@ export function TicketWalletPage(){
   const { household,modules,profiles,user }=useHousehold()
   const access=modules.find((module)=>module.code==='tickets')
   const assistantAccess=modules.find((module)=>module.code==='assistant')
+  const filesAccess=modules.find((module)=>module.code==='files')
   const canWrite=Boolean(access?.enabled&&access.can_write)
   const canWriteCalendar=Boolean(modules.find((module)=>module.code==='calendar')?.can_write)
   const canWriteLifeAdmin=Boolean(modules.find((module)=>module.code==='life_admin')?.can_write)
+  const canWriteFiles=Boolean(filesAccess?.enabled&&filesAccess.can_write)
   const hasAiAssistant=Boolean(assistantAccess?.enabled)
 
   const [tickets,setTickets]=useState<TicketEntry[]>([])
@@ -899,6 +907,11 @@ export function TicketWalletPage(){
   const [scanSaving,setScanSaving]=useState(false)
   const [qrPageOpen,setQrPageOpen]=useState(false)
   const [qrPageUrl,setQrPageUrl]=useState('')
+  const [qrPageTitle,setQrPageTitle]=useState('')
+  const [qrPageDescription,setQrPageDescription]=useState('')
+  const [qrMetaLoading,setQrMetaLoading]=useState(false)
+  const [qrLinkSaving,setQrLinkSaving]=useState(false)
+  const [qrLinkSaved,setQrLinkSaved]=useState(false)
   const [qrAiDraft,setQrAiDraft]=useState<QrEventDraft|null>(null)
   const [qrAiLoading,setQrAiLoading]=useState(false)
   const [qrEventSaving,setQrEventSaving]=useState(false)
@@ -945,17 +958,88 @@ export function TicketWalletPage(){
     return String(detail)
   }
 
+  async function inspectQrPageMetadata(value:string){
+    setQrMetaLoading(true)
+
+    const result=await supabase.functions.invoke('extract-qr-page',{
+      body:{
+        household_id:household.id,
+        url:value,
+        timezone:household.timezone,
+        metadata_only:true,
+      },
+    })
+
+    setQrMetaLoading(false)
+
+    if(result.error||result.data?.error) return
+
+    const metadata=result.data?.metadata
+    if(metadata?.title) setQrPageTitle(String(metadata.title).slice(0,200))
+    if(metadata?.description) setQrPageDescription(String(metadata.description).slice(0,700))
+    if(metadata?.source_url&&isWebQr(String(metadata.source_url))){
+      setQrPageUrl(String(metadata.source_url))
+    }
+  }
+
+  function closeQrPageActions(){
+    try{ sessionStorage.removeItem('famioo:pending-qr-page') }catch{ /* ignore */ }
+    setQrPageOpen(false)
+    setQrAiDraft(null)
+    setQrPageUrl('')
+    setQrPageTitle('')
+    setQrPageDescription('')
+    setQrLinkSaved(false)
+    setError('')
+  }
+
   function openQrPage(value:string){
     setQrPageUrl(value)
+    setQrPageTitle(hostTitle(value))
+    setQrPageDescription('')
     setQrAiDraft(null)
+    setQrLinkSaved(false)
     setQrPageOpen(true)
     setError('')
-    setScannerMessage('QR destination found. The page has been opened; return to Famioo to create an event with Assistant if you want.')
+    setScannerMessage('QR destination found. Return to Famioo after viewing the page to save the link or create an event.')
+
     try{
-      window.open(value,'_blank','noopener,noreferrer')
+      sessionStorage.setItem('famioo:pending-qr-page',JSON.stringify({
+        url:value,
+        at:Date.now(),
+      }))
     }catch{
-      // The review dialog always keeps an explicit Open page button.
+      // The redirect still works even if temporary browser storage is unavailable.
     }
+
+    window.location.assign(value)
+  }
+
+  async function saveQrPageLink(){
+    if(!canWriteFiles||!qrPageUrl||qrLinkSaving) return
+
+    setQrLinkSaving(true)
+    setError('')
+
+    const result=await supabase
+      .from('household_links')
+      .insert({
+        household_id:household.id,
+        title:(qrPageTitle.trim()||hostTitle(qrPageUrl)).slice(0,200),
+        url:qrPageUrl,
+        notes:qrPageDescription.trim()||null,
+        source_module:'qr_scanner',
+      })
+
+    setQrLinkSaving(false)
+
+    if(result.error){
+      setError(result.error.message)
+      return
+    }
+
+    setQrLinkSaved(true)
+    setMessage('Website link saved in Files · Links.')
   }
 
   async function load(){
@@ -1007,6 +1091,28 @@ export function TicketWalletPage(){
   }
 
   useEffect(()=>{ void load() },[household.id,access?.enabled])
+
+  useEffect(()=>{
+    let parsed:{url?:string;at?:number}|null=null
+    try{
+      const raw=sessionStorage.getItem('famioo:pending-qr-page')
+      parsed=raw?JSON.parse(raw):null
+    }catch{
+      parsed=null
+    }
+
+    if(!parsed?.url||!isWebQr(parsed.url)) return
+    if(parsed.at&&Date.now()-parsed.at>24*60*60*1000){
+      try{ sessionStorage.removeItem('famioo:pending-qr-page') }catch{ /* ignore */ }
+      return
+    }
+
+    setQrPageUrl(parsed.url)
+    setQrPageTitle(hostTitle(parsed.url))
+    setQrPageOpen(true)
+    setQrLinkSaved(false)
+    void inspectQrPageMetadata(parsed.url)
+  },[household.id])
 
   function resetForm(){
     setEditing(null)
@@ -1407,9 +1513,12 @@ export function TicketWalletPage(){
       return
     }
 
+    try{ sessionStorage.removeItem('famioo:pending-qr-page') }catch{ /* ignore */ }
     setQrPageOpen(false)
     setQrAiDraft(null)
     setQrPageUrl('')
+    setQrPageTitle('')
+    setQrPageDescription('')
     setMessage('Calendar event created from the QR destination page.')
   }
 
@@ -1458,7 +1567,7 @@ export function TicketWalletPage(){
     const path=`${household.id}/${crypto.randomUUID()}/${safeFileName(scanFile.name)}`
     const upload=await supabase.storage
       .from('ticket-wallet')
-      .upload(path,scanFile,{
+      .upload(path,ticketUploadBody(scanFile),{
         contentType:ticketFileMime(scanFile),
         upsert:false,
       })
@@ -1677,7 +1786,7 @@ export function TicketWalletPage(){
       const path=`${household.id}/${crypto.randomUUID()}/${safeFileName(pendingFile.name)}`
       const upload=await supabase.storage
         .from('ticket-wallet')
-        .upload(path,pendingFile,{
+        .upload(path,ticketUploadBody(pendingFile),{
           contentType:ticketFileMime(pendingFile),
           upsert:false,
         })
