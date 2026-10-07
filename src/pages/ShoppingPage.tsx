@@ -692,10 +692,16 @@ export function ShoppingPage() {
           <div className="shopping-card-head-actions">
             <small>{completed}/{listItems.length}</small>
             {canWrite && (
-              <button className="secondary-button compact" type="button" onClick={() => beginArchive(list)}>
-                <Archive size={14} />
-                Archive
-              </button>
+              <>
+                <span className="mobile-slot-actions" aria-label={'Pin ' + list.title}>
+                  <button type="button" className="secondary-button compact" disabled={list.expanded_slot === 1} onClick={() => void setExpandedSlot(list.id, 1)}>Top 1</button>
+                  <button type="button" className="secondary-button compact" disabled={list.expanded_slot === 2} onClick={() => void setExpandedSlot(list.id, 2)}>Top 2</button>
+                </span>
+                <button className="secondary-button compact" type="button" onClick={() => beginArchive(list)}>
+                  <Archive size={14} />
+                  Finish shopping
+                </button>
+              </>
             )}
           </div>
         </header>
@@ -785,7 +791,7 @@ export function ShoppingPage() {
             </div>
             <button className="secondary-button compact" type="button" onClick={() => beginArchive(list)}>
               <Archive size={14} />
-              Archive
+              Finish
             </button>
           </div>
         )}
