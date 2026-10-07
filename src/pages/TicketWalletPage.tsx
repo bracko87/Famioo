@@ -272,6 +272,8 @@ function parseJsonScan(raw:string):ScanDraft|null{
 }
 
 function parseKeyValueScan(raw:string):ScanDraft|null{
+  if(/BEGIN:(VCALENDAR|VEVENT|VCARD)/i.test(raw)||/^WIFI:/i.test(raw)) return null
+
   const pairs=new Map<string,string>()
   raw
     .replace(/\r/g,'\n')
@@ -1039,6 +1041,7 @@ export function TicketWalletPage(){
       if(result.error) throw result.error
 
       setScanReviewOpen(false)
+      setComposerOpen(false)
       setScanDraft(null)
       setScanFile(null)
       setMessage(withCalendar
@@ -1125,6 +1128,7 @@ export function TicketWalletPage(){
     }
 
     setScanReviewOpen(false)
+    setComposerOpen(false)
     setScanDraft(null)
     setScanFile(null)
     setMessage('Scanned information saved to Calendar.')
@@ -1169,6 +1173,7 @@ export function TicketWalletPage(){
     }
 
     setScanReviewOpen(false)
+    setComposerOpen(false)
     setScanDraft(null)
     setScanFile(null)
     setMessage('Scanned information saved to Life Admin · Reference.')
