@@ -1058,7 +1058,7 @@ export function TicketWalletPage(){
   }
 
   function closeQrPageActions(){
-    try{ sessionStorage.removeItem('famioo:pending-qr-page') }catch{ /* ignore */ }
+    try{ localStorage.removeItem('famioo:pending-qr-page') }catch{ /* ignore */ }
     setQrPageOpen(false)
     setQrAiDraft(null)
     setQrPageUrl('')
@@ -1079,7 +1079,7 @@ export function TicketWalletPage(){
     setScannerMessage('QR destination found. Return to Famioo after viewing the page to save the link or create an event.')
 
     try{
-      sessionStorage.setItem('famioo:pending-qr-page',JSON.stringify({
+      localStorage.setItem('famioo:pending-qr-page',JSON.stringify({
         url:value,
         at:Date.now(),
       }))
@@ -1087,7 +1087,7 @@ export function TicketWalletPage(){
       // The redirect still works even if temporary browser storage is unavailable.
     }
 
-    window.location.assign(value)
+    window.location.href=value
   }
 
   async function saveQrPageLink(){
@@ -1177,10 +1177,12 @@ export function TicketWalletPage(){
   useEffect(()=>{ void load() },[household.id,access?.enabled])
 
   useEffect(()=>{
+    let lastRestoredUrl=''
+
     const restoreQrPage=()=>{
       let parsed:{url?:string;at?:number}|null=null
       try{
-        const raw=sessionStorage.getItem('famioo:pending-qr-page')
+        const raw=localStorage.getItem('famioo:pending-qr-page')
         parsed=raw?JSON.parse(raw):null
       }catch{
         parsed=null
@@ -1188,20 +1190,35 @@ export function TicketWalletPage(){
 
       if(!parsed?.url||!isWebQr(parsed.url)) return
       if(parsed.at&&Date.now()-parsed.at>24*60*60*1000){
-        try{ sessionStorage.removeItem('famioo:pending-qr-page') }catch{ /* ignore */ }
+        try{ localStorage.removeItem('famioo:pending-qr-page') }catch{ /* ignore */ }
         return
       }
 
       setQrPageUrl(parsed.url)
-      setQrPageTitle(hostTitle(parsed.url))
+      setQrPageTitle((current)=>current||hostTitle(parsed!.url!))
       setQrPageOpen(true)
       setQrLinkSaved(false)
-      void inspectQrPageMetadata(parsed.url)
+
+      if(lastRestoredUrl!==parsed.url){
+        lastRestoredUrl=parsed.url
+        void inspectQrPageMetadata(parsed.url)
+      }
+    }
+
+    const restoreOnVisibility=()=>{
+      if(document.visibilityState==='visible') restoreQrPage()
     }
 
     restoreQrPage()
     window.addEventListener('pageshow',restoreQrPage)
-    return ()=>window.removeEventListener('pageshow',restoreQrPage)
+    window.addEventListener('focus',restoreQrPage)
+    document.addEventListener('visibilitychange',restoreOnVisibility)
+
+    return ()=>{
+      window.removeEventListener('pageshow',restoreQrPage)
+      window.removeEventListener('focus',restoreQrPage)
+      document.removeEventListener('visibilitychange',restoreOnVisibility)
+    }
   },[household.id])
 
   function resetForm(){
@@ -1605,7 +1622,7 @@ export function TicketWalletPage(){
       return
     }
 
-    try{ sessionStorage.removeItem('famioo:pending-qr-page') }catch{ /* ignore */ }
+    try{ localStorage.removeItem('famioo:pending-qr-page') }catch{ /* ignore */ }
     setQrPageOpen(false)
     setQrAiDraft(null)
     setQrPageUrl('')
@@ -1751,7 +1768,13 @@ export function TicketWalletPage(){
           .eq('household_id',household.id)
           .eq('id',String(result.data))
 
-        if(previewUpdate.error) throw previewUpdate.error
+        if(previewUpdate.error){
+          if(uploaded.previewPath){
+            await supabase.storage.from('ticket-wallet').remove([uploaded.previewPath])
+          }
+          uploaded.previewPath=null
+          uploaded.previewMime=null
+        }
       }
 
       setScanReviewOpen(false)
@@ -2225,7 +2248,7 @@ export function TicketWalletPage(){
 
                           {digital&&(
                             <div
-                              className={'ticket-digital-poster '+(previewUrl?'has-artwork':'')}
+                              className={'ticket-digital-poster '+(previewUrl?'has-artwork ':'')+(ticket.preview_image_path?.toLowerCase().includes('logo')?'logo-artwork':'')}
                               style={previewUrl?{backgroundImage:`linear-gradient(90deg,rgba(30,20,38,.72),rgba(30,20,38,.20)),url("${previewUrl}")`}:undefined}
                             >
                               <div className="ticket-digital-poster-top">
@@ -2688,7 +2711,7 @@ export function TicketWalletPage(){
                       },
                     }}
                     onClick={()=>{
-                      try{ sessionStorage.removeItem('famioo:pending-qr-page') }catch{ /* ignore */ }
+                      try{ localStorage.removeItem('famioo:pending-qr-page') }catch{ /* ignore */ }
                     }}
                   >
                     <CalendarDays size={18}/>
