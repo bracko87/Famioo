@@ -674,7 +674,7 @@ function bestPkpassPreview(files:Record<string,Uint8Array>){
 
   const bytes=files[name]
   return new File(
-    [new Blob([bytes],{type:previewMime(name)})],
+    [new Blob([bytes as unknown as BlobPart],{type:previewMime(name)})],
     'wallet-preview-'+name.replace(/[^a-zA-Z0-9._-]+/g,'-'),
     {type:previewMime(name)},
   )
