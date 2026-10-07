@@ -45,6 +45,23 @@ type TicketType=
   | 'other'
 
 type TicketStatus='active'|'used'|'archived'
+type ScanKind='event'|'ticket'|'link'|'contact'|'wifi'|'reference'
+
+type ScanDraft={
+  kind:ScanKind
+  title:string
+  ticket_type:TicketType
+  start_date:string
+  start_time:string
+  end_date:string
+  end_time:string
+  location_text:string
+  provider_text:string
+  booking_reference:string
+  notes:string
+  raw_value:string
+  source_label:string
+}
 
 type TicketEntry={
   id:string
@@ -113,6 +130,209 @@ function formatDate(value:string|null){
 
 function todayKey(){
   return new Date().toISOString().slice(0,10)
+}
+
+function unfoldPayloadLines(value:string){
+  return value
+    .replace(/\r\n/g,'\n')
+    .replace(/\r/g,'\n')
+    .replace(/\n[ \t]/g,'')
+    .split('\n')
+    .map((line)=>line.trim())
+    .filter(Boolean)
+}
+
+function payloadField(lines:string[],name:string){
+  const upper=name.toUpperCase()+':'
+  const prefix=name.toUpperCase()+';'
+  const line=lines.find((item)=>{
+    const candidate=item.toUpperCase()
+    return candidate.startsWith(upper)||candidate.startsWith(prefix)
+  })
+  if(!line) return ''
+  const colon=line.indexOf(':')
+  return colon>=0?line.slice(colon+1).trim():''
+}
+
+function unescapePayloadText(value:string){
+  return value
+    .replace(/\\n/gi,'\n')
+    .replace(/\\,/g,',')
+    .replace(/\\;/g,';')
+    .replace(/\\\\/g,'\\')
+    .trim()
+}
+
+function parseCompactDateTime(value:string){
+  const clean=value.trim()
+  const match=clean.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?)?/)
+  if(!match) return {date:'',time:''}
+  return {
+    date:`${match[1]}-${match[2]}-${match[3]}`,
+    time:match[4]&&match[5]?`${match[4]}:${match[5]}`:'',
+  }
+}
+
+function hostTitle(value:string){
+  try{
+    const url=new URL(value)
+    return url.hostname.replace(/^www\./,'')
+  }catch{
+    return 'Scanned link'
+  }
+}
+
+function qrWifiField(raw:string,key:string){
+  const body=raw.replace(/^WIFI:/i,'').replace(/;;$/,'')
+  const parts=body.split(/(?<!\\);/)
+  const prefix=key+':'
+  const part=parts.find((item)=>item.startsWith(prefix))
+  return part?part.slice(prefix.length).replace(/\\;/g,';').replace(/\\:/g,':').replace(/\\\\/g,'\\'):''
+}
+
+function parseScannedPayload(rawValue:string):ScanDraft{
+  const raw=rawValue.trim()
+  const lines=unfoldPayloadLines(raw)
+  const blank:ScanDraft={
+    kind:'reference',
+    title:'Scanned reference',
+    ticket_type:'other',
+    start_date:'',
+    start_time:'',
+    end_date:'',
+    end_time:'',
+    location_text:'',
+    provider_text:'',
+    booking_reference:'',
+    notes:'',
+    raw_value:raw,
+    source_label:'QR / barcode',
+  }
+
+  if(/BEGIN:(VCALENDAR|VEVENT)/i.test(raw)){
+    const summary=unescapePayloadText(payloadField(lines,'SUMMARY'))
+    const location=unescapePayloadText(payloadField(lines,'LOCATION'))
+    const description=unescapePayloadText(payloadField(lines,'DESCRIPTION'))
+    const start=parseCompactDateTime(payloadField(lines,'DTSTART'))
+    const end=parseCompactDateTime(payloadField(lines,'DTEND'))
+
+    return {
+      ...blank,
+      kind:'event',
+      title:summary||'Scanned event',
+      ticket_type:/flight|boarding|airline/i.test(summary+' '+description)
+        ?'flight'
+        :/train|rail/i.test(summary+' '+description)
+          ?'train'
+          :'event',
+      start_date:start.date,
+      start_time:start.time,
+      end_date:end.date,
+      end_time:end.time,
+      location_text:location,
+      notes:description,
+      source_label:'Calendar event',
+    }
+  }
+
+  if(/^BEGIN:VCARD/i.test(raw)){
+    const name=unescapePayloadText(payloadField(lines,'FN'))
+      ||unescapePayloadText(payloadField(lines,'N')).replace(/;/g,' ').trim()
+    const org=unescapePayloadText(payloadField(lines,'ORG'))
+    const phone=unescapePayloadText(payloadField(lines,'TEL'))
+    const email=unescapePayloadText(payloadField(lines,'EMAIL'))
+    return {
+      ...blank,
+      kind:'contact',
+      title:name||org||'Scanned contact',
+      provider_text:org,
+      notes:[phone&&`Phone: ${phone}`,email&&`Email: ${email}`].filter(Boolean).join('\n'),
+      source_label:'Contact card',
+    }
+  }
+
+  if(/^WIFI:/i.test(raw)){
+    const network=qrWifiField(raw,'S')
+    const security=qrWifiField(raw,'T')
+    return {
+      ...blank,
+      kind:'wifi',
+      title:network?`Wi-Fi · ${network}`:'Wi-Fi network',
+      provider_text:network,
+      notes:security?`Security: ${security}`:'',
+      source_label:'Wi-Fi information',
+    }
+  }
+
+  if(/^https?:\/\//i.test(raw)){
+    const host=hostTitle(raw)
+    const looksTicket=/ticket|event|concert|cinema|flight|airline|boarding|rail|train|bahn|booking|pass/i.test(raw)
+    return {
+      ...blank,
+      kind:looksTicket?'ticket':'link',
+      title:looksTicket?`Ticket · ${host}`:host,
+      ticket_type:/flight|airline|boarding/i.test(raw)
+        ?'flight'
+        :/train|rail|bahn/i.test(raw)
+          ?'train'
+          :looksTicket?'event':'other',
+      provider_text:host,
+      notes:raw,
+      source_label:looksTicket?'Ticket link':'Web link',
+    }
+  }
+
+  if(/^mailto:/i.test(raw)){
+    const email=raw.replace(/^mailto:/i,'').split('?')[0]
+    return {
+      ...blank,
+      kind:'contact',
+      title:email||'Email address',
+      notes:raw,
+      source_label:'Email address',
+    }
+  }
+
+  if(/^tel:/i.test(raw)){
+    return {
+      ...blank,
+      kind:'contact',
+      title:raw.replace(/^tel:/i,'')||'Phone number',
+      notes:raw,
+      source_label:'Phone number',
+    }
+  }
+
+  if(/^otpauth:/i.test(raw)){
+    return {
+      ...blank,
+      kind:'reference',
+      title:'Security credential',
+      notes:'Famioo will not automatically store authentication secrets from this QR code. Review the raw value carefully before saving anything.',
+      source_label:'Sensitive security code',
+    }
+  }
+
+  if(/^M\d/.test(raw)&&raw.length>50){
+    return {
+      ...blank,
+      kind:'ticket',
+      title:'Boarding pass',
+      ticket_type:'flight',
+      notes:'A boarding-pass barcode was detected. Some airline barcodes contain compact industry data, but Famioo will not guess fields it cannot verify.',
+      source_label:'Boarding pass barcode',
+    }
+  }
+
+  const ticketLike=/flight|boarding|train|ticket|concert|cinema|event|booking|reservation/i.test(raw)
+  return {
+    ...blank,
+    kind:ticketLike?'ticket':'reference',
+    title:ticketLike?'Scanned ticket':'Scanned reference',
+    ticket_type:/flight|boarding/i.test(raw)?'flight':/train|rail/i.test(raw)?'train':ticketLike?'event':'other',
+    notes:raw.length<=500?raw:'',
+    source_label:ticketLike?'Ticket information':'General information',
+  }
 }
 
 function safeFileName(name:string){
@@ -198,6 +418,8 @@ export function TicketWalletPage(){
   const { household,modules,profiles,user }=useHousehold()
   const access=modules.find((module)=>module.code==='tickets')
   const canWrite=Boolean(access?.enabled&&access.can_write)
+  const canWriteCalendar=Boolean(modules.find((module)=>module.code==='calendar')?.can_write)
+  const canWriteLifeAdmin=Boolean(modules.find((module)=>module.code==='life_admin')?.can_write)
 
   const [tickets,setTickets]=useState<TicketEntry[]>([])
   const [calendars,setCalendars]=useState<CalendarRow[]>([])
@@ -233,6 +455,10 @@ export function TicketWalletPage(){
   const [scannerOpen,setScannerOpen]=useState(false)
   const [scannerError,setScannerError]=useState('')
   const [scannerMessage,setScannerMessage]=useState('')
+  const [scanReviewOpen,setScanReviewOpen]=useState(false)
+  const [scanDraft,setScanDraft]=useState<ScanDraft|null>(null)
+  const [scanFile,setScanFile]=useState<File|null>(null)
+  const [scanSaving,setScanSaving]=useState(false)
   const [saving,setSaving]=useState(false)
   const [error,setError]=useState('')
   const [message,setMessage]=useState('')
@@ -333,8 +559,15 @@ export function TicketWalletPage(){
 
   function openNew(scan=false){
     resetForm()
-    setComposerOpen(true)
-    if(scan) setScannerOpen(true)
+    setScanDraft(null)
+    setScanFile(null)
+    setScanReviewOpen(false)
+    if(scan){
+      setComposerOpen(false)
+      setScannerOpen(true)
+    }else{
+      setComposerOpen(true)
+    }
   }
 
   function openEdit(ticket:TicketEntry){
@@ -413,10 +646,12 @@ export function TicketWalletPage(){
 
       if(raw){
         const snapshot=await captureVideoFrame(video)
-        if(snapshot) setPendingFile(snapshot)
-        setQrValue(raw)
-        setScannerMessage('QR/barcode detected. Review the ticket details before saving.')
+        const draft=parseScannedPayload(raw)
+        setScanFile(snapshot)
+        setScanDraft(draft)
+        setScannerMessage('Code detected. Famioo recognized the information below.')
         setScannerOpen(false)
+        setScanReviewOpen(true)
         return
       }
 
@@ -487,8 +722,12 @@ export function TicketWalletPage(){
     }
 
     if(raw){
+      const draft=parseScannedPayload(raw)
       setQrValue(raw)
-      setScannerMessage('QR/barcode detected from the uploaded ticket image.')
+      setScanDraft(draft)
+      setScanFile(file)
+      setScannerMessage('Code detected from the uploaded image. Famioo recognized the information below.')
+      setScanReviewOpen(true)
     }
   }
 
