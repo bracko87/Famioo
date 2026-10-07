@@ -1028,7 +1028,7 @@ export function TicketWalletPage(){
     const Detector=getBarcodeDetector()
 
     if(!navigator.mediaDevices?.getUserMedia){
-      setScannerError('Camera access is not available in this browser. Upload a ticket image instead.')
+      setScannerError('Camera access is not available in this browser. Upload a QR image or ticket file instead.')
       return
     }
 
@@ -1101,7 +1101,7 @@ export function TicketWalletPage(){
       }catch(reason){
         setScannerError(reason instanceof Error
           ?reason.message
-          :'Camera permission could not be opened. Upload a ticket image instead.')
+          :'Camera permission could not be opened. Upload a QR image or ticket file instead.')
       }
     }
 
@@ -1589,7 +1589,7 @@ export function TicketWalletPage(){
         {canWrite&&(
           <div className="ticket-wallet-heading-actions">
             <button type="button" className="secondary-button compact" onClick={()=>openNew(true)}>
-              <ScanLine size={15}/>Scan ticket
+              <ScanLine size={15}/>Scan QR code
             </button>
             <button type="button" className="secondary-button compact" onClick={()=>{
               resetForm()
@@ -1672,8 +1672,8 @@ export function TicketWalletPage(){
         {visibleTickets.length===0 ? (
           <div className="list-card empty-state ticket-wallet-empty">
             <Ticket size={26}/>
-            <span className="empty-state-title">No tickets here yet.</span>
-            <span>{canWrite?'Scan a QR code, upload a ticket or add the first ticket manually.':'No tickets are available.'}</span>
+            <span className="empty-state-title">Nothing saved in the wallet yet.</span>
+            <span>{canWrite?'Scan any QR code, import a pass/file or add the first wallet item manually.':'No wallet items are available.'}</span>
           </div>
         ) : (
           <div className="ticket-wallet-list">
@@ -1719,10 +1719,17 @@ export function TicketWalletPage(){
                       </div>
                     )}
 
+                    {fileUrl&&ticket.file_mime_type?.startsWith('image/')&&(
+                      <a className="ticket-wallet-image-preview" href={fileUrl} target="_blank" rel="noreferrer" aria-label="Open saved QR or ticket image">
+                        <img src={fileUrl} alt={ticket.qr_value?'Saved QR code image':'Saved ticket image'}/>
+                        {ticket.qr_value&&<span><QrCode size={12}/>Saved QR image</span>}
+                      </a>
+                    )}
+
                     {fileUrl&&(
                       <a className="ticket-wallet-file" href={fileUrl} target="_blank" rel="noreferrer">
                         {ticket.file_mime_type?.startsWith('image/')?<ImageIcon size={13}/>:<FileText size={13}/>}
-                        {ticket.file_name??'Open ticket file'}
+                        {ticket.file_name??'Open saved file'}
                       </a>
                     )}
                   </div>
@@ -1956,7 +1963,7 @@ export function TicketWalletPage(){
                 </button>
               )}
 
-              <small>JPG, PNG, WebP, PDF or Apple Wallet .pkpass · maximum 15 MB. Apple Wallet passes are read locally from pass.json; ticket images are checked locally for QR codes.</small>
+              <small>JPG, PNG, WebP, PDF or Apple Wallet .pkpass · maximum 15 MB. Apple Wallet passes are read locally from pass.json; images are checked locally for QR codes.</small>
             </section>
 
             <label>
@@ -2292,10 +2299,10 @@ export function TicketWalletPage(){
           <section className="modal-card ticket-scanner-card">
             <header>
               <div>
-                <span className="eyebrow">LIVE SCANNER</span>
-                <h2>Scan QR or barcode</h2>
+                <span className="eyebrow">QR SCANNER</span>
+                <h2>Scan QR code</h2>
               </div>
-              <button type="button" className="icon-button" aria-label="Close ticket scanner" onClick={()=>setScannerOpen(false)}>
+              <button type="button" className="icon-button" aria-label="Close QR scanner" onClick={()=>setScannerOpen(false)}>
                 <X size={18}/>
               </button>
             </header>
@@ -2316,11 +2323,11 @@ export function TicketWalletPage(){
                   setScannerOpen(false)
                   window.setTimeout(()=>scanFileInputRef.current?.click(),0)
                 }}>
-                  <Upload size={14}/>Upload ticket image
+                  <Upload size={14}/>Upload QR / ticket image
                 </button>
               </div>
             ) : (
-              <p className="ticket-scanner-help">Point the camera at the ticket code. Famioo fills the code automatically when it is detected.</p>
+              <p className="ticket-scanner-help">Point the camera at any QR code or supported barcode. Famioo recognizes the content and opens a review popup automatically.</p>
             )}
           </section>
         </div>
