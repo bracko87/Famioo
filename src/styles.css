@@ -13949,3 +13949,122 @@ b {
     max-width: none;
   }
 }
+
+
+/* QR website follow-up */
+.qr-page-source {
+  margin: 11px 0;
+  display: grid;
+  gap: 7px;
+}
+
+.qr-page-source > div {
+  padding: 10px 11px;
+  border: 1px solid #e4dce7;
+  border-radius: 10px;
+  background: #fbf9fc;
+}
+
+.qr-page-source strong {
+  margin-top: 3px;
+  display: block;
+  color: #5d5062;
+  font-size: 12px;
+  font-weight: 630;
+}
+
+.qr-page-source p {
+  margin: 4px 0 0;
+  color: #918594;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.qr-page-choice-grid {
+  margin-top: 11px;
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 8px;
+}
+
+.qr-page-choice {
+  min-height: 82px;
+  padding: 10px 11px;
+  border: 1px solid #e3dbe6;
+  border-radius: 11px;
+  display: grid;
+  grid-template-columns: 27px minmax(0,1fr);
+  align-items: start;
+  gap: 8px;
+  color: #67596c;
+  background: #fff;
+  text-align: left;
+  text-decoration: none;
+}
+
+.qr-page-choice:hover:not(:disabled) {
+  border-color: #cdbbd4;
+  background: #fbf8fc;
+}
+
+.qr-page-choice.primary {
+  border-color: #cbb6d4;
+  background: #f8f2fa;
+}
+
+.qr-page-choice.locked {
+  background: #faf8f5;
+}
+
+.qr-page-choice > svg {
+  margin-top: 2px;
+  color: #765a82;
+}
+
+.qr-page-choice > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.qr-page-choice strong {
+  color: #5d5062;
+  font-size: 10px;
+}
+
+.qr-page-choice small {
+  color: #938797;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.qr-page-choice:disabled {
+  cursor: not-allowed;
+  opacity: .5;
+}
+
+/* Files links */
+.files-link-row .files-preview.link {
+  color: #6d5a77;
+  background: #f1ebf3;
+}
+
+.files-link-url {
+  max-width: 760px;
+  overflow: hidden;
+  display: block;
+  color: #8f8194;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.files-links-list {
+  display: grid;
+  gap: 8px;
+}
+
+@media (max-width: 650px) {
+  .qr-page-choice-grid {
+    grid-template-columns: 1fr;
+  }
+}
