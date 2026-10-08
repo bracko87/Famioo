@@ -545,15 +545,7 @@ Deno.serve(async(req)=>{
   if(!adminKey) return json({error:"Server accounting configuration is incomplete."},503)
 
   const usage=payload?.usage??{}
-  let conversationId:string
-  try{
-    conversationId=body.conversation_id
-      ?crypto.randomUUID.call({toString:()=>body.conversation_id})
-      :crypto.randomUUID()
-  }catch{
-    conversationId=crypto.randomUUID()
-  }
-
+  let conversationId=crypto.randomUUID()
   if(body.conversation_id){
     const normalized=String(body.conversation_id).trim()
     if(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalized)){
