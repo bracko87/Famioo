@@ -411,8 +411,35 @@ Deno.serve(async(req:Request)=>{
     },422)
   }
 
+  const sourceUrl=response.url || url.toString()
+  const payload=parsedRecipePayload(recipe,sourceUrl)
+
+  if(!payload.source_image_url){
+    const $=loadHtml(html)
+    payload.source_image_url=
+      $('meta[property="og:image"]').attr('content')
+      || $('meta[name="twitter:image"]').attr('content')
+      || $('meta[property="twitter:image"]').attr('content')
+      || $('link[rel="image_src"]').attr('href')
+      || ''
+  }
+
+  if(payload.source_image_url){
+    try{
+      payload.source_image_url=new URL(payload.source_image_url,sourceUrl).toString()
+    } catch {
+      payload.source_image_url=''
+    }
+  }
+
+  if(!payload.source_image_url){
+    return json({
+      error:"Famioo found the recipe, but the original recipe image could not be imported. Recipe images are mandatory for website imports.",
+    },422)
+  }
+
   return json({
     ok:true,
-    recipe:parsedRecipePayload(recipe,response.url || url.toString()),
+    recipe:payload,
   })
 })
