@@ -48,6 +48,23 @@ function secretKey(){
   return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")??""
 }
 
+async function recordAssistantAction(
+  supabaseUrl:string,
+  adminKey:string,
+  body:Record<string,unknown>,
+){
+  const response=await fetch(supabaseUrl+"/rest/v1/rpc/record_assistant_action_v1",{
+    method:"POST",
+    headers:{
+      apikey:adminKey,
+      "Content-Type":"application/json",
+    },
+    body:JSON.stringify(body),
+  })
+  const payload=await response.json().catch(()=>null)
+  return {response,payload}
+}
+
 function outputText(payload:any){
   if(typeof payload?.output_text==="string") return payload.output_text
   for(const item of payload?.output??[]){
@@ -197,9 +214,6 @@ Deno.serve(async(req)=>{
 
   const adminKey=secretKey()
   if(!adminKey) return json({error:"Server configuration is incomplete."},500)
-  const adminClient=createClient(supabaseUrl,adminKey,{
-    auth:{persistSession:false,autoRefreshToken:false},
-  })
 
   const householdResult=await userClient
     .from("households")
@@ -401,7 +415,7 @@ Deno.serve(async(req)=>{
 
 
   const assistantUsage=payload?.usage??{}
-  const consumeResult=await adminClient.rpc("record_assistant_action_v1",{
+  const accounting=await recordAssistantAction(supabaseUrl,adminKey,{
     p_household_id:householdId,
     p_user_id:userResult.data.user.id,
     p_action_type:"qr_page_event",
@@ -411,15 +425,15 @@ Deno.serve(async(req)=>{
     p_total_tokens:Number.isFinite(Number(assistantUsage.total_tokens))?Math.max(0,Math.round(Number(assistantUsage.total_tokens))):null,
     p_metadata:{},
   })
-  if(consumeResult.error){
-    console.error("Assistant action accounting failed",consumeResult.error)
+  if(!accounting.response.ok){
+    console.error("Assistant action accounting failed",accounting.payload)
     return json({error:"The page was read, but Famioo could not record the Assistant action. Please try again."},503)
   }
-  if(consumeResult.data?.ok!==true){
+  if(accounting.payload?.ok!==true){
     return json({
       error:"Your household has used all Assistant actions for this period.",
-      code:String(consumeResult.data?.code||"ASSISTANT_LIMIT_REACHED"),
-      cycle_end:consumeResult.data?.cycle_end??null,
+      code:String(accounting.payload?.code||"ASSISTANT_LIMIT_REACHED"),
+      cycle_end:accounting.payload?.cycle_end??null,
     },429)
   }
 
