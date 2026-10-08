@@ -209,10 +209,22 @@ async function executePlan(
   }
 
   if(plan.action_type==="create_task"){
+    const categories=await userClient
+      .from("event_categories")
+      .select("id")
+      .eq("household_id",householdId)
+      .eq("active",true)
+      .order("sort_order")
+      .limit(1)
+
+    if(categories.error||!categories.data?.length){
+      return {executed:false,error:categories.error?.message||"No active task category is available."}
+    }
+
     const result=await userClient.rpc("create_task_v1",{
       p_household_id:householdId,
       p_title:title,
-      p_category_id:null,
+      p_category_id:categories.data[0].id,
       p_due_date:plan.date,
       p_location_text:plan.location?.trim()||null,
       p_participants:[],
@@ -229,10 +241,22 @@ async function executePlan(
   }
 
   if(plan.action_type==="create_checklist"){
+    const categories=await userClient
+      .from("event_categories")
+      .select("id")
+      .eq("household_id",householdId)
+      .eq("active",true)
+      .order("sort_order")
+      .limit(1)
+
+    if(categories.error||!categories.data?.length){
+      return {executed:false,error:categories.error?.message||"No active checklist category is available."}
+    }
+
     const result=await userClient.rpc("create_checklist_v1",{
       p_household_id:householdId,
       p_title:title,
-      p_category_id:null,
+      p_category_id:categories.data[0].id,
       p_due_date:plan.date,
       p_location_text:plan.location?.trim()||null,
       p_participants:[],
