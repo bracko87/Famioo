@@ -19,6 +19,7 @@ type RequestBody={
   message?:string
   history?:ChatMessage[]
   page_path?:string
+  conversation_id?:string
 }
 
 type AssistantPlan={
@@ -31,6 +32,8 @@ type AssistantPlan={
   all_day:boolean
   location:string|null
   description:string|null
+  reminder_minutes_before:number|null
+  participant_names:string[]
 }
 
 const planSchema={
@@ -38,7 +41,7 @@ const planSchema={
   additionalProperties:false,
   required:[
     "reply","action_type","title","date","start_time","end_time",
-    "all_day","location","description",
+    "all_day","location","description","reminder_minutes_before","participant_names",
   ],
   properties:{
     reply:{type:"string",maxLength:1400},
@@ -53,6 +56,12 @@ const planSchema={
     all_day:{type:"boolean"},
     location:{type:["string","null"],maxLength:300},
     description:{type:["string","null"],maxLength:1200},
+    reminder_minutes_before:{type:["integer","null"],minimum:0,maximum:10080},
+    participant_names:{
+      type:"array",
+      maxItems:12,
+      items:{type:"string",maxLength:120},
+    },
   },
 }
 
@@ -141,9 +150,27 @@ async function recordAssistantAction(
   return {response,payload}
 }
 
+async function recordAssistantConversationTurn(
+  supabaseUrl:string,
+  adminKey:string,
+  body:Record<string,unknown>,
+){
+  const response=await fetch(supabaseUrl+"/rest/v1/rpc/record_assistant_conversation_turn_v1",{
+    method:"POST",
+    headers:{
+      apikey:adminKey,
+      "Content-Type":"application/json",
+    },
+    body:JSON.stringify(body),
+  })
+  const payload=await response.json().catch(()=>null)
+  return {response,payload}
+}
+
 async function executePlan(
   userClient:any,
   householdId:string,
+  userId:string,
   timezone:string,
   plan:AssistantPlan,
 ){
@@ -175,6 +202,54 @@ async function executePlan(
       ?localDateTimeToIso(plan.date,plan.end_time,timezone)
       :null
 
+    const profilesResult=await userClient
+      .from("family_profiles")
+      .select("id,display_name,linked_user_id")
+      .eq("household_id",householdId)
+      .eq("active",true)
+
+    if(profilesResult.error){
+      return {executed:false,error:profilesResult.error.message}
+    }
+
+    const requestedNames=(plan.participant_names??[])
+      .map((name)=>name.trim().toLocaleLowerCase())
+      .filter(Boolean)
+
+    const matchedProfiles=(profilesResult.data??[]).filter((profile:any)=>
+      requestedNames.includes(String(profile.display_name||"").trim().toLocaleLowerCase())
+    )
+
+    const participants=matchedProfiles.map((profile:any)=>({
+      profile_id:profile.id,
+      participant_role:"participant",
+      can_edit:false,
+    }))
+
+    const reminderMinutes=plan.reminder_minutes_before==null
+      ?null
+      :Math.max(0,Math.min(10080,Math.round(Number(plan.reminder_minutes_before))))
+
+    const currentProfile=(profilesResult.data??[]).find((profile:any)=>profile.linked_user_id===userId)
+    const reminders=reminderMinutes==null||!currentProfile
+      ?[]
+      :[{
+          profile_id:currentProfile.id,
+          reminder_kind:"offset",
+          offset_minutes:reminderMinutes,
+          exact_at:null,
+          morning_time:null,
+          delivery_channel:"push",
+          enabled:true,
+        }]
+
+    if(reminderMinutes!=null&&!currentProfile){
+      return {
+        executed:false,
+        error:"Your signed-in account is not linked to a household profile, so Famioo cannot target the reminder.",
+      }
+    }
+
     const result=await userClient.rpc("save_event_v1",{
       p_event_id:null,
       p_household_id:householdId,
@@ -190,9 +265,9 @@ async function executePlan(
       p_location_text:plan.location?.trim()||null,
       p_category_id:null,
       p_visibility:"household",
-      p_participants:[],
+      p_participants:participants,
       p_rrule:null,
-      p_reminders:[],
+      p_reminders:reminders,
     })
 
     if(result.error) return {executed:false,error:result.error.message}
@@ -204,7 +279,8 @@ async function executePlan(
       executed:true,
       action_type:plan.action_type,
       record_id:result.data,
-      reply:"Added “"+title+"” to the family calendar for "+when+".",
+      reply:"Added “"+title+"” to the family calendar for "+when
+        +(reminderMinutes!=null?" with a notification "+reminderMinutes+" minutes before.":"."),
     }
   }
 
@@ -394,7 +470,9 @@ Deno.serve(async(req)=>{
     "Supported direct actions: create a Calendar event, Task, Checklist, or Shopping list.",
     "For these four creation actions, execute when the request is clear. Do not say that you cannot do it.",
     "Never choose edit/delete/archive actions. Destructive or ambiguous changes require confirmation and are not part of this action schema yet.",
-    "For create_calendar_event: extract title, date, optional start/end time, all-day, location and description. If a date/time request is clear, use it.",
+    "For create_calendar_event: extract title, date, optional start/end time, all-day, location, description, reminder_minutes_before and participant_names.",
+    "If the user asks for a notification/reminder, convert it to minutes before the event: one hour before = 60, 30 minutes before = 30, one day before = 1440.",
+    "If the user names who the event is for (for example Esther), include that name in participant_names. Never invent names.",
     "For create_task/create_checklist/create_shopping_list: title is required; date is an optional due/scheduled date.",
     "If the user only asks a question or calculation, action_type must be none.",
     "Use plain text only in reply. Do not use Markdown markers such as **, #, backticks or bullet syntax.",
@@ -456,7 +534,7 @@ Deno.serve(async(req)=>{
     return json({error:"AI Assistant returned an unreadable action plan."},502)
   }
 
-  const executed=await executePlan(userClient,householdId,timezone,plan)
+  const executed=await executePlan(userClient,householdId,userResult.data.user.id,timezone,plan)
   if(executed.error){
     return json({
       error:"Assistant understood the request, but Famioo could not complete it: "+String(executed.error).slice(0,350),
@@ -467,9 +545,26 @@ Deno.serve(async(req)=>{
   if(!adminKey) return json({error:"Server accounting configuration is incomplete."},503)
 
   const usage=payload?.usage??{}
-  const accounting=await recordAssistantAction(supabaseUrl,adminKey,{
+  let conversationId:string
+  try{
+    conversationId=body.conversation_id
+      ?crypto.randomUUID.call({toString:()=>body.conversation_id})
+      :crypto.randomUUID()
+  }catch{
+    conversationId=crypto.randomUUID()
+  }
+
+  if(body.conversation_id){
+    const normalized=String(body.conversation_id).trim()
+    if(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalized)){
+      conversationId=normalized
+    }
+  }
+
+  const accounting=await recordAssistantConversationTurn(supabaseUrl,adminKey,{
     p_household_id:householdId,
     p_user_id:userResult.data.user.id,
+    p_conversation_id:conversationId,
     p_action_type:executed.executed?String(executed.action_type||"quick_assistant"):"quick_assistant",
     p_model:model,
     p_input_tokens:Number.isFinite(Number(usage.input_tokens))?Math.max(0,Math.round(Number(usage.input_tokens))):null,
@@ -502,6 +597,8 @@ Deno.serve(async(req)=>{
     action_type:executed.action_type??plan.action_type,
     record_id:executed.record_id??null,
     remaining:Number(accounting.payload?.remaining??0),
+    billable:Boolean(accounting.payload?.billable),
+    conversation_turn:Number(accounting.payload?.conversation_turn??1),
     cycle_end:accounting.payload?.cycle_end??allowance?.cycle_end??null,
   })
 })
