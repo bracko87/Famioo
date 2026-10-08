@@ -16373,3 +16373,513 @@ b {
     filter: none;
   }
 }
+
+
+/* =========================================================
+   Mobile full-width / dark-mode audit – 2026-10-08
+   Final overrides after phone screenshots.
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .launch-orbit {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+
+  .launch-orbit-1  { top: 10%; left: 10%; transform: rotate(-7deg); }
+  .launch-orbit-2  { top: 10%; right: 10%; transform: rotate(7deg); }
+  .launch-orbit-3  { top: 22%; left: 5%; transform: rotate(5deg); }
+  .launch-orbit-4  { top: 22%; right: 5%; transform: rotate(-5deg); }
+  .launch-orbit-5  { top: 35%; left: 9%; transform: rotate(-6deg); }
+  .launch-orbit-6  { top: 35%; right: 9%; transform: rotate(6deg); }
+  .launch-orbit-7  { top: 49%; left: 4%; transform: rotate(4deg); }
+  .launch-orbit-8  { top: 49%; right: 4%; transform: rotate(-4deg); }
+  .launch-orbit-9  { bottom: 33%; left: 9%; transform: rotate(-6deg); }
+  .launch-orbit-10 { bottom: 33%; right: 9%; transform: rotate(6deg); }
+  .launch-orbit-11 { bottom: 20%; left: 5%; transform: rotate(5deg); }
+  .launch-orbit-12 { bottom: 20%; right: 5%; transform: rotate(-5deg); }
+  .launch-orbit-13 { bottom: 9%; left: 13%; transform: rotate(-7deg); }
+  .launch-orbit-14 { bottom: 9%; right: 13%; transform: rotate(7deg); }
+}
+
+@media (max-width: 767px) {
+  html,
+  body,
+  #root,
+  .app-layout,
+  .app-content {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .app-header {
+    justify-content: flex-start;
+  }
+
+  .app-header .header-household {
+    flex: 0 1 auto;
+    width: auto;
+    max-width: calc(100% - 104px);
+    margin-left: 0 !important;
+    margin-right: auto;
+    justify-content: flex-start !important;
+    text-align: left;
+  }
+
+  .app-header .header-household > strong {
+    max-width: 155px;
+  }
+
+  .app-header .header-household .custom-select {
+    width: min(180px, 100%);
+  }
+
+  .page {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .page:not(.calendar-page):not(.settings-page):not(.recipe-detail-page) {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .page > *,
+  .page section,
+  .page article,
+  .page form,
+  .page header,
+  .page footer,
+  .settings-tab-content,
+  .settings-tab-content > *,
+  .settings-card,
+  .list-card {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .page img,
+  .settings-page img {
+    max-width: 100%;
+  }
+
+  .page-heading-row,
+  .archive-page-heading,
+  .settings-section-head {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0,1fr);
+    align-items: start;
+    gap: 10px;
+  }
+
+  .page-heading-row > .primary-button,
+  .archive-page-heading > .primary-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Month entries are one-line, category-colored chips. */
+  .month-calendar .calendar-event-pill {
+    border: 0;
+    box-shadow: none;
+  }
+
+  .month-calendar .calendar-event-pill .calendar-event-text strong {
+    color: #fff !important;
+    font-size: 7.5px;
+    font-weight: 650;
+  }
+
+  .month-calendar .calendar-event-pill .calendar-event-dot {
+    display: none !important;
+  }
+
+  /* Shopping cards: no controls can escape the phone frame. */
+  .list-expanded-grid {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+
+  .list-expanded-slot {
+    min-width: 0;
+  }
+
+  .list-expanded-slot:has(.list-drop-placeholder) {
+    display: none;
+  }
+
+  .shopping-card {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .shopping-card > header {
+    width: 100%;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: minmax(0,1fr);
+    align-items: stretch;
+    gap: 9px;
+  }
+
+  .shopping-card > header > div:first-child {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .shopping-card-head-actions {
+    width: 100%;
+    min-width: 0;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start;
+    flex-wrap: wrap !important;
+    gap: 6px;
+  }
+
+  .shopping-card-head-actions > small {
+    margin-right: auto;
+  }
+
+  .shopping-card-head-actions .mobile-slot-actions {
+    display: inline-flex;
+    flex: 0 0 auto;
+    gap: 5px;
+  }
+
+  .shopping-card-head-actions > .secondary-button {
+    flex: 1 0 100%;
+    width: 100%;
+    max-width: 100%;
+    min-height: 40px;
+    justify-content: center;
+  }
+
+  .shopping-add {
+    width: 100%;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: minmax(0,1fr) 78px !important;
+    gap: 7px;
+  }
+
+  .shopping-add input,
+  .shopping-add .shopping-quantity {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .shopping-add .secondary-button {
+    width: 100%;
+    min-height: 42px;
+    grid-column: 1 / -1 !important;
+    justify-content: center;
+  }
+
+  .shopping-item,
+  .shopping-item-toggle {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .shopping-item-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .compact-list-card {
+    grid-template-columns: minmax(0,1fr) auto !important;
+    gap: 8px;
+  }
+
+  .compact-list-main {
+    min-width: 0;
+  }
+
+  .compact-list-actions {
+    grid-column: 1 / -1;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  /* Settings: every section becomes a true one-column mobile page. */
+  .settings-page {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .settings-tab-content {
+    width: 100%;
+    padding: 12px;
+    overflow-x: hidden;
+  }
+
+  .general-settings-grid,
+  .users-settings-layout,
+  .category-settings-layout,
+  .types-settings-grid,
+  .notification-security-grid,
+  .privacy-settings-grid,
+  .template-section-grid,
+  .pricing-model-grid,
+  .category-module-grid,
+  .mobile-app-install-hero,
+  .mobile-app-install-steps,
+  .mobile-app-test-grid {
+    width: 100%;
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+
+  .settings-card,
+  .settings-card form,
+  .add-user-form,
+  .add-category-form {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .settings-card input,
+  .settings-card textarea,
+  .settings-card select,
+  .settings-card .custom-select,
+  .settings-card .custom-select-trigger,
+  .settings-card .date-picker,
+  .settings-card .date-picker-trigger {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .users-table {
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+  }
+
+  .users-table-head {
+    display: none;
+  }
+
+  .users-table-row {
+    width: 100%;
+    min-width: 0;
+    padding: 11px 0;
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) !important;
+    gap: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .user-cell,
+  .user-contact-cell,
+  .user-actions-cell,
+  .user-actions-placeholder {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .user-contact-cell {
+    overflow-wrap: anywhere;
+  }
+
+  .user-actions-cell {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  .identity-switch,
+  .mode-switch,
+  .person-type-switch,
+  .notification-button-row,
+  .mobile-app-install-actions,
+  .weather-settings-actions {
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .identity-switch > *,
+  .mode-switch > *,
+  .person-type-switch > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .permissions-table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  .category-row,
+  .type-settings-row.category-row {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: 14px minmax(0,1fr) auto 32px;
+    gap: 7px;
+  }
+
+  .category-name,
+  .category-color-label {
+    min-width: 0;
+  }
+
+  .category-name strong,
+  .category-name small,
+  .category-color-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .category-availability-row,
+  .settings-switch-row,
+  .summary-schedule-row,
+  .passkey-row,
+  .template-row {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* General protection for module pages that still use desktop grids. */
+  .school-summary-grid,
+  .home-care-summary-grid,
+  .life-admin-summary-grid,
+  .cost-chart-grid,
+  .cost-side-charts,
+  .finance-overview-grid,
+  .cost-summary-panel,
+  .home-care-overview-grid,
+  .life-admin-overview-grid,
+  .project-points-grid,
+  .shopping-finish-grid,
+  .receipt-insight-summary,
+  .receipt-insight-columns {
+    width: 100%;
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+
+  .school-entry-card,
+  .home-care-asset-card,
+  .life-admin-item-card,
+  .project-card,
+  .task-row,
+  .checklist-card,
+  .recipe-card,
+  .cost-row {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .modal-card,
+  .modal-card * {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  /* Dark mode: dark surfaces, white text/icons, retain accent colors. */
+  html[data-famioo-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  html[data-famioo-theme="dark"] body,
+  html[data-famioo-theme="dark"] #root,
+  html[data-famioo-theme="dark"] .app-content,
+  html[data-famioo-theme="dark"] .page {
+    background-color: #000 !important;
+  }
+
+  html[data-famioo-theme="dark"] .page [class*="-card"],
+  html[data-famioo-theme="dark"] .page [class*="-panel"],
+  html[data-famioo-theme="dark"] .page [class*="-row"],
+  html[data-famioo-theme="dark"] .page [class*="-list"],
+  html[data-famioo-theme="dark"] .page [class*="-table"],
+  html[data-famioo-theme="dark"] .page [class*="-summary"],
+  html[data-famioo-theme="dark"] .page [class*="-total"],
+  html[data-famioo-theme="dark"] .list-expanded-slot,
+  html[data-famioo-theme="dark"] .list-drop-placeholder,
+  html[data-famioo-theme="dark"] .archive-repository-bar,
+  html[data-famioo-theme="dark"] .settings-tab-content,
+  html[data-famioo-theme="dark"] .mobile-settings-menu,
+  html[data-famioo-theme="dark"] .mobile-settings-title,
+  html[data-famioo-theme="dark"] .mobile-settings-detail-head {
+    border-color: #303030 !important;
+    background-color: #0d0d0d !important;
+  }
+
+  html[data-famioo-theme="dark"] input,
+  html[data-famioo-theme="dark"] textarea,
+  html[data-famioo-theme="dark"] select,
+  html[data-famioo-theme="dark"] .custom-select-trigger,
+  html[data-famioo-theme="dark"] .date-picker-trigger,
+  html[data-famioo-theme="dark"] .secondary-button,
+  html[data-famioo-theme="dark"] .icon-button {
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+    border-color: #3a3a3a !important;
+    background: #151515 !important;
+    box-shadow: none !important;
+  }
+
+  html[data-famioo-theme="dark"] input:-webkit-autofill,
+  html[data-famioo-theme="dark"] input:-webkit-autofill:hover,
+  html[data-famioo-theme="dark"] input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #fff !important;
+    -webkit-box-shadow: 0 0 0 1000px #151515 inset !important;
+    caret-color: #fff;
+  }
+
+  html[data-famioo-theme="dark"] button:disabled,
+  html[data-famioo-theme="dark"] input:disabled,
+  html[data-famioo-theme="dark"] textarea:disabled {
+    opacity: .55;
+  }
+
+  html[data-famioo-theme="dark"] .primary-button,
+  html[data-famioo-theme="dark"] .mobile-assistant-tab,
+  html[data-famioo-theme="dark"] .shopping-compare-tab,
+  html[data-famioo-theme="dark"] .mobile-cost-side-tabs > button,
+  html[data-famioo-theme="dark"] .module-banner,
+  html[data-famioo-theme="dark"] .promo-slide {
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+  }
+
+  html[data-famioo-theme="dark"] .cost-summary-card:nth-child(3) {
+    background:
+      radial-gradient(circle at 84% 15%,rgba(255,255,255,.16),transparent 28%),
+      linear-gradient(135deg,#713681,#b44b90) !important;
+  }
+
+  html[data-famioo-theme="dark"] .calendar-event-pill {
+    background-color: var(--event-color, inherit);
+  }
+
+  html[data-famioo-theme="dark"] .receipt-insight-summary article,
+  html[data-famioo-theme="dark"] .receipt-insight-columns > div,
+  html[data-famioo-theme="dark"] .shopping-receipt-upload,
+  html[data-famioo-theme="dark"] .receipt-review-panel,
+  html[data-famioo-theme="dark"] .cost-chart,
+  html[data-famioo-theme="dark"] .cost-report-total,
+  html[data-famioo-theme="dark"] .finance-plan-fields > label,
+  html[data-famioo-theme="dark"] .weather-location-results,
+  html[data-famioo-theme="dark"] .mobile-app-install-note {
+    border-color: #303030 !important;
+    background: #111 !important;
+  }
+}
