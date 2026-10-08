@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, BarChart3, CalendarDays, ClipboardCheck, GripVertical, Plus, ReceiptText, ShoppingBag, Sparkles, Store, Trash2, Upload, X } from 'lucide-react'
+import { Archive, ArchiveRestore, ArrowLeftRight, BarChart3, CalendarDays, ClipboardCheck, GripVertical, Plus, ReceiptText, ShoppingBag, Sparkles, Store, Trash2, Upload, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { Select } from '../components/ui/Select'
@@ -143,6 +143,8 @@ export function ShoppingPage() {
   const [quantityDrafts, setQuantityDrafts] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [draggedListId, setDraggedListId] = useState<string | null>(null)
+  const [compareOpen,setCompareOpen] = useState(false)
+  const [comparePeriod,setComparePeriod] = useState<'month'|'30days'>('month')
   const [error, setError] = useState('')
 
   async function load() {
@@ -320,6 +322,97 @@ export function ShoppingPage() {
       comparisons,
     }
   }, [monthlyReceipts, receiptItems, receiptById])
+
+
+  const receiptComparisonReport = useMemo(() => {
+    const now=new Date()
+    const start30=new Date(now)
+    start30.setDate(start30.getDate()-29)
+    const start30Key=start30.toISOString().slice(0,10)
+    const monthKey=now.toISOString().slice(0,7)
+
+    const selectedReceipts=receipts
+      .filter((receipt)=>comparePeriod==='month'
+        ? receipt.purchase_date.startsWith(monthKey)
+        : receipt.purchase_date>=start30Key)
+      .sort((a,b)=>a.purchase_date.localeCompare(b.purchase_date))
+
+    const selectedIds=new Set(selectedReceipts.map((receipt)=>receipt.id))
+    const selectedItems=receiptItems.filter((item)=>selectedIds.has(item.receipt_id))
+    const total=selectedReceipts.reduce((sum,receipt)=>sum+Number(receipt.total_amount??0),0)
+    const average=selectedReceipts.length ? total/selectedReceipts.length : 0
+
+    const storeTotals=new Map<string,number>()
+    for(const receipt of selectedReceipts){
+      const store=receipt.store_name?.trim()||'Unknown store'
+      storeTotals.set(store,(storeTotals.get(store)??0)+Number(receipt.total_amount??0))
+    }
+
+    const products=new Map<string,Array<{price:number;date:string;store:string;label:string}>>()
+    for(const item of selectedItems){
+      const price=item.unit_price ?? item.line_total
+      const key=item.normalized_name.trim().toLowerCase()
+      if(price==null || !key) continue
+      const receipt=receiptById.get(item.receipt_id)
+      if(!receipt) continue
+      const rows=products.get(key)??[]
+      rows.push({
+        price:Number(price),
+        date:receipt.purchase_date,
+        store:receipt.store_name?.trim()||'Unknown store',
+        label:item.product_name,
+      })
+      products.set(key,rows)
+    }
+
+    const changes=Array.from(products.entries())
+      .filter(([,rows])=>rows.length>=2)
+      .map(([key,rows])=>{
+        const sorted=[...rows].sort((a,b)=>a.date.localeCompare(b.date))
+        const first=sorted[0]
+        const last=sorted[sorted.length-1]
+        const delta=last.price-first.price
+        const percent=first.price>0 ? (delta/first.price)*100 : 0
+        return { key,label:last.label,first,last,delta,percent,observations:rows.length }
+      })
+      .sort((a,b)=>Math.abs(b.percent)-Math.abs(a.percent))
+
+    const lastTwo=selectedReceipts.slice(-2)
+    const previous=lastTwo.length===2 ? lastTwo[0] : null
+    const latest=lastTwo.length ? lastTwo[lastTwo.length-1] : null
+    const receiptDelta=previous && latest
+      ? Number(latest.total_amount??0)-Number(previous.total_amount??0)
+      : null
+
+    return {
+      selectedReceipts,
+      total,
+      average,
+      stores:Array.from(storeTotals.entries())
+        .map(([store,value])=>({store,value}))
+        .sort((a,b)=>b.value-a.value),
+      increases:changes.filter((item)=>item.delta>0).slice(0,5),
+      decreases:changes.filter((item)=>item.delta<0).sort((a,b)=>a.percent-b.percent).slice(0,5),
+      latest,
+      previous,
+      receiptDelta,
+    }
+  },[receipts,receiptItems,receiptById,comparePeriod])
+
+  function askAssistantAboutShopping(){
+    const report=receiptComparisonReport
+    const periodLabel=comparePeriod==='month' ? 'this month' : 'the last 30 days'
+    const increases=report.increases.map((item)=>item.label+' '+item.percent.toFixed(0)+'%').join(', ') || 'none detected'
+    const decreases=report.decreases.map((item)=>item.label+' '+Math.abs(item.percent).toFixed(0)+'%').join(', ') || 'none detected'
+    const stores=report.stores.slice(0,5).map((item)=>item.store+' '+moneyValue(item.value)).join(', ') || 'no store data'
+
+    window.dispatchEvent(new CustomEvent('famioo:assistant-prefill',{
+      detail:{
+        message:'Analyze our shopping receipts for '+periodLabel+'. We have '+report.selectedReceipts.length+' receipts totaling '+moneyValue(report.total)+'. Spend by store: '+stores+'. Biggest detected price increases: '+increases+'. Biggest detected price decreases: '+decreases+'. Give me useful household shopping insights, point out where we pay more or less, and suggest practical ways to save money. Do not invent data that is not included here.',
+      },
+    }))
+    setCompareOpen(false)
+  }
 
   function resetReceiptState() {
     setReceiptFile(null)
@@ -817,6 +910,99 @@ export function ShoppingPage() {
       </div>
 
       <PrivacyNotice compact />
+
+      <button
+        type="button"
+        className={compareOpen ? 'shopping-compare-tab active' : 'shopping-compare-tab'}
+        onClick={()=>setCompareOpen((current)=>!current)}
+        aria-label={compareOpen ? 'Close shopping comparison' : 'Compare shopping receipts'}
+        aria-expanded={compareOpen}
+      >
+        <ArrowLeftRight size={19}/>
+      </button>
+
+      {compareOpen && (
+        <>
+          <button className="shopping-compare-backdrop" type="button" aria-label="Close shopping comparison" onClick={()=>setCompareOpen(false)}/>
+          <aside className="shopping-compare-drawer" aria-label="Shopping comparison">
+            <header>
+              <div>
+                <span className="eyebrow">SHOPPING COMPARE</span>
+                <h2>Receipt comparison</h2>
+              </div>
+              <button type="button" onClick={()=>setCompareOpen(false)} aria-label="Close shopping comparison"><X size={18}/></button>
+            </header>
+
+            <div className="shopping-compare-period">
+              <button type="button" className={comparePeriod==='month'?'active':''} onClick={()=>setComparePeriod('month')}>This month</button>
+              <button type="button" className={comparePeriod==='30days'?'active':''} onClick={()=>setComparePeriod('30days')}>Last 30 days</button>
+            </div>
+
+            <div className="shopping-compare-summary">
+              <article><span>Total spend</span><strong>{moneyValue(receiptComparisonReport.total)}</strong></article>
+              <article><span>Receipts</span><strong>{receiptComparisonReport.selectedReceipts.length}</strong></article>
+              <article><span>Average trip</span><strong>{moneyValue(receiptComparisonReport.average)}</strong></article>
+            </div>
+
+            {receiptComparisonReport.latest && (
+              <section className="shopping-compare-section">
+                <h3>Latest receipt</h3>
+                <div className="shopping-compare-latest">
+                  <span>
+                    <strong>{receiptComparisonReport.latest.store_name || 'Unknown store'}</strong>
+                    <small>{receiptComparisonReport.latest.purchase_date}</small>
+                  </span>
+                  <strong>{moneyValue(Number(receiptComparisonReport.latest.total_amount??0),receiptComparisonReport.latest.currency)}</strong>
+                </div>
+                {receiptComparisonReport.previous && receiptComparisonReport.receiptDelta!=null && (
+                  <small>
+                    {receiptComparisonReport.receiptDelta===0
+                      ? 'Same total as the previous receipt.'
+                      : Math.abs(receiptComparisonReport.receiptDelta)>0
+                        ? (receiptComparisonReport.receiptDelta>0 ? 'Up ' : 'Down ')+moneyValue(Math.abs(receiptComparisonReport.receiptDelta))+' versus the previous receipt.'
+                        : ''}
+                  </small>
+                )}
+              </section>
+            )}
+
+            <section className="shopping-compare-section">
+              <h3>Spend by store</h3>
+              {receiptComparisonReport.stores.length ? receiptComparisonReport.stores.slice(0,6).map((item)=>(
+                <div className="shopping-compare-row" key={item.store}>
+                  <span>{item.store}</span><strong>{moneyValue(item.value)}</strong>
+                </div>
+              )) : <small>No receipt data for this period.</small>}
+            </section>
+
+            <section className="shopping-compare-section">
+              <h3>Prices that increased</h3>
+              {receiptComparisonReport.increases.length ? receiptComparisonReport.increases.map((item)=>(
+                <div className="shopping-compare-product" key={'up-'+item.key}>
+                  <span><strong>{item.label}</strong><small>{item.first.store} → {item.last.store}</small></span>
+                  <b>+{item.percent.toFixed(0)}%</b>
+                </div>
+              )) : <small>No repeated products with a detected price increase yet.</small>}
+            </section>
+
+            <section className="shopping-compare-section">
+              <h3>Prices that decreased</h3>
+              {receiptComparisonReport.decreases.length ? receiptComparisonReport.decreases.map((item)=>(
+                <div className="shopping-compare-product" key={'down-'+item.key}>
+                  <span><strong>{item.label}</strong><small>{item.first.store} → {item.last.store}</small></span>
+                  <b>{item.percent.toFixed(0)}%</b>
+                </div>
+              )) : <small>No repeated products with a detected price decrease yet.</small>}
+            </section>
+
+            {hasAiAssistant && (
+              <button type="button" className="primary-button shopping-compare-ai" onClick={askAssistantAboutShopping}>
+                <Sparkles size={15}/>Ask AI for a deeper report
+              </button>
+            )}
+          </aside>
+        </>
+      )}
 
       {!access?.enabled && <div className="module-access-note">Shopping is not enabled for this household.</div>}
       {access?.enabled && !canWrite && <div className="module-access-note">Read-only access</div>}
