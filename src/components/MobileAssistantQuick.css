@@ -62,6 +62,7 @@
     border-radius: 22px 0 0 22px;
     box-shadow: -18px 0 52px rgba(31, 24, 52, .24);
     overflow: hidden;
+    overscroll-behavior: contain;
     animation: mobile-assistant-in .2s ease-out;
   }
 
@@ -129,6 +130,8 @@
   .mobile-assistant-chat {
     min-height: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     padding: 15px;
     background:
       radial-gradient(circle at 95% 0%, rgba(207, 90, 165, .08), transparent 31%),
