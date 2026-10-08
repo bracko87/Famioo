@@ -90,6 +90,11 @@ export function AppShell() {
   const profileMark = currentProfile?.avatar_emoji ?? profileName.slice(0, 1).toUpperCase()
   const unreadCount = notifications.filter((item) => item.status === 'sent').length
 
+  useEffect(() => {
+    const savedTheme=window.localStorage.getItem('famioo.mobile.theme') === 'dark' ? 'dark' : 'light'
+    document.documentElement.dataset.famiooTheme=savedTheme
+  }, [])
+
   function toggleSidebar() {
     setSidebarCollapsed((current) => {
       const next = !current
