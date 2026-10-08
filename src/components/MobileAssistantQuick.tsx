@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Send, Sparkles, X } from 'lucide-react'
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowRight, Mic, MicOff, Send, Sparkles, X } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
@@ -28,8 +28,10 @@ export function MobileAssistantQuick() {
   const [chat, setChat] = useState<ChatMessage[]>([])
   const [summary, setSummary] = useState<UsageSummary | null>(null)
   const [sending, setSending] = useState(false)
+  const [listening, setListening] = useState(false)
   const [error, setError] = useState('')
   const listRef = useRef<HTMLDivElement | null>(null)
+  const recognitionRef = useRef<any>(null)
 
   const cycleLabel = useMemo(() => {
     if (!summary?.cycle_end) return ''
@@ -71,6 +73,69 @@ export function MobileAssistantQuick() {
   useEffect(() => {
     setOpen(false)
   }, [household.id])
+
+  useEffect(() => () => {
+    try {
+      recognitionRef.current?.stop?.()
+    } catch {
+      // Recognition may already be stopped.
+    }
+  }, [])
+
+  function toggleVoiceInput() {
+    if (listening) {
+      try {
+        recognitionRef.current?.stop?.()
+      } catch {
+        // Recognition may already be stopped.
+      }
+      setListening(false)
+      return
+    }
+
+    const speechWindow = window as typeof window & {
+      SpeechRecognition?: new () => any
+      webkitSpeechRecognition?: new () => any
+    }
+    const SpeechRecognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition
+
+    if (!SpeechRecognition) {
+      setError('Voice input is not supported by this browser.')
+      return
+    }
+
+    setError('')
+    const recognition = new SpeechRecognition()
+    recognition.lang = navigator.language || 'en-US'
+    recognition.continuous = false
+    recognition.interimResults = true
+
+    recognition.onstart = () => setListening(true)
+    recognition.onend = () => setListening(false)
+    recognition.onerror = (event: { error?: string }) => {
+      setListening(false)
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        setError('Microphone permission is required for voice input.')
+      } else if (event.error && event.error !== 'no-speech') {
+        setError('Voice input could not be started. Please try again.')
+      }
+    }
+    recognition.onresult = (event: any) => {
+      let transcript = ''
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        transcript += event.results[index][0]?.transcript ?? ''
+      }
+      if (transcript.trim()) {
+        setMessage((current) => {
+          const prefix = current.trim()
+          return prefix ? prefix + ' ' + transcript.trim() : transcript.trim()
+        })
+      }
+    }
+
+    recognitionRef.current = recognition
+    recognition.start()
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -211,6 +276,16 @@ export function MobileAssistantQuick() {
                 maxLength={4000}
                 disabled={sending || summary?.total_remaining === 0}
               />
+              <button
+                className={listening ? 'mobile-assistant-mic listening' : 'mobile-assistant-mic'}
+                type="button"
+                onClick={toggleVoiceInput}
+                disabled={sending || summary?.total_remaining === 0}
+                aria-label={listening ? 'Stop voice input' : 'Use microphone'}
+                title={listening ? 'Stop listening' : 'Use microphone'}
+              >
+                {listening ? <MicOff size={17} /> : <Mic size={17} />}
+              </button>
               <button
                 className="mobile-assistant-send"
                 type="submit"
