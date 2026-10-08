@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarClock, History, RefreshCw, Sparkles, Zap } from 'lucide-react'
+import { CalendarClock, ChevronDown, ChevronLeft, ChevronRight, History, RefreshCw, Sparkles, Zap } from 'lucide-react'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
 import './AssistantPage.css'
@@ -61,6 +61,8 @@ export function AssistantPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
+  const [historyOpen,setHistoryOpen]=useState(false)
+  const [historyPage,setHistoryPage]=useState(1)
 
   const profileByUserId = useMemo(() => new Map(
     profiles
@@ -117,6 +119,14 @@ export function AssistantPage() {
   const usedPercent = summary?.monthly_limit
     ? Math.min(100, Math.round((summary.monthly_used / summary.monthly_limit) * 100))
     : 0
+
+  const historyPageSize=10
+  const historyPages=Math.max(1,Math.ceil(history.length/historyPageSize))
+  const safeHistoryPage=Math.min(historyPage,historyPages)
+  const pagedHistory=history.slice(
+    (safeHistoryPage-1)*historyPageSize,
+    safeHistoryPage*historyPageSize,
+  )
 
   if (loading) {
     return (
@@ -211,57 +221,89 @@ export function AssistantPage() {
             )}
           </section>
 
-          <section className="assistant-history">
-            <div className="assistant-section-head">
+          <section className={historyOpen?'assistant-history open':'assistant-history collapsed'}>
+            <button
+              type="button"
+              className="assistant-history-toggle"
+              aria-expanded={historyOpen}
+              onClick={()=>setHistoryOpen((current)=>!current)}
+            >
               <div>
                 <span className="assistant-eyebrow">HOUSEHOLD</span>
                 <h2>Usage history</h2>
               </div>
-              <span>{history.length} recent {history.length === 1 ? 'action' : 'actions'}</span>
-            </div>
+              <span className="assistant-history-toggle-meta">
+                {history.length} recent {history.length === 1 ? 'action' : 'actions'}
+                <ChevronDown size={17}/>
+              </span>
+            </button>
 
-            {history.length === 0 ? (
-              <div className="assistant-empty">
-                <Sparkles size={22} />
-                <strong>No Assistant actions used yet</strong>
-                <span>Your first successful receipt, QR or calendar AI request will appear here.</span>
-              </div>
-            ) : (
-              <div className="assistant-history-list">
-                {history.map((item) => {
-                  const input = item.input_tokens ?? 0
-                  const output = item.output_tokens ?? 0
-                  return (
-                    <div className="assistant-history-row" key={item.id}>
-                      <span className="assistant-history-mark"><Sparkles size={15} /></span>
-                      <div className="assistant-history-main">
-                        <strong>{actionLabels[item.action_type] ?? item.action_type.replaceAll('_', ' ')}</strong>
-                        <span>
-                          {item.user_id ? (profileByUserId.get(item.user_id) ?? 'Household member') : 'Household member'}
-                          {' · '}
-                          {dateTimeFormatter.format(new Date(item.created_at))}
-                        </span>
-                      </div>
-                      <div className="assistant-history-meta">
-                        <strong>{item.billable ? '1 action' : 'Included follow-up'}</strong>
-                        <span>
-                          {item.conversation_turn ? `Turn ${item.conversation_turn} · ` : ''}
-                          {item.model}
-                        </span>
-                        {item.total_tokens != null && (
-                          <small>{input.toLocaleString()} in + {output.toLocaleString()} out tokens</small>
-                        )}
-                      </div>
+            {historyOpen&&(
+              <>
+                {history.length === 0 ? (
+                  <div className="assistant-empty">
+                    <Sparkles size={22} />
+                    <strong>No Assistant actions used yet</strong>
+                    <span>Your first successful receipt, QR or calendar AI request will appear here.</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="assistant-history-list">
+                      {pagedHistory.map((item) => {
+                        const input = item.input_tokens ?? 0
+                        const output = item.output_tokens ?? 0
+                        return (
+                          <div className="assistant-history-row" key={item.id}>
+                            <span className="assistant-history-mark"><Sparkles size={15} /></span>
+                            <div className="assistant-history-main">
+                              <strong>{actionLabels[item.action_type] ?? item.action_type.replaceAll('_', ' ')}</strong>
+                              <span>
+                                {item.user_id ? (profileByUserId.get(item.user_id) ?? 'Household member') : 'Household member'}
+                                {' · '}
+                                {dateTimeFormatter.format(new Date(item.created_at))}
+                              </span>
+                            </div>
+                            <div className="assistant-history-meta">
+                              <strong>{item.billable ? '1 action' : 'Included follow-up'}</strong>
+                              <span>
+                                {item.conversation_turn ? `Turn ${item.conversation_turn} · ` : ''}
+                                {item.model}
+                              </span>
+                              {item.total_tokens != null && (
+                                <small>{input.toLocaleString()} in + {output.toLocaleString()} out tokens</small>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
-                  )
-                })}
-              </div>
-            )}
 
-            <p className="assistant-token-note">
-              OpenAI input/output tokens are technical cost data only. They do not change the Famioo rule:
-              one successful AI request uses one Assistant action.
-            </p>
+                    {historyPages>1&&(
+                      <nav className="assistant-history-pagination" aria-label="Assistant usage history pages">
+                        <button
+                          type="button"
+                          disabled={safeHistoryPage<=1}
+                          onClick={()=>setHistoryPage((page)=>Math.max(1,page-1))}
+                          aria-label="Previous usage history page"
+                        ><ChevronLeft size={16}/></button>
+                        <span>Page {safeHistoryPage} of {historyPages}</span>
+                        <button
+                          type="button"
+                          disabled={safeHistoryPage>=historyPages}
+                          onClick={()=>setHistoryPage((page)=>Math.min(historyPages,page+1))}
+                          aria-label="Next usage history page"
+                        ><ChevronRight size={16}/></button>
+                      </nav>
+                    )}
+                  </>
+                )}
+
+                <p className="assistant-token-note">
+                  OpenAI input/output tokens are technical cost data only. They do not change the Famioo rule:
+                  one successful AI request uses one Assistant action.
+                </p>
+              </>
+            )}
           </section>
         </>
       ) : (
