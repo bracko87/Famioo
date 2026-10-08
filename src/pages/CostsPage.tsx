@@ -1,4 +1,4 @@
-import { BarChart3, CalendarClock, Plus, Receipt, ShoppingBag, WalletCards, X } from 'lucide-react'
+import { CalendarClock, Plus, Receipt, ShoppingBag, WalletCards, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { DatePicker } from '../components/ui/DatePicker'
 import { Select } from '../components/ui/Select'
@@ -110,7 +110,7 @@ export function CostsPage() {
   const [saving, setSaving] = useState(false)
   const [savingFinance, setSavingFinance] = useState(false)
   const [error, setError] = useState('')
-  const [mobilePanel,setMobilePanel]=useState<'plan'|'report'|'entries'|null>(null)
+  const [mobilePanel,setMobilePanel]=useState<'plan'|'entries'|null>(null)
 
   async function load() {
     setError('')
@@ -547,23 +547,19 @@ export function CostsPage() {
         )}
       </div>
 
-      <PrivacyNotice compact />
+      <div className="cost-privacy-top"><PrivacyNotice compact /></div>
 
       {!access?.enabled && <div className="module-access-note">Household Costs is not enabled for this household.</div>}
       {access?.enabled && !canWrite && <div className="module-access-note">Read-only access</div>}
       {error && !composerOpen && <div className="notice error">{error}</div>}
 
-      <nav className="mobile-cost-side-tabs" aria-label="Household cost tools">
-        <button type="button" className={mobilePanel==='plan'?'active':''} onClick={()=>setMobilePanel((current)=>current==='plan'?null:'plan')} aria-label="Budget and income">
-          <WalletCards size={18}/>
+      <nav className="mobile-cost-side-tabs" aria-label="Household cost shortcuts">
+        <button type="button" className={mobilePanel==='plan'?'active':''} onClick={()=>setMobilePanel((current)=>current==='plan'?null:'plan')} aria-label="Budget and income" title="Budget & income">
+          <WalletCards size={20}/>
           <span>Budget</span>
         </button>
-        <button type="button" className={mobilePanel==='report'?'active':''} onClick={()=>setMobilePanel((current)=>current==='report'?null:'report')} aria-label="Cost reporting">
-          <BarChart3 size={18}/>
-          <span>Reports</span>
-        </button>
-        <button type="button" className={mobilePanel==='entries'?'active':''} onClick={()=>setMobilePanel((current)=>current==='entries'?null:'entries')} aria-label="Cost entries">
-          <Receipt size={18}/>
+        <button type="button" className={mobilePanel==='entries'?'active':''} onClick={()=>setMobilePanel((current)=>current==='entries'?null:'entries')} aria-label="Cost entries" title="Cost entries">
+          <Receipt size={20}/>
           <span>Entries</span>
         </button>
       </nav>
@@ -641,7 +637,6 @@ export function CostsPage() {
       </section>
 
       <section className="cost-report-card list-card">
-        <button type="button" className="mobile-cost-drawer-close" onClick={()=>setMobilePanel(null)} aria-label="Close reporting"><X size={19}/></button>
         <div className="cost-report-head">
           <div>
             <span className="eyebrow">REPORTING</span>
@@ -843,6 +838,8 @@ export function CostsPage() {
           </div>
         )}
       </section>
+
+      <div className="cost-privacy-bottom"><PrivacyNotice compact /></div>
 
       {composerOpen && canWrite && (
         <div
