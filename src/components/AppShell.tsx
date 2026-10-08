@@ -283,10 +283,10 @@ export function AppShell() {
         <NavLink to="/app" end><Home size={19} /><span>Home</span></NavLink>
         <NavLink to="/app/calendar"><CalendarDays size={19} /><span>Calendar</span></NavLink>
         <NavLink to="/app/tasks"><ClipboardList size={19} /><span>Tasks</span></NavLink>
-        <NavLink to="/app/checklists"><CheckSquare size={19} /><span>Lists</span></NavLink>
-        <button type="button" onClick={() => setMobileMenu(true)} aria-label="Open all Famioo modules">
-          <Menu size={19} />
-          <span>More</span>
+        <NavLink to="/app/settings"><Settings size={19} /><span>Settings</span></NavLink>
+        <button type="button" className="mobile-signout-tab" onClick={() => void supabase.auth.signOut()} aria-label="Sign out of Famioo">
+          <LogOut size={19} />
+          <span>Logout</span>
         </button>
       </nav>
     </div>
