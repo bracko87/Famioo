@@ -16957,7 +16957,7 @@ b {
   }
 
   /* Finish the dark theme for controls that previously stayed white. */
-  html[data-famioo-theme="dark"] button:not(.primary-button):not(.mobile-assistant-tab):not(.shopping-compare-tab):not(.mobile-cost-side-tabs > button) {
+  html[data-famioo-theme="dark"] button:not(.primary-button):not(.mobile-assistant-tab):not(.shopping-compare-tab) {
     color: #fff !important;
     -webkit-text-fill-color: #fff !important;
     border-color: #383838 !important;
@@ -17020,5 +17020,12 @@ b {
   html[data-famioo-theme="dark"] .permission-fixed {
     color: #ddc4ff !important;
     background: #2d2038 !important;
+  }
+
+  html[data-famioo-theme="dark"] .mobile-cost-side-tabs > button {
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+    border-color: rgba(255,255,255,.35) !important;
+    background: linear-gradient(180deg,#8b3d95,#b64f91) !important;
   }
 }
