@@ -17029,3 +17029,168 @@ b {
     background: linear-gradient(180deg,#8b3d95,#b64f91) !important;
   }
 }
+
+
+@media (max-width: 767px) {
+  /* Remaining route-level mobile hardening. */
+  .page [class*="-grid"],
+  .page [class*="-layout"],
+  .page [class*="-actions"] {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .page [class*="-actions"] {
+    flex-wrap: wrap;
+  }
+
+  .vaccination-birth-card,
+  .vaccination-summary-grid,
+  .ticket-wallet-summary-grid {
+    width: 100%;
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+
+  .vaccination-birth-card {
+    align-items: stretch;
+  }
+
+  .vaccination-birth-card > .primary-button,
+  .vaccination-birth-card > .secondary-button {
+    width: 100%;
+  }
+
+  .vaccination-entry {
+    grid-template-columns: 82px 28px minmax(0,1fr);
+  }
+
+  .vaccination-entry > :last-child {
+    grid-column: 3;
+    justify-self: start;
+  }
+
+  .ticket-wallet-heading-actions {
+    width: 100%;
+  }
+
+  .ticket-wallet-heading-actions > * {
+    flex: 1 1 140px;
+  }
+
+  .ticket-wallet-section-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ticket-wallet-filter {
+    width: 100%;
+  }
+
+  .ticket-wallet-card {
+    grid-template-columns: 36px minmax(0,1fr);
+  }
+
+  .ticket-wallet-card > :last-child {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .project-card > header,
+  .family-standing-card > header,
+  .projects-section-head {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .project-card-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .project-work-row {
+    grid-template-columns: 28px minmax(0,1fr);
+  }
+
+  .project-work-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .meal-plan-row {
+    grid-template-columns: 68px minmax(0,1fr);
+  }
+
+  .meal-row-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .recipe-card > footer,
+  .recipe-actions {
+    flex-wrap: wrap;
+  }
+
+  .calendar-provider-grid,
+  .calendar-import-mode-grid,
+  .calendar-mode-buttons {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+
+  .calendar-connection-row {
+    width: 100%;
+    grid-template-columns: 32px minmax(0,1fr) !important;
+  }
+
+  .calendar-connection-provider {
+    grid-row: 1 / span 2;
+  }
+
+  .calendar-provider-status,
+  .calendar-connection-actions {
+    grid-column: 2 !important;
+  }
+
+  .files-row {
+    width: 100%;
+    grid-template-columns: 46px minmax(0,1fr);
+  }
+
+  .files-actions {
+    grid-column: 1 / -1;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .archive-page-row {
+    grid-template-columns: minmax(82px,.45fr) minmax(0,1fr);
+  }
+
+  .archive-page-row > :last-child {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  /* Dark surfaces that are nested elements rather than named cards. */
+  html[data-famioo-theme="dark"] .assistant-hero,
+  html[data-famioo-theme="dark"] .assistant-stat-grid article,
+  html[data-famioo-theme="dark"] .assistant-policy-card,
+  html[data-famioo-theme="dark"] .assistant-history-list,
+  html[data-famioo-theme="dark"] .assistant-empty,
+  html[data-famioo-theme="dark"] .assistant-loading,
+  html[data-famioo-theme="dark"] .assistant-error,
+  html[data-famioo-theme="dark"] .pricing-model-grid article,
+  html[data-famioo-theme="dark"] .calendar-import-mode-grid article,
+  html[data-famioo-theme="dark"] .calendar-mode-buttons button,
+  html[data-famioo-theme="dark"] .recipe-ingredients,
+  html[data-famioo-theme="dark"] .recipe-ingredients summary,
+  html[data-famioo-theme="dark"] .ticket-wallet-security,
+  html[data-famioo-theme="dark"] .vaccination-medical-note,
+  html[data-famioo-theme="dark"] .external-event-notice,
+  html[data-famioo-theme="dark"] .external-event-local-note {
+    border-color: #303030 !important;
+    background: #111 !important;
+  }
+}
