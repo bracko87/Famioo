@@ -93,6 +93,18 @@ export function MobileAssistantQuick() {
     setOpen(false)
   }, [household.id])
 
+  useEffect(() => {
+    function handlePrefill(event: Event) {
+      const detail=(event as CustomEvent<{ message?: string }>).detail
+      const nextMessage=detail?.message?.trim()
+      if(nextMessage) setMessage(nextMessage)
+      setOpen(true)
+    }
+
+    window.addEventListener('famioo:assistant-prefill',handlePrefill)
+    return ()=>window.removeEventListener('famioo:assistant-prefill',handlePrefill)
+  }, [])
+
   useEffect(() => () => {
     try {
       if (mediaRecorderRef.current?.state === 'recording') {
