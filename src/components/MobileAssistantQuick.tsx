@@ -351,7 +351,6 @@ export function MobileAssistantQuick() {
                       : listening
                         ? 'Recording · tap mic to stop'
                         : summary
-                      ? `${summary.total_remaining} actions left${cycleLabel ? ` · reloads ${cycleLabel}` : ''}`
                           ? `${summary.total_remaining} actions left${cycleLabel ? ` · reloads ${cycleLabel}` : ''}`
                           : 'Household Assistant'}
                   </small>
@@ -405,7 +404,7 @@ export function MobileAssistantQuick() {
                 className={listening ? 'mobile-assistant-mic listening' : 'mobile-assistant-mic'}
                 type="button"
                 onClick={toggleVoiceInput}
-                disabled={sending || summary?.total_remaining === 0}
+                disabled={sending || transcribing || summary?.total_remaining === 0}
                 aria-label={listening ? 'Stop recording' : transcribing ? 'Transcribing voice' : 'Use microphone'}
                 title={listening ? 'Stop recording' : transcribing ? 'Transcribing…' : 'Use microphone'}
               >
