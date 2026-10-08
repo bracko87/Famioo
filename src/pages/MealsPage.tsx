@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { DatePicker } from '../components/ui/DatePicker'
 import { Select } from '../components/ui/Select'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
@@ -351,6 +352,10 @@ export function MealsPage(){
   async function saveRecipe(event:FormEvent){
     event.preventDefault()
     if(!canWrite || !recipeTitle.trim()) return
+    if(recipeSourceType==='imported' && !recipeSourceImageUrl.trim()){
+      setError('An imported recipe must include the original recipe image.')
+      return
+    }
     setSaving(true)
     setError('')
     setMessage('')
@@ -453,6 +458,10 @@ export function MealsPage(){
     const imported=result.data?.recipe as ImportedRecipe|undefined
     if(!imported){
       setError('The recipe website did not return a recipe.')
+      return
+    }
+    if(!imported.source_image_url?.trim()){
+      setError('Famioo found the recipe, but no original recipe image could be imported. The image is mandatory, so this recipe was not saved.')
       return
     }
 
@@ -838,10 +847,15 @@ export function MealsPage(){
 
     return (
       <article className="recipe-card list-card" key={recipe.id}>
+        {recipe.source_image_url && (
+          <Link className="recipe-card-image-link" to={'/app/meals/recipes/'+recipe.id} aria-label={'Open '+recipe.title}>
+            <img className="recipe-card-image" src={recipe.source_image_url} alt="" loading="lazy"/>
+          </Link>
+        )}
         <header>
           <div>
             <span className="eyebrow">{recipe.meal_type.toUpperCase()}</span>
-            <h2>{recipe.title}</h2>
+            <h2><Link className="recipe-title-link" to={'/app/meals/recipes/'+recipe.id}>{recipe.title}</Link></h2>
           </div>
           {canWrite && (
             <div className="recipe-actions">
@@ -1026,14 +1040,29 @@ export function MealsPage(){
             </header>
 
             {recipeSourceType==='imported' && (
-              <div className="recipe-import-source">
-                <Globe2 size={16}/>
-                <span>
-                  <strong>{recipeSourceSite||'Imported website'}</strong>
-                  <small>Review and edit anything before saving it to your Famioo Recipe book.</small>
-                </span>
-                {recipeSourceUrl && <a href={recipeSourceUrl} target="_blank" rel="noreferrer">Open source<ExternalLink size={12}/></a>}
-              </div>
+              <>
+                <div className="recipe-import-source">
+                  <Globe2 size={16}/>
+                  <span>
+                    <strong>{recipeSourceSite||'Imported website'}</strong>
+                    <small>Review and edit anything before saving it to your Famioo Recipe book.</small>
+                  </span>
+                  {recipeSourceUrl && <a href={recipeSourceUrl} target="_blank" rel="noreferrer">Open source<ExternalLink size={12}/></a>}
+                </div>
+
+                <label className="recipe-image-field">
+                  Original recipe image
+                  {recipeSourceImageUrl && <img src={recipeSourceImageUrl} alt="" />}
+                  <input
+                    type="url"
+                    value={recipeSourceImageUrl}
+                    onChange={(event)=>setRecipeSourceImageUrl(event.target.value)}
+                    placeholder="https://…"
+                    required
+                  />
+                  <small className="field-hint">Mandatory for imported recipes. Famioo keeps the original website image together with the recipe.</small>
+                </label>
+              </>
             )}
 
             <div className="composer-grid-two aligned-field-row">
