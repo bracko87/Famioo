@@ -18033,3 +18033,28 @@ b {
   from { width: 35%; }
   to { width: 78%; }
 }
+
+
+/* =========================================================
+   Loading-screen zero-width regression fix
+   Absolutely positioned splash children gave the grid item no intrinsic width.
+   ========================================================= */
+@media (max-width: 900px) {
+  .loading-screen {
+    display: block !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: none !important;
+  }
+
+  .mobile-launch-screen {
+    display: block !important;
+    width: 100vw !important;
+    min-width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+    place-self: auto !important;
+  }
+}
