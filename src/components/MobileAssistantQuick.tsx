@@ -257,7 +257,7 @@ export function MobileAssistantQuick() {
                 <div className="mobile-assistant-welcome">
                   <Sparkles size={24} />
                   <strong>What can I help with?</strong>
-                  <span>Ask a question, calculate something, plan something, or give Famioo a task to prepare.</span>
+                  <span>Ask a question, calculate something, or tell Famioo what you want it to do.</span>
                 </div>
               )}
 
