@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarDays, CheckSquare, ClipboardList, House, ShoppingBag, Sparkles } from 'lucide-react'
+import { CalendarDays, CheckSquare, ClipboardList, FileText, FolderKanban, GraduationCap, House, Receipt, ShoppingBag, Sparkles, Syringe, Ticket, Utensils, Wrench } from 'lucide-react'
 import type { Session, User } from '@supabase/supabase-js'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { supabase } from './lib/supabase'
@@ -40,12 +40,20 @@ function LoadingScreen() {
       </div>
 
       <div className="mobile-launch-screen" aria-label="Opening Famioo">
-        <span className="launch-orbit launch-orbit-1"><CalendarDays size={19} /></span>
-        <span className="launch-orbit launch-orbit-2"><ClipboardList size={18} /></span>
-        <span className="launch-orbit launch-orbit-3"><ShoppingBag size={18} /></span>
-        <span className="launch-orbit launch-orbit-4"><House size={19} /></span>
-        <span className="launch-orbit launch-orbit-5"><CheckSquare size={17} /></span>
-        <span className="launch-orbit launch-orbit-6"><Sparkles size={18} /></span>
+        <span className="launch-orbit launch-orbit-1" title="Calendar"><CalendarDays size={18} /></span>
+        <span className="launch-orbit launch-orbit-2" title="Tasks"><ClipboardList size={18} /></span>
+        <span className="launch-orbit launch-orbit-3" title="Checklists"><CheckSquare size={17} /></span>
+        <span className="launch-orbit launch-orbit-4" title="Shopping"><ShoppingBag size={18} /></span>
+        <span className="launch-orbit launch-orbit-5" title="Household Costs"><Receipt size={18} /></span>
+        <span className="launch-orbit launch-orbit-6" title="School & Kita"><GraduationCap size={18} /></span>
+        <span className="launch-orbit launch-orbit-7" title="Home Care"><Wrench size={18} /></span>
+        <span className="launch-orbit launch-orbit-8" title="Life Admin"><FileText size={18} /></span>
+        <span className="launch-orbit launch-orbit-9" title="Projects"><FolderKanban size={18} /></span>
+        <span className="launch-orbit launch-orbit-10" title="Meals & Recipes"><Utensils size={18} /></span>
+        <span className="launch-orbit launch-orbit-11" title="Files"><House size={18} /></span>
+        <span className="launch-orbit launch-orbit-12" title="Vaccinations"><Syringe size={18} /></span>
+        <span className="launch-orbit launch-orbit-13" title="Tickets"><Ticket size={18} /></span>
+        <span className="launch-orbit launch-orbit-14" title="AI Assistant"><Sparkles size={18} /></span>
 
         <img className="launch-app-icon" src="/famioo-app-icon.svg" alt="" />
         <strong>Famioo</strong>
@@ -183,7 +191,7 @@ export function App() {
       return
     }
 
-    const timer = window.setTimeout(() => setIntroReady(true), 1800)
+    const timer = window.setTimeout(() => setIntroReady(true), 3500)
     return () => window.clearTimeout(timer)
   }, [])
 
