@@ -39,6 +39,19 @@ function publishableKey(){
   return Deno.env.get("SUPABASE_ANON_KEY")??""
 }
 
+function secretKey(){
+  const current=Deno.env.get("SUPABASE_SECRET_KEYS")
+  if(current){
+    try{
+      const parsed=JSON.parse(current) as Record<string,string>
+      if(parsed.default) return parsed.default
+    }catch{
+      // Legacy service-role fallback remains below.
+    }
+  }
+  return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")??""
+}
+
 function outputText(payload:any){
   if(typeof payload?.output_text==="string") return payload.output_text
   for(const item of payload?.output??[]){
@@ -142,6 +155,18 @@ Deno.serve(async(req)=>{
 
   const userClient=createClient(supabaseUrl,clientKey,{
     global:{headers:{Authorization:authorization}},
+    auth:{persistSession:false,autoRefreshToken:false},
+  })
+
+  const token=authorization.slice("Bearer ".length).trim()
+  const userResult=await userClient.auth.getUser(token)
+  if(userResult.error||!userResult.data.user){
+    return json({error:"Authentication required."},401)
+  }
+
+  const adminKey=secretKey()
+  if(!adminKey) return json({error:"Server configuration is incomplete."},500)
+  const adminClient=createClient(supabaseUrl,adminKey,{
     auth:{persistSession:false,autoRefreshToken:false},
   })
 
@@ -276,8 +301,9 @@ Deno.serve(async(req)=>{
 
 
   const assistantUsage=payload?.usage??{}
-  const consumeResult=await userClient.rpc("consume_assistant_action_v1",{
+  const consumeResult=await adminClient.rpc("record_assistant_action_v1",{
     p_household_id:body.household_id,
+    p_user_id:userResult.data.user.id,
     p_action_type:body.source_type==="image"?"work_calendar_image":"work_calendar_text",
     p_model:model,
     p_input_tokens:Number.isFinite(Number(assistantUsage.input_tokens))?Math.max(0,Math.round(Number(assistantUsage.input_tokens))):null,
