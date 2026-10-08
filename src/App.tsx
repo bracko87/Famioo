@@ -120,7 +120,12 @@ function LoadingScreen() {
         <span className="launch-orbit launch-orbit-14" title="AI Assistant"><Sparkles size={19} /></span>
 
         <div className="launch-brand">
-          <img className="launch-brand-app-icon" src="/famioo-logo-white.svg" alt="" />
+          <div className="launch-brand-logo" aria-hidden="true">
+            <span className="launch-petal launch-petal-purple" />
+            <span className="launch-petal launch-petal-pink" />
+            <span className="launch-petal launch-petal-green" />
+            <span className="launch-petal launch-petal-blue" />
+          </div>
           <strong className="launch-brand-name">Famio</strong>
           <i className="launch-loader" aria-hidden="true" />
         </div>
