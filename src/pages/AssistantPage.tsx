@@ -32,6 +32,7 @@ const actionLabels: Record<string, string> = {
   qr_page_event: 'QR webpage to event',
   work_calendar_image: 'Calendar screenshot import',
   work_calendar_text: 'Calendar text import',
+  quick_assistant: 'Quick Assistant',
 }
 
 function toSummary(row: Record<string, unknown>): UsageSummary {
