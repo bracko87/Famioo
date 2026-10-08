@@ -201,6 +201,31 @@ function hostTitle(value:string){
   }
 }
 
+const QR_COVER_PREFIX='[[famioo-cover:'
+const QR_COVER_SUFFIX=']]'
+
+function ticketCoverFromNotes(value:string|null){
+  if(!value) return ''
+  const start=value.indexOf(QR_COVER_PREFIX)
+  if(start<0) return ''
+  const end=value.indexOf(QR_COVER_SUFFIX,start+QR_COVER_PREFIX.length)
+  if(end<0) return ''
+  const candidate=value.slice(start+QR_COVER_PREFIX.length,end).trim()
+  try{
+    const url=new URL(candidate)
+    return url.protocol==='https:'||url.protocol==='http:'?url.toString():''
+  }catch{
+    return ''
+  }
+}
+
+function visibleTicketNotes(value:string|null){
+  if(!value) return ''
+  return value
+    .replace(/\[\[famioo-cover:https?:\/\/[^\]]+\]\]\s*/gi,'')
+    .trim()
+}
+
 function normalizeScannedDate(value:unknown){
   if(typeof value!=='string') return ''
   const clean=value.trim()
@@ -984,12 +1009,17 @@ export function TicketWalletPage(){
   const [qrPageUrl,setQrPageUrl]=useState('')
   const [qrPageTitle,setQrPageTitle]=useState('')
   const [qrPageDescription,setQrPageDescription]=useState('')
+  const [qrPageImageUrl,setQrPageImageUrl]=useState('')
+  const [qrAiSummary,setQrAiSummary]=useState('')
+  const [qrAiAnalyzed,setQrAiAnalyzed]=useState(false)
+  const [qrAiSuggestTicket,setQrAiSuggestTicket]=useState(false)
   const [qrMetaLoading,setQrMetaLoading]=useState(false)
   const [qrLinkSaving,setQrLinkSaving]=useState(false)
   const [qrLinkSaved,setQrLinkSaved]=useState(false)
   const [qrAiDraft,setQrAiDraft]=useState<QrEventDraft|null>(null)
   const [qrAiLoading,setQrAiLoading]=useState(false)
   const [qrEventSaving,setQrEventSaving]=useState(false)
+  const [qrWalletSaving,setQrWalletSaving]=useState(false)
   const [qrReminder,setQrReminder]=useState('60')
   const [saving,setSaving]=useState(false)
   const [error,setError]=useState('')
@@ -1052,6 +1082,7 @@ export function TicketWalletPage(){
     const metadata=result.data?.metadata
     if(metadata?.title) setQrPageTitle(String(metadata.title).slice(0,200))
     if(metadata?.description) setQrPageDescription(String(metadata.description).slice(0,700))
+    if(metadata?.image_url&&isWebQr(String(metadata.image_url))) setQrPageImageUrl(String(metadata.image_url))
     if(metadata?.source_url&&isWebQr(String(metadata.source_url))){
       setQrPageUrl(String(metadata.source_url))
     }
@@ -1064,6 +1095,10 @@ export function TicketWalletPage(){
     setQrPageUrl('')
     setQrPageTitle('')
     setQrPageDescription('')
+    setQrPageImageUrl('')
+    setQrAiSummary('')
+    setQrAiAnalyzed(false)
+    setQrAiSuggestTicket(false)
     setQrLinkSaved(false)
     setError('')
   }
@@ -1072,6 +1107,10 @@ export function TicketWalletPage(){
     setQrPageUrl(value)
     setQrPageTitle(hostTitle(value))
     setQrPageDescription('')
+    setQrPageImageUrl('')
+    setQrAiSummary('')
+    setQrAiAnalyzed(false)
+    setQrAiSuggestTicket(false)
     setQrAiDraft(null)
     setQrLinkSaved(false)
     setQrPageOpen(true)
