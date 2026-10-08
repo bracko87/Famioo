@@ -283,14 +283,14 @@ export function AssistantPage() {
                         <button
                           type="button"
                           disabled={safeHistoryPage<=1}
-                          onClick={()=>setHistoryPage((page)=>Math.max(1,page-1))}
+                          onClick={()=>setHistoryPage(Math.max(1,safeHistoryPage-1))}
                           aria-label="Previous usage history page"
                         ><ChevronLeft size={16}/></button>
                         <span>Page {safeHistoryPage} of {historyPages}</span>
                         <button
                           type="button"
                           disabled={safeHistoryPage>=historyPages}
-                          onClick={()=>setHistoryPage((page)=>Math.min(historyPages,page+1))}
+                          onClick={()=>setHistoryPage(Math.min(historyPages,safeHistoryPage+1))}
                           aria-label="Next usage history page"
                         ><ChevronRight size={16}/></button>
                       </nav>
