@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-220 -220 440 440" role="img" aria-label="Famioo">
+  <g>
+    <path d="M0-164 C38-164 66-134 66-96 C66-54 25-20 0 5 C-25-20-66-54-66-96 C-66-134-38-164 0-164Z" fill="#6e57d8" transform="rotate(15) translate(0,-22)"/>
+    <path d="M0-164 C38-164 66-134 66-96 C66-54 25-20 0 5 C-25-20-66-54-66-96 C-66-134-38-164 0-164Z" fill="#e05aa1" transform="rotate(105) translate(0,-22)"/>
+    <path d="M0-164 C38-164 66-134 66-96 C66-54 25-20 0 5 C-25-20-66-54-66-96 C-66-134-38-164 0-164Z" fill="#52b397" transform="rotate(195) translate(0,-22)"/>
+    <path d="M0-164 C38-164 66-134 66-96 C66-54 25-20 0 5 C-25-20-66-54-66-96 C-66-134-38-164 0-164Z" fill="#7dc8d7" transform="rotate(285) translate(0,-22)"/>
+  </g>
+</svg>
