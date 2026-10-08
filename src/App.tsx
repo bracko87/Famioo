@@ -25,6 +25,7 @@ import { ProjectsPage } from './pages/ProjectsPage'
 import { ProjectsArchivePage } from './pages/ProjectsArchivePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { MealsPage } from './pages/MealsPage'
+import { RecipeDetailPage } from './pages/RecipeDetailPage'
 import { FilesPage } from './pages/FilesPage'
 import { VaccinationPage } from './pages/VaccinationPage'
 import { TicketWalletPage } from './pages/TicketWalletPage'
@@ -157,6 +158,7 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="projects/archive" element={<ProjectsArchivePage />} />
           <Route path="meals" element={<MealsPage />} />
+          <Route path="meals/recipes/:recipeId" element={<RecipeDetailPage />} />
           <Route path="files" element={<FilesPage />} />
           <Route path="vaccinations" element={<VaccinationPage />} />
           <Route path="tickets" element={<TicketWalletPage />} />
