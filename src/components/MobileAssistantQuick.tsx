@@ -32,6 +32,7 @@ export function MobileAssistantQuick() {
   const [error, setError] = useState('')
   const listRef = useRef<HTMLDivElement | null>(null)
   const recognitionRef = useRef<any>(null)
+  const voiceBaseMessageRef = useRef('')
 
   const cycleLabel = useMemo(() => {
     if (!summary?.cycle_end) return ''
@@ -96,6 +97,35 @@ export function MobileAssistantQuick() {
     }
   }, [])
 
+  function playMicStartSound() {
+    try {
+      const AudioContextCtor = window.AudioContext
+        ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+
+      if (!AudioContextCtor) return
+
+      const audioContext = new AudioContextCtor()
+      const oscillator = audioContext.createOscillator()
+      const gain = audioContext.createGain()
+
+      oscillator.type = 'sine'
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime)
+      gain.gain.setValueAtTime(0.0001, audioContext.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.11, audioContext.currentTime + 0.01)
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.12)
+
+      oscillator.connect(gain)
+      gain.connect(audioContext.destination)
+      oscillator.start(audioContext.currentTime)
+      oscillator.stop(audioContext.currentTime + 0.13)
+      oscillator.onended = () => {
+        void audioContext.close()
+      }
+    } catch {
+      // Sound feedback is optional and should never block voice input.
+    }
+  }
+
   function toggleVoiceInput() {
     if (listening) {
       try {
@@ -119,6 +149,9 @@ export function MobileAssistantQuick() {
     }
 
     setError('')
+    voiceBaseMessageRef.current = message.trim()
+    playMicStartSound()
+
     const recognition = new SpeechRecognition()
     recognition.lang = navigator.language || 'en-US'
     recognition.continuous = false
@@ -136,15 +169,18 @@ export function MobileAssistantQuick() {
     }
     recognition.onresult = (event: any) => {
       let transcript = ''
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        transcript += event.results[index][0]?.transcript ?? ''
+
+      for (let index = 0; index < event.results.length; index += 1) {
+        const part = event.results[index]?.[0]?.transcript ?? ''
+        if (!part) continue
+        transcript += (transcript ? ' ' : '') + part.trim()
       }
-      if (transcript.trim()) {
-        setMessage((current) => {
-          const prefix = current.trim()
-          return prefix ? prefix + ' ' + transcript.trim() : transcript.trim()
-        })
-      }
+
+      const spoken = transcript.trim()
+      if (!spoken) return
+
+      const base = voiceBaseMessageRef.current
+      setMessage(base ? base + ' ' + spoken : spoken)
     }
 
     recognitionRef.current = recognition
