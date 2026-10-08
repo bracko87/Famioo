@@ -49,6 +49,13 @@ Possible later extensions:
 - critical/high-priority notification support where the mobile OS permits it
 - hardware-button / locked-phone SOS trigger where the mobile operating system permits it
 
+Hardware-trigger feasibility:
+- Current web/PWA version cannot listen for side/volume-button combinations while the phone is locked or the app is in the background.
+- Android native version: investigate a dedicated SOS trigger that can work with the screen locked. Android accessibility key filtering can technically receive global key events, but use of AccessibilityService is policy-sensitive and requires explicit user enablement/disclosure, so it must not be the only SOS path.
+- iPhone: third-party apps cannot replace/intercept Apple's side/volume Emergency SOS combinations. Use Apple's own Emergency SOS for true hardware emergency calling; Famioo should provide lock-screen/widget/watch/shortcut alternatives where supported.
+- If the device is physically powered off, no Famioo trigger can work.
+- Preferred Famioo fallback hierarchy: in-app hold-to-SOS button → lock-screen/widget/shortcut → smartwatch trigger → native Android hardware trigger if a compliant implementation is available.
+
 ### Family Messenger
 Status: Approved idea
 
