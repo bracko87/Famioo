@@ -1057,9 +1057,8 @@ export function MealsPage(){
                     value={recipeSourceImageUrl}
                     onChange={(event)=>setRecipeSourceImageUrl(event.target.value)}
                     placeholder="https://…"
-                    required
                   />
-                  <small className="field-hint">Mandatory for imported recipes. Famioo keeps the original website image together with the recipe.</small>
+                  <small className="field-hint">Famioo keeps the original website image when available. If the source has no usable image, a meal-matched default cover is shown instead.</small>
                 </label>
               </>
             )}
