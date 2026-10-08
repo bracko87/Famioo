@@ -71,6 +71,20 @@ export function MobileAssistantQuick() {
   }, [chat, open, sending])
 
   useEffect(() => {
+    if (!open) return
+
+    const previousOverflow = document.body.style.overflow
+    const previousOverscroll = document.body.style.overscrollBehavior
+    document.body.style.overflow = 'hidden'
+    document.body.style.overscrollBehavior = 'none'
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.body.style.overscrollBehavior = previousOverscroll
+    }
+  }, [open])
+
+  useEffect(() => {
     setOpen(false)
   }, [household.id])
 
