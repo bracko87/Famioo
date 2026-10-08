@@ -137,6 +137,23 @@ Deno.serve(async(req)=>{
     },403)
   }
 
+
+  const allowanceResult=await userClient.rpc("assistant_usage_summary_v1",{
+    p_household_id:body.household_id,
+  })
+  if(allowanceResult.error){
+    console.error("Assistant allowance check failed",allowanceResult.error)
+    return json({error:"Famioo could not verify the Assistant allowance."},503)
+  }
+  const allowance=Array.isArray(allowanceResult.data)?allowanceResult.data[0]:allowanceResult.data
+  if(Number(allowance?.total_remaining??0)<=0){
+    return json({
+      error:"Your household has used all Assistant actions for this period.",
+      code:"ASSISTANT_LIMIT_REACHED",
+      cycle_end:allowance?.cycle_end??null,
+    },429)
+  }
+
   const apiKey=Deno.env.get("OPENAI_API_KEY")
   if(!apiKey) return json({error:"Receipt extraction is not configured on the server."},503)
 
@@ -226,6 +243,29 @@ Deno.serve(async(req)=>{
       category:item.category?String(item.category).trim().slice(0,80):null,
       confidence:Math.max(0,Math.min(1,Number(item.confidence??0))),
     }))
+
+
+  const assistantUsage=payload?.usage??{}
+  const consumeResult=await userClient.rpc("consume_assistant_action_v1",{
+    p_household_id:body.household_id,
+    p_action_type:"receipt_scan",
+    p_model:model,
+    p_input_tokens:Number.isFinite(Number(assistantUsage.input_tokens))?Math.max(0,Math.round(Number(assistantUsage.input_tokens))):null,
+    p_output_tokens:Number.isFinite(Number(assistantUsage.output_tokens))?Math.max(0,Math.round(Number(assistantUsage.output_tokens))):null,
+    p_total_tokens:Number.isFinite(Number(assistantUsage.total_tokens))?Math.max(0,Math.round(Number(assistantUsage.total_tokens))):null,
+    p_metadata:{},
+  })
+  if(consumeResult.error){
+    console.error("Assistant action accounting failed",consumeResult.error)
+    return json({error:"The receipt was read, but Famioo could not record the Assistant action. Please try again."},503)
+  }
+  if(consumeResult.data?.ok!==true){
+    return json({
+      error:"Your household has used all Assistant actions for this period.",
+      code:String(consumeResult.data?.code||"ASSISTANT_LIMIT_REACHED"),
+      cycle_end:consumeResult.data?.cycle_end??null,
+    },429)
+  }
 
   return json({
     receipt:{
