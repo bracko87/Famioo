@@ -432,12 +432,6 @@ Deno.serve(async(req:Request)=>{
     }
   }
 
-  if(!payload.source_image_url){
-    return json({
-      error:"Famioo found the recipe, but the original recipe image could not be imported. Recipe images are mandatory for website imports.",
-    },422)
-  }
-
   return json({
     ok:true,
     recipe:payload,
