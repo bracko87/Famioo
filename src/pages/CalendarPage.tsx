@@ -1140,11 +1140,12 @@ export function CalendarPage() {
   function EventPill({ item, detailed = false }: { item: CalendarOccurrence; detailed?: boolean }) {
     const category = item.category_id ? categoriesById.get(item.category_id) : undefined
     const calendar = calendarsById.get(item.calendar_id)
-    const color = categoryColor(calendar?.color_key ?? category?.color_key ?? 'slate')
+    const color = categoryColor(category?.color_key ?? calendar?.color_key ?? 'slate')
 
     return (
       <div
         className={detailed ? 'calendar-event-detail' : 'calendar-event-pill'}
+        style={detailed ? undefined : { backgroundColor: color, color: '#fff' }}
         key={item.occurrence_key}
         role={canWrite ? 'button' : undefined}
         tabIndex={canWrite ? 0 : undefined}
