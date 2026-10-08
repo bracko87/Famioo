@@ -67,18 +67,81 @@ export function HomePage() {
   const [familyPoints, setFamilyPoints] = useState<Record<string, number>>({})
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarOccurrence[]>([])
   const [showMobilePromo, setShowMobilePromo] = useState(true)
-  const promoSentinelRef = useRef<HTMLDivElement | null>(null)
+  const lastHomeScrollRef = useRef(0)
+  const promoHideTimeRef = useRef(0)
+  const touchStartYRef = useRef<number | null>(null)
 
   useEffect(() => {
-    const sentinel = promoSentinelRef.current
-    if (!sentinel || !window.matchMedia('(max-width: 767px)').matches) return
+    const mobileQuery = window.matchMedia('(max-width: 767px)')
+    if (!mobileQuery.matches) {
+      setShowMobilePromo(true)
+      return
+    }
 
-    const observer = new IntersectionObserver(([entry]) => {
-      setShowMobilePromo(entry.isIntersecting)
-    }, { threshold: 0.01, rootMargin: '140px 0px 0px 0px' })
+    let frame = 0
 
-    observer.observe(sentinel)
-    return () => observer.disconnect()
+    const scrollTop = () => Math.max(
+      window.scrollY || 0,
+      document.documentElement.scrollTop || 0,
+      document.body.scrollTop || 0,
+    )
+
+    const revealNearTop = () => {
+      if (scrollTop() <= 55 && performance.now() - promoHideTimeRef.current > 280) {
+        setShowMobilePromo(true)
+      }
+    }
+
+    const update = () => {
+      frame = 0
+      const current = scrollTop()
+      const previous = lastHomeScrollRef.current
+      const movingDown = current > previous + 2
+      const movingUp = current < previous - 2
+
+      if (movingDown && current > 105) {
+        promoHideTimeRef.current = performance.now()
+        setShowMobilePromo(false)
+      } else if (movingUp) {
+        revealNearTop()
+      }
+
+      lastHomeScrollRef.current = current
+    }
+
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(update)
+    }
+
+    const onWheel = (event: WheelEvent) => {
+      if (event.deltaY < 0) revealNearTop()
+    }
+
+    const onTouchStart = (event: TouchEvent) => {
+      touchStartYRef.current = event.touches[0]?.clientY ?? null
+    }
+
+    const onTouchMove = (event: TouchEvent) => {
+      const startY = touchStartYRef.current
+      const currentY = event.touches[0]?.clientY
+      if (startY != null && currentY != null && currentY > startY + 12) revealNearTop()
+    }
+
+    lastHomeScrollRef.current = scrollTop()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    document.addEventListener('scroll', onScroll, { passive: true, capture: true })
+    window.addEventListener('wheel', onWheel, { passive: true })
+    window.addEventListener('touchstart', onTouchStart, { passive: true })
+    window.addEventListener('touchmove', onTouchMove, { passive: true })
+
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', onScroll)
+      document.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('wheel', onWheel)
+      window.removeEventListener('touchstart', onTouchStart)
+      window.removeEventListener('touchmove', onTouchMove)
+    }
   }, [])
 
   useEffect(() => {
@@ -229,7 +292,6 @@ export function HomePage() {
     <div className="page home-page">
       <div className="page-label">HOME</div>
 
-      <div ref={promoSentinelRef} className="home-promo-sentinel" aria-hidden="true" />
       <div className={showMobilePromo ? 'home-mobile-promo-wrap' : 'home-mobile-promo-wrap collapsed'}>
         <PromoCarousel modules={modules} />
       </div>
