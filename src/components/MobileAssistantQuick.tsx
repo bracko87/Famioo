@@ -29,9 +29,12 @@ export function MobileAssistantQuick() {
   const [summary, setSummary] = useState<UsageSummary | null>(null)
   const [sending, setSending] = useState(false)
   const [listening, setListening] = useState(false)
+  const [transcribing, setTranscribing] = useState(false)
   const [error, setError] = useState('')
   const listRef = useRef<HTMLDivElement | null>(null)
-  const recognitionRef = useRef<any>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
   const voiceBaseMessageRef = useRef('')
   const conversationIdRef = useRef(crypto.randomUUID())
 
@@ -92,10 +95,13 @@ export function MobileAssistantQuick() {
 
   useEffect(() => () => {
     try {
-      recognitionRef.current?.stop?.()
+      if (mediaRecorderRef.current?.state === 'recording') {
+        mediaRecorderRef.current.stop()
+      }
     } catch {
-      // Recognition may already be stopped.
+      // Recorder may already be stopped.
     }
+    mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
   }, [])
 
   function playMicStartSound() {
@@ -127,65 +133,127 @@ export function MobileAssistantQuick() {
     }
   }
 
-  function toggleVoiceInput() {
-    if (listening) {
-      try {
-        recognitionRef.current?.stop?.()
-      } catch {
-        // Recognition may already be stopped.
-      }
-      setListening(false)
+  async function transcribeRecording(blob: Blob, mimeType: string) {
+    if (!blob.size) {
+      setError('No speech was recorded.')
       return
     }
 
-    const speechWindow = window as typeof window & {
-      SpeechRecognition?: new () => any
-      webkitSpeechRecognition?: new () => any
-    }
-    const SpeechRecognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition
-
-    if (!SpeechRecognition) {
-      setError('Voice input is not supported by this browser.')
-      return
-    }
-
+    setTranscribing(true)
     setError('')
-    voiceBaseMessageRef.current = message.trim()
-    playMicStartSound()
 
-    const recognition = new SpeechRecognition()
-    recognition.lang = navigator.language || 'en-US'
-    recognition.continuous = false
-    recognition.interimResults = true
+    const extension = mimeType.includes('mp4') || mimeType.includes('m4a')
+      ? 'm4a'
+      : mimeType.includes('ogg')
+        ? 'ogg'
+        : mimeType.includes('wav')
+          ? 'wav'
+          : 'webm'
 
-    recognition.onstart = () => setListening(true)
-    recognition.onend = () => setListening(false)
-    recognition.onerror = (event: { error?: string }) => {
+    const formData = new FormData()
+    formData.append('household_id', household.id)
+    formData.append('file', new File([blob], 'famioo-voice.' + extension, {
+      type: mimeType || 'audio/webm',
+    }))
+
+    const result = await supabase.functions.invoke('assistant-transcribe', {
+      body: formData,
+    })
+
+    if (result.error) {
+      let detail = result.error.message
+      const context = (result.error as { context?: Response }).context
+      if (context) {
+        try {
+          const payload = await context.clone().json() as { error?: string }
+          if (payload.error) detail = payload.error
+        } catch {
+          // Keep the function error message.
+        }
+      }
+      setError(detail)
+    } else {
+      const payload = result.data as { text?: string } | null
+      const spoken = payload?.text?.trim()
+      if (spoken) {
+        const base = voiceBaseMessageRef.current
+        setMessage(base ? base + ' ' + spoken : spoken)
+      }
+    }
+
+    setTranscribing(false)
+  }
+
+  async function toggleVoiceInput() {
+    if (listening) {
+      const recorder = mediaRecorderRef.current
+      if (recorder && recorder.state === 'recording') {
+        recorder.stop()
+      }
+      return
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setError('Voice recording is not supported by this browser.')
+      return
+    }
+
+    try {
+      setError('')
+      voiceBaseMessageRef.current = message.trim()
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      mediaStreamRef.current = stream
+      audioChunksRef.current = []
+
+      const candidates = [
+        'audio/mp4',
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+      ]
+      const mimeType = candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? ''
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream)
+
+      mediaRecorderRef.current = recorder
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data)
+      }
+
+      recorder.onstart = () => {
+        setListening(true)
+        playMicStartSound()
+      }
+
+      recorder.onstop = () => {
+        setListening(false)
+        const finalType = recorder.mimeType || mimeType || 'audio/webm'
+        const blob = new Blob(audioChunksRef.current, { type: finalType })
+        audioChunksRef.current = []
+        mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
+        mediaStreamRef.current = null
+        mediaRecorderRef.current = null
+        void transcribeRecording(blob, finalType)
+      }
+
+      recorder.onerror = () => {
+        setListening(false)
+        mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
+        mediaStreamRef.current = null
+        mediaRecorderRef.current = null
+        setError('Voice recording failed. Please try again.')
+      }
+
+      recorder.start(250)
+    } catch {
       setListening(false)
-      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-        setError('Microphone permission is required for voice input.')
-      } else if (event.error && event.error !== 'no-speech') {
-        setError('Voice input could not be started. Please try again.')
-      }
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
+      mediaStreamRef.current = null
+      setError('Microphone permission is required for voice input.')
     }
-    recognition.onresult = (event: any) => {
-      let transcript = ''
-
-      for (let index = 0; index < event.results.length; index += 1) {
-        const part = event.results[index]?.[0]?.transcript ?? ''
-        if (!part) continue
-        transcript += (transcript ? ' ' : '') + part.trim()
-      }
-
-      const spoken = transcript.trim()
-      if (!spoken) return
-
-      const base = voiceBaseMessageRef.current
-      setMessage(base ? base + ' ' + spoken : spoken)
-    }
-
-    recognitionRef.current = recognition
-    recognition.start()
   }
 
   async function submit(event: FormEvent) {
@@ -278,9 +346,14 @@ export function MobileAssistantQuick() {
                 <div>
                   <strong>Famioo Assistant</strong>
                   <small>
-                    {summary
+                    {transcribing
+                      ? 'Transcribing voice…'
+                      : listening
+                        ? 'Recording · tap mic to stop'
+                        : summary
                       ? `${summary.total_remaining} actions left${cycleLabel ? ` · reloads ${cycleLabel}` : ''}`
-                      : 'Household Assistant'}
+                          ? `${summary.total_remaining} actions left${cycleLabel ? ` · reloads ${cycleLabel}` : ''}`
+                          : 'Household Assistant'}
                   </small>
                 </div>
               </div>
@@ -326,22 +399,22 @@ export function MobileAssistantQuick() {
                 placeholder="Ask a question or give Famioo a task…"
                 rows={2}
                 maxLength={4000}
-                disabled={sending || summary?.total_remaining === 0}
+                disabled={sending || transcribing || summary?.total_remaining === 0}
               />
               <button
                 className={listening ? 'mobile-assistant-mic listening' : 'mobile-assistant-mic'}
                 type="button"
                 onClick={toggleVoiceInput}
                 disabled={sending || summary?.total_remaining === 0}
-                aria-label={listening ? 'Stop voice input' : 'Use microphone'}
-                title={listening ? 'Stop listening' : 'Use microphone'}
+                aria-label={listening ? 'Stop recording' : transcribing ? 'Transcribing voice' : 'Use microphone'}
+                title={listening ? 'Stop recording' : transcribing ? 'Transcribing…' : 'Use microphone'}
               >
                 {listening ? <MicOff size={17} /> : <Mic size={17} />}
               </button>
               <button
                 className="mobile-assistant-send"
                 type="submit"
-                disabled={sending || !message.trim() || summary?.total_remaining === 0}
+                disabled={sending || transcribing || !message.trim() || summary?.total_remaining === 0}
                 aria-label="Send to Assistant"
               >
                 <Send size={17} />
