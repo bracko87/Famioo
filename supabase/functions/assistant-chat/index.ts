@@ -553,21 +553,36 @@ Deno.serve(async(req)=>{
     }
   }
 
-  const accounting=await recordAssistantConversationTurn(supabaseUrl,adminKey,{
-    p_household_id:householdId,
-    p_user_id:userResult.data.user.id,
-    p_conversation_id:conversationId,
-    p_action_type:executed.executed?String(executed.action_type||"quick_assistant"):"quick_assistant",
-    p_model:model,
-    p_input_tokens:Number.isFinite(Number(usage.input_tokens))?Math.max(0,Math.round(Number(usage.input_tokens))):null,
-    p_output_tokens:Number.isFinite(Number(usage.output_tokens))?Math.max(0,Math.round(Number(usage.output_tokens))):null,
-    p_total_tokens:Number.isFinite(Number(usage.total_tokens))?Math.max(0,Math.round(Number(usage.total_tokens))):null,
-    p_metadata:{
-      page_path:String(body.page_path||"").slice(0,160),
-      executed:Boolean(executed.executed),
-      action_type:executed.action_type??plan.action_type,
-    },
-  })
+  const accounting=executed.executed
+    ?await recordAssistantAction(supabaseUrl,adminKey,{
+        p_household_id:householdId,
+        p_user_id:userResult.data.user.id,
+        p_action_type:String(executed.action_type||"quick_assistant"),
+        p_model:model,
+        p_input_tokens:Number.isFinite(Number(usage.input_tokens))?Math.max(0,Math.round(Number(usage.input_tokens))):null,
+        p_output_tokens:Number.isFinite(Number(usage.output_tokens))?Math.max(0,Math.round(Number(usage.output_tokens))):null,
+        p_total_tokens:Number.isFinite(Number(usage.total_tokens))?Math.max(0,Math.round(Number(usage.total_tokens))):null,
+        p_metadata:{
+          page_path:String(body.page_path||"").slice(0,160),
+          executed:true,
+          action_type:executed.action_type??plan.action_type,
+        },
+      })
+    :await recordAssistantConversationTurn(supabaseUrl,adminKey,{
+        p_household_id:householdId,
+        p_user_id:userResult.data.user.id,
+        p_conversation_id:conversationId,
+        p_action_type:"quick_assistant",
+        p_model:model,
+        p_input_tokens:Number.isFinite(Number(usage.input_tokens))?Math.max(0,Math.round(Number(usage.input_tokens))):null,
+        p_output_tokens:Number.isFinite(Number(usage.output_tokens))?Math.max(0,Math.round(Number(usage.output_tokens))):null,
+        p_total_tokens:Number.isFinite(Number(usage.total_tokens))?Math.max(0,Math.round(Number(usage.total_tokens))):null,
+        p_metadata:{
+          page_path:String(body.page_path||"").slice(0,160),
+          executed:false,
+          action_type:plan.action_type,
+        },
+      })
 
   if(!accounting.response.ok){
     console.error("Assistant action accounting failed",accounting.payload)
@@ -589,8 +604,8 @@ Deno.serve(async(req)=>{
     action_type:executed.action_type??plan.action_type,
     record_id:executed.record_id??null,
     remaining:Number(accounting.payload?.remaining??0),
-    billable:Boolean(accounting.payload?.billable),
-    conversation_turn:Number(accounting.payload?.conversation_turn??1),
+    billable:executed.executed?true:Boolean(accounting.payload?.billable),
+    conversation_turn:executed.executed?null:Number(accounting.payload?.conversation_turn??1),
     cycle_end:accounting.payload?.cycle_end??allowance?.cycle_end??null,
   })
 })
