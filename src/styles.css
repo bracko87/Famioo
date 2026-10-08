@@ -15875,3 +15875,501 @@ b {
     background: rgba(10,10,10,.96);
   }
 }
+
+
+/* =========================================================
+   Mobile corrections after visual review – 2026-10-08
+   ========================================================= */
+
+.shopping-compare-tab,
+.shopping-compare-backdrop,
+.shopping-compare-drawer,
+.cost-privacy-bottom {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  /* Header keeps the household context visible: Household · Levnajici. */
+  .header-household {
+    justify-content: center;
+    gap: 3px;
+  }
+
+  .header-household > span {
+    display: inline !important;
+    flex: 0 0 auto;
+    color: rgba(255,255,255,.72);
+    font-size: 10px;
+    font-weight: 550;
+  }
+
+  .header-household > span::after {
+    content: " ·";
+  }
+
+  .header-household > strong,
+  .header-household .custom-select-trigger {
+    font-size: 14px;
+  }
+
+  /* Month view: every entry is exactly one readable row. */
+  .month-calendar .calendar-event-pill {
+    width: 100%;
+    min-height: 15px;
+    padding: 1px 2px;
+    overflow: hidden;
+  }
+
+  .month-calendar .calendar-event-text {
+    min-width: 0;
+    width: 100%;
+    display: block;
+    overflow: hidden;
+  }
+
+  .month-calendar .calendar-event-text strong {
+    width: 100%;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    -webkit-line-clamp: unset;
+    -webkit-box-orient: initial;
+    font-size: 8px;
+    line-height: 1.2;
+  }
+
+  /* Upcoming starts with today, shows 30 days, then offers the next 30. */
+  .upcoming-calendar-toolbar {
+    display: none !important;
+  }
+
+  .upcoming-calendar {
+    padding-bottom: 8px;
+  }
+
+  .upcoming-day.today .upcoming-date {
+    background: #f0e6f7;
+  }
+
+  .upcoming-day.today .upcoming-date strong {
+    color: #8544a5;
+    font-size: 13px;
+  }
+
+  .upcoming-empty-day {
+    align-self: center;
+    justify-self: center;
+    color: #aaa1ad;
+    font-size: 12px;
+  }
+
+  .upcoming-load-more {
+    width: 100%;
+    min-height: 44px;
+    margin-top: 12px;
+    justify-content: center;
+  }
+
+  /* Shopping comparison sits directly above the AI shortcut. */
+  .shopping-compare-tab {
+    position: fixed;
+    z-index: 75;
+    right: 0;
+    bottom: calc(170px + env(safe-area-inset-bottom, 0px));
+    width: 50px;
+    min-height: 52px;
+    padding: 0;
+    border: 1px solid rgba(255,255,255,.46);
+    border-right: 0;
+    border-radius: 16px 0 0 16px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: linear-gradient(145deg,#397d78,#6656bd);
+    box-shadow: 0 12px 30px rgba(50,62,118,.24);
+  }
+
+  .shopping-compare-tab.active {
+    transform: translateX(4px);
+  }
+
+  .shopping-compare-backdrop {
+    position: fixed;
+    z-index: 77;
+    inset: 0;
+    display: block;
+    border: 0;
+    background: rgba(28,25,37,.38);
+    backdrop-filter: blur(2px);
+  }
+
+  .shopping-compare-drawer {
+    position: fixed;
+    z-index: 78;
+    right: 0;
+    bottom: calc(72px + env(safe-area-inset-bottom,0px));
+    width: min(92vw,410px);
+    height: min(760px,calc(100svh - 96px - env(safe-area-inset-top,0px)));
+    padding-bottom: 14px;
+    display: block;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 22px 0 0 22px;
+    background: #fff;
+    box-shadow: -18px 0 52px rgba(31,24,52,.24);
+  }
+
+  .shopping-compare-drawer > header {
+    position: sticky;
+    z-index: 2;
+    top: 0;
+    min-height: 66px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #ece6ef;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: rgba(255,255,255,.96);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .shopping-compare-drawer > header h2 {
+    margin: 3px 0 0;
+    font-size: 17px;
+  }
+
+  .shopping-compare-drawer > header > button {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    color: #786c7d;
+    background: #f2eef4;
+  }
+
+  .shopping-compare-period {
+    margin: 13px 14px 10px;
+    padding: 3px;
+    border-radius: 11px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    background: #f2eff4;
+  }
+
+  .shopping-compare-period button {
+    min-height: 36px;
+    border: 0;
+    border-radius: 9px;
+    color: #857989;
+    background: transparent;
+    font-size: 12px;
+  }
+
+  .shopping-compare-period button.active {
+    color: #65417b;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(57,41,65,.09);
+  }
+
+  .shopping-compare-summary {
+    padding: 0 14px 10px;
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 7px;
+  }
+
+  .shopping-compare-summary article {
+    min-width: 0;
+    min-height: 76px;
+    padding: 10px 8px;
+    border: 1px solid #ebe4ee;
+    border-radius: 12px;
+    display: grid;
+    align-content: center;
+    gap: 3px;
+    background: #fbfafc;
+  }
+
+  .shopping-compare-summary span,
+  .shopping-compare-summary small {
+    color: #988c9c;
+    font-size: 9px;
+  }
+
+  .shopping-compare-summary strong {
+    overflow: hidden;
+    color: #55495b;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .shopping-compare-section {
+    margin: 0 14px;
+    padding: 13px 0;
+    border-top: 1px solid #eee8f0;
+  }
+
+  .shopping-compare-section h3 {
+    margin: 0 0 8px;
+    color: #5c5061;
+    font-size: 12px;
+  }
+
+  .shopping-compare-section > small {
+    color: #9a8e9e;
+    font-size: 10px;
+    line-height: 1.4;
+  }
+
+  .shopping-compare-row,
+  .shopping-compare-product,
+  .shopping-compare-latest {
+    min-height: 42px;
+    padding: 7px 0;
+    border-bottom: 1px solid #f1edf2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 9px;
+  }
+
+  .shopping-compare-row:last-child,
+  .shopping-compare-product:last-child {
+    border-bottom: 0;
+  }
+
+  .shopping-compare-row span,
+  .shopping-compare-row strong,
+  .shopping-compare-latest strong {
+    color: #5c5061;
+    font-size: 11px;
+  }
+
+  .shopping-compare-product > span,
+  .shopping-compare-latest > span {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+  }
+
+  .shopping-compare-product strong {
+    overflow: hidden;
+    color: #5b4f60;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .shopping-compare-product small,
+  .shopping-compare-latest small {
+    color: #9b909f;
+    font-size: 9px;
+  }
+
+  .shopping-compare-product b {
+    flex: 0 0 auto;
+    color: #74518b;
+    font-size: 11px;
+  }
+
+  .shopping-compare-ai {
+    width: calc(100% - 28px);
+    min-height: 44px;
+    margin: 5px 14px 0;
+    justify-content: center;
+  }
+
+  /* Costs: reporting belongs to the main body; Budget and Entries are shortcuts only. */
+  .cost-privacy-top {
+    display: none;
+  }
+
+  .cost-privacy-bottom {
+    margin-top: 18px;
+    display: block;
+  }
+
+  .costs-page .cost-report-card {
+    display: block !important;
+    margin-top: 12px;
+  }
+
+  .costs-page .cost-report-card .mobile-cost-drawer-close {
+    display: none !important;
+  }
+
+  .mobile-cost-side-tabs {
+    display: contents;
+  }
+
+  .mobile-cost-side-tabs > button {
+    top: auto !important;
+    left: auto !important;
+    right: 0 !important;
+    width: 50px;
+    min-height: 52px;
+    padding: 0;
+    border-radius: 16px 0 0 16px !important;
+    display: grid;
+    place-items: center;
+  }
+
+  .mobile-cost-side-tabs > button span {
+    display: none;
+  }
+
+  .mobile-cost-side-tabs > button:nth-child(1) {
+    bottom: calc(170px + env(safe-area-inset-bottom,0px));
+  }
+
+  .mobile-cost-side-tabs > button:nth-child(2) {
+    bottom: calc(228px + env(safe-area-inset-bottom,0px));
+  }
+
+  .costs-page .finance-plan-card,
+  .costs-page .cost-list {
+    display: none;
+  }
+
+  .costs-page.mobile-cost-panel-plan .finance-plan-card,
+  .costs-page.mobile-cost-panel-entries .cost-list {
+    position: fixed;
+    z-index: 78;
+    top: calc(70px + env(safe-area-inset-top));
+    left: 12px;
+    right: 12px;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 18px 14px 22px;
+    border: 1px solid #e2d7e6;
+    border-radius: 20px;
+    display: block;
+    overflow-y: auto;
+    background: #fff;
+    box-shadow: 0 18px 54px rgba(38,20,44,.24);
+  }
+
+  .cost-report-card .cost-chart-grid,
+  .cost-report-card .cost-side-charts {
+    grid-template-columns: 1fr;
+  }
+
+  /* Dark mode is black surfaces + white text/icons; Famioo/accent colors stay colored. */
+  html[data-famioo-theme="dark"] body,
+  html[data-famioo-theme="dark"] .app-content,
+  html[data-famioo-theme="dark"] .page {
+    background: #000;
+  }
+
+  html[data-famioo-theme="dark"] body *,
+  html[data-famioo-theme="dark"] .mobile-bottom-nav *,
+  html[data-famioo-theme="dark"] .app-header * {
+    color: #fff !important;
+  }
+
+  html[data-famioo-theme="dark"] input::placeholder,
+  html[data-famioo-theme="dark"] textarea::placeholder {
+    color: rgba(255,255,255,.58) !important;
+  }
+
+  html[data-famioo-theme="dark"] .app-header {
+    border-bottom-color: rgba(255,255,255,.13);
+    background:
+      radial-gradient(circle at 68% 0,rgba(255,255,255,.13),transparent 26%),
+      linear-gradient(100deg,#6c2d77,#96408e 56%,#b64c91);
+  }
+
+  html[data-famioo-theme="dark"] .mobile-bottom-nav,
+  html[data-famioo-theme="dark"] .notification-popover,
+  html[data-famioo-theme="dark"] .custom-select-menu,
+  html[data-famioo-theme="dark"] .settings-page,
+  html[data-famioo-theme="dark"] .mobile-settings-menu,
+  html[data-famioo-theme="dark"] .settings-tab-content,
+  html[data-famioo-theme="dark"] .mobile-settings-title,
+  html[data-famioo-theme="dark"] .mobile-settings-theme-row,
+  html[data-famioo-theme="dark"] .mobile-settings-menu > button,
+  html[data-famioo-theme="dark"] .mobile-settings-detail-head,
+  html[data-famioo-theme="dark"] .list-card,
+  html[data-famioo-theme="dark"] .settings-card,
+  html[data-famioo-theme="dark"] .compact-list-card,
+  html[data-famioo-theme="dark"] .checklist-card,
+  html[data-famioo-theme="dark"] .shopping-card,
+  html[data-famioo-theme="dark"] .calendar-day,
+  html[data-famioo-theme="dark"] .month-calendar,
+  html[data-famioo-theme="dark"] .day-calendar,
+  html[data-famioo-theme="dark"] .mobile-week-calendar,
+  html[data-famioo-theme="dark"] .mobile-week-day,
+  html[data-famioo-theme="dark"] .upcoming-day,
+  html[data-famioo-theme="dark"] .mobile-calendar-search,
+  html[data-famioo-theme="dark"] .recipe-card,
+  html[data-famioo-theme="dark"] .recipe-detail,
+  html[data-famioo-theme="dark"] .recipe-detail-page,
+  html[data-famioo-theme="dark"] .recipe-detail-topbar,
+  html[data-famioo-theme="dark"] .cost-report-card,
+  html[data-famioo-theme="dark"] .cost-list,
+  html[data-famioo-theme="dark"] .finance-plan-card,
+  html[data-famioo-theme="dark"] .shopping-compare-drawer,
+  html[data-famioo-theme="dark"] .shopping-compare-drawer > header,
+  html[data-famioo-theme="dark"] .shopping-compare-summary article,
+  html[data-famioo-theme="dark"] .mobile-assistant-drawer,
+  html[data-famioo-theme="dark"] .mobile-assistant-chat,
+  html[data-famioo-theme="dark"] .mobile-assistant-form,
+  html[data-famioo-theme="dark"] input,
+  html[data-famioo-theme="dark"] textarea,
+  html[data-famioo-theme="dark"] .custom-select-trigger {
+    border-color: #2d2d2d;
+    background: #0d0d0d;
+  }
+
+  html[data-famioo-theme="dark"] .calendar-view-tabs,
+  html[data-famioo-theme="dark"] .mobile-theme-toggle,
+  html[data-famioo-theme="dark"] .mobile-week-day > header,
+  html[data-famioo-theme="dark"] .day-calendar > header,
+  html[data-famioo-theme="dark"] .upcoming-date,
+  html[data-famioo-theme="dark"] .shopping-compare-period,
+  html[data-famioo-theme="dark"] .mobile-assistant-bubble.assistant {
+    background: #171717;
+  }
+
+  html[data-famioo-theme="dark"] .calendar-view-tabs button.active,
+  html[data-famioo-theme="dark"] .mobile-settings-menu .mobile-theme-toggle button.active,
+  html[data-famioo-theme="dark"] .shopping-compare-period button.active {
+    background: #2a2a2a;
+  }
+
+  html[data-famioo-theme="dark"] .primary-button {
+    color: #fff !important;
+    background: linear-gradient(135deg,#7847cc,#c653a0);
+    box-shadow: none;
+  }
+
+  html[data-famioo-theme="dark"] .cost-summary-card:nth-child(3) {
+    background:
+      radial-gradient(circle at 84% 15%,rgba(255,255,255,.16),transparent 28%),
+      linear-gradient(135deg,#713681,#b44b90);
+  }
+
+  html[data-famioo-theme="dark"] .mobile-cost-side-tabs > button {
+    background: linear-gradient(180deg,#8b3d95,#b64f91);
+  }
+
+  html[data-famioo-theme="dark"] .shopping-compare-tab {
+    background: linear-gradient(145deg,#397d78,#6656bd);
+  }
+
+  html[data-famioo-theme="dark"] .module-banner,
+  html[data-famioo-theme="dark"] .promo-slide,
+  html[data-famioo-theme="dark"] .mobile-assistant-tab {
+    filter: none;
+  }
+}
