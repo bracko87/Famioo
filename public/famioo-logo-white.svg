@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Famioo">
+  <rect x="28" y="28" width="456" height="456" rx="132" fill="#fff"/>
+  <g transform="translate(256 256)">
+    <path d="M0-92 C22-92 38-75 38-54 C38-30 15-11 0 3 C-15-11-38-30-38-54 C-38-75-22-92 0-92Z" fill="#6e57d8" transform="rotate(15) translate(0,-13)"/>
+    <path d="M0-92 C22-92 38-75 38-54 C38-30 15-11 0 3 C-15-11-38-30-38-54 C-38-75-22-92 0-92Z" fill="#e05aa1" transform="rotate(105) translate(0,-13)"/>
+    <path d="M0-92 C22-92 38-75 38-54 C38-30 15-11 0 3 C-15-11-38-30-38-54 C-38-75-22-92 0-92Z" fill="#52b397" transform="rotate(195) translate(0,-13)"/>
+    <path d="M0-92 C22-92 38-75 38-54 C38-30 15-11 0 3 C-15-11-38-30-38-54 C-38-75-22-92 0-92Z" fill="#7dc8d7" transform="rotate(285) translate(0,-13)"/>
+  </g>
+</svg>
