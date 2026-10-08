@@ -51,10 +51,11 @@
   .mobile-assistant-drawer {
     position: fixed;
     z-index: 78;
-    top: max(12px, env(safe-area-inset-top, 0px));
+    top: auto;
     right: 0;
     bottom: calc(72px + env(safe-area-inset-bottom, 0px));
     width: min(92vw, 410px);
+    height: min(760px, calc(100svh - 96px - env(safe-area-inset-top, 0px)));
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto auto;
     background: #fff;
@@ -221,7 +222,7 @@
     padding: 10px 11px;
     border-top: 1px solid rgba(85, 72, 119, .1);
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 42px;
+    grid-template-columns: minmax(0, 1fr) 42px 42px;
     align-items: end;
     gap: 8px;
     background: #fff;
@@ -247,18 +248,35 @@
     box-shadow: 0 0 0 3px rgba(103, 80, 185, .08);
   }
 
+  .mobile-assistant-mic,
+  .mobile-assistant-mic,
   .mobile-assistant-send {
     width: 42px;
     height: 42px;
     border: 0;
     border-radius: 12px;
-    background: #6750b9;
-    color: #fff;
     display: grid;
     place-items: center;
     cursor: pointer;
   }
 
+  .mobile-assistant-mic {
+    background: #f0edf7;
+    color: #6750b9;
+  }
+
+  .mobile-assistant-mic.listening {
+    background: #6750b9;
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(103, 80, 185, .12);
+  }
+
+  .mobile-assistant-send {
+    background: #6750b9;
+    color: #fff;
+  }
+
+  .mobile-assistant-mic:disabled,
   .mobile-assistant-send:disabled {
     opacity: .4;
     cursor: default;
