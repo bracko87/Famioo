@@ -24,6 +24,8 @@ type UsageEvent = {
   input_tokens: number | null
   output_tokens: number | null
   total_tokens: number | null
+  billable: boolean
+  conversation_turn: number | null
   created_at: string
 }
 
@@ -75,7 +77,7 @@ export function AssistantPage() {
       supabase.rpc('assistant_usage_summary_v1', { p_household_id: household.id }),
       supabase
         .from('assistant_usage_events')
-        .select('id,user_id,action_type,model,balance_source,input_tokens,output_tokens,total_tokens,created_at')
+        .select('id,user_id,action_type,model,balance_source,input_tokens,output_tokens,total_tokens,billable,conversation_turn,created_at')
         .eq('household_id', household.id)
         .order('created_at', { ascending: false })
         .limit(100),
@@ -241,8 +243,11 @@ export function AssistantPage() {
                         </span>
                       </div>
                       <div className="assistant-history-meta">
-                        <strong>1 action</strong>
-                        <span>{item.model}</span>
+                        <strong>{item.billable ? '1 action' : 'Included follow-up'}</strong>
+                        <span>
+                          {item.conversation_turn ? `Turn ${item.conversation_turn} · ` : ''}
+                          {item.model}
+                        </span>
                         {item.total_tokens != null && (
                           <small>{input.toLocaleString()} in + {output.toLocaleString()} out tokens</small>
                         )}
