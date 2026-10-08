@@ -128,6 +128,10 @@ function normalizeIngredient(value:string){
   return value.trim().toLocaleLowerCase().replace(/\s+/g,' ')
 }
 
+function recipeImage(recipe:Pick<Recipe,'source_image_url'|'meal_type'>){
+  return recipe.source_image_url?.trim() || '/defaults/recipe-'+(recipe.meal_type || 'other')+'.svg'
+}
+
 
 function stripRecipeLine(value:string){
   return value
@@ -352,10 +356,6 @@ export function MealsPage(){
   async function saveRecipe(event:FormEvent){
     event.preventDefault()
     if(!canWrite || !recipeTitle.trim()) return
-    if(recipeSourceType==='imported' && !recipeSourceImageUrl.trim()){
-      setError('An imported recipe must include the original recipe image.')
-      return
-    }
     setSaving(true)
     setError('')
     setMessage('')
@@ -460,11 +460,6 @@ export function MealsPage(){
       setError('The recipe website did not return a recipe.')
       return
     }
-    if(!imported.source_image_url?.trim()){
-      setError('Famioo found the recipe, but no original recipe image could be imported. The image is mandatory, so this recipe was not saved.')
-      return
-    }
-
     resetRecipe()
     setRecipeTitle(imported.title||'Imported recipe')
     setRecipeDescription(imported.description||'')
@@ -847,11 +842,15 @@ export function MealsPage(){
 
     return (
       <article className="recipe-card list-card" key={recipe.id}>
-        {recipe.source_image_url && (
-          <Link className="recipe-card-image-link" to={'/app/meals/recipes/'+recipe.id} aria-label={'Open '+recipe.title}>
-            <img className="recipe-card-image" src={recipe.source_image_url} alt="" loading="lazy"/>
-          </Link>
-        )}
+        <Link className="recipe-card-image-link" to={'/app/meals/recipes/'+recipe.id} aria-label={'Open '+recipe.title}>
+          <img
+            className="recipe-card-image"
+            src={recipeImage(recipe)}
+            alt=""
+            loading="lazy"
+            onError={(event)=>{ event.currentTarget.src='/defaults/recipe-other.svg' }}
+          />
+        </Link>
         <header>
           <div>
             <span className="eyebrow">{recipe.meal_type.toUpperCase()}</span>
