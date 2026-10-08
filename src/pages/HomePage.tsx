@@ -13,7 +13,7 @@ import {
   Ticket,
   Utensils,
 } from 'lucide-react'
-import { useEffect, useState, type ComponentType } from 'react'
+import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { Link } from 'react-router-dom'
 import { PromoCarousel } from '../components/PromoCarousel'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
@@ -66,6 +66,20 @@ export function HomePage() {
   const [costMonthTotal, setCostMonthTotal] = useState(0)
   const [familyPoints, setFamilyPoints] = useState<Record<string, number>>({})
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarOccurrence[]>([])
+  const [showMobilePromo, setShowMobilePromo] = useState(true)
+  const promoSentinelRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const sentinel = promoSentinelRef.current
+    if (!sentinel || !window.matchMedia('(max-width: 767px)').matches) return
+
+    const observer = new IntersectionObserver(([entry]) => {
+      setShowMobilePromo(entry.isIntersecting)
+    }, { threshold: 0.01 })
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     void supabase.rpc('purge_old_archives_v1', { p_household_id: household.id })
@@ -215,7 +229,10 @@ export function HomePage() {
     <div className="page home-page">
       <div className="page-label">HOME</div>
 
-      <PromoCarousel modules={modules} />
+      <div ref={promoSentinelRef} className="home-promo-sentinel" aria-hidden="true" />
+      <div className={showMobilePromo ? 'home-mobile-promo-wrap' : 'home-mobile-promo-wrap collapsed'}>
+        <PromoCarousel modules={modules} />
+      </div>
 
       <section className="home-module-area" aria-label="Enabled modules">
         <div className="module-stack">
