@@ -2324,6 +2324,9 @@ export function TicketWalletPage(){
                     const holder=ticket.holder_profile_id?profileById.get(ticket.holder_profile_id):undefined
                     const fileUrl=fileUrls[ticket.id]
                     const previewUrl=previewUrls[ticket.id]
+                    const websiteCover=ticketCoverFromNotes(ticket.notes)
+                    const displayNotes=visibleTicketNotes(ticket.notes)
+                    const posterUrl=previewUrl||websiteCover
                     const digital=Boolean(ticket.file_path)
 
                     return (
@@ -2341,14 +2344,16 @@ export function TicketWalletPage(){
                             <em>{ticket.status}</em>
                           </div>
 
-                          {digital&&(
+                          {(digital||websiteCover)&&(
                             <div
-                              className={'ticket-digital-poster '+(previewUrl?'has-artwork ':'')+(ticket.preview_image_path?.toLowerCase().includes('logo')?'logo-artwork':'')}
-                              style={previewUrl?{backgroundImage:`linear-gradient(90deg,rgba(30,20,38,.72),rgba(30,20,38,.20)),url("${previewUrl}")`}:undefined}
+                              className={'ticket-digital-poster '+(posterUrl?'has-artwork ':'')+(websiteCover?'website-artwork ':'')+(ticket.preview_image_path?.toLowerCase().includes('logo')?'logo-artwork':'')}
+                              style={posterUrl?{backgroundImage:websiteCover
+                                ?`linear-gradient(90deg,rgba(50,34,58,.88),rgba(50,34,58,.76)),url("${posterUrl}")`
+                                :`linear-gradient(90deg,rgba(30,20,38,.72),rgba(30,20,38,.20)),url("${posterUrl}")`}:undefined}
                             >
                               <div className="ticket-digital-poster-top">
                                 <span>{ticketTypeLabel(ticket.ticket_type)}</span>
-                                <small>DIGITAL PASS</small>
+                                <small>{digital?'DIGITAL PASS':'QR PAGE'}</small>
                               </div>
                               <strong>{ticket.title}</strong>
                               <div className="ticket-digital-poster-meta">
@@ -2381,10 +2386,10 @@ export function TicketWalletPage(){
                             {ticket.linked_event_id&&<span><CalendarDays size={12}/>In Calendar</span>}
                           </div>
 
-                          {(ticket.booking_reference||ticket.notes)&&(
+                          {(ticket.booking_reference||displayNotes)&&(
                             <div className="ticket-wallet-details">
                               {ticket.booking_reference&&<small>Reference: {ticket.booking_reference}</small>}
-                              {ticket.notes&&<p>{ticket.notes}</p>}
+                              {displayNotes&&<p>{displayNotes}</p>}
                             </div>
                           )}
 
@@ -2698,10 +2703,12 @@ export function TicketWalletPage(){
             <header>
               <div>
                 <span className="eyebrow">QR DESTINATION</span>
-                <h2>{qrAiDraft?'Review Calendar event':'QR page opened'}</h2>
+                <h2>{qrAiDraft?'Assistant found an event':qrAiAnalyzed?'Assistant page summary':'QR page opened'}</h2>
                 <p>{qrAiDraft
-                  ?'Assistant read the destination page. Check the details before saving anything to Calendar.'
-                  :'Famioo found a web link in the QR code. The page can be opened normally; Assistant is optional and only used if you want an event created automatically.'}</p>
+                  ?'Assistant analyzed the destination page and found an event. Choose which useful Famioo actions you want.'
+                  :qrAiAnalyzed
+                    ?'Assistant analyzed the destination page. You can keep the website, save a useful Wallet item, or create something manually.'
+                    :'The QR code opened its normal destination page. When you return to Famioo, Assistant can summarize that page and suggest useful actions.'}</p>
               </div>
               <button
                 type="button"
@@ -2714,7 +2721,9 @@ export function TicketWalletPage(){
               </button>
             </header>
 
-            <div className="qr-page-source">
+            <div className={'qr-page-source '+(qrPageImageUrl?'has-image':'')} style={qrPageImageUrl?{
+              backgroundImage:`linear-gradient(90deg,rgba(255,255,255,.92),rgba(255,255,255,.78)),url("${qrPageImageUrl}")`,
+            }:undefined}>
               <div>
                 <span className="eyebrow">{qrMetaLoading?'READING PAGE…':'WEB PAGE'}</span>
                 <strong>{qrPageTitle||hostTitle(qrPageUrl)}</strong>
@@ -2740,13 +2749,20 @@ export function TicketWalletPage(){
                   <div className={'qr-page-step '+(hasAiAssistant?'ready':'locked')}>
                     <span>3</span>
                     <div>
-                      <strong>Create Calendar event with Assistant</strong>
+                      <strong>Summarize page with Assistant</strong>
                       <small>{hasAiAssistant
-                        ?'Assistant can read the page and prepare the event fields for review.'
+                        ?'Assistant can read the page, explain what it contains, and suggest Calendar, Files or Wallet actions.'
                         :'This optional step requires the paid AI Assistant module.'}</small>
                     </div>
                   </div>
                 </div>
+
+                {qrAiAnalyzed&&qrAiSummary&&(
+                  <div className="qr-ai-summary">
+                    <span><Sparkles size={15}/>Assistant summary</span>
+                    <p>{qrAiSummary}</p>
+                  </div>
+                )}
 
                 {error&&<div className="notice error">{error}</div>}
 
@@ -2776,13 +2792,13 @@ export function TicketWalletPage(){
                     <button
                       type="button"
                       className="qr-page-choice primary"
-                      disabled={qrAiLoading||!canWriteCalendar}
+                      disabled={qrAiLoading}
                       onClick={()=>void readQrPageWithAssistant()}
                     >
                       <Sparkles size={18}/>
                       <span>
-                        <strong>{qrAiLoading?'Reading page…':'Create event with Assistant'}</strong>
-                        <small>Assistant reads the page and prepares date, time, location and description for review.</small>
+                        <strong>{qrAiLoading?'Reading page…':qrAiAnalyzed?'Analyze again':'Summarize with Assistant'}</strong>
+                        <small>Assistant reads the page and suggests the Famioo actions that fit what it found.</small>
                       </span>
                     </button>
                   ) : (
@@ -2793,6 +2809,21 @@ export function TicketWalletPage(){
                         <small>Automatic page-to-event extraction is a paid Assistant feature.</small>
                       </span>
                     </Link>
+                  )}
+
+                  {qrAiAnalyzed&&qrAiSuggestTicket&&(
+                    <button
+                      type="button"
+                      className="qr-page-choice"
+                      disabled={!canWrite||qrWalletSaving}
+                      onClick={()=>void saveQrPageTicket()}
+                    >
+                      <Ticket size={18}/>
+                      <span>
+                        <strong>{qrWalletSaving?'Saving…':'Save as active Wallet ticket'}</strong>
+                        <small>{qrPageImageUrl?'The website image will be used softly behind the ticket.':'Keep this page as a useful active ticket or reference.'}</small>
+                      </span>
+                    </button>
                   )}
 
                   <Link
@@ -2827,6 +2858,13 @@ export function TicketWalletPage(){
               </>
             ) : (
               <>
+                {qrAiSummary&&(
+                  <div className="qr-ai-summary">
+                    <span><Sparkles size={15}/>Assistant summary</span>
+                    <p>{qrAiSummary}</p>
+                  </div>
+                )}
+
                 <div className="ticket-scan-recognition-strip">
                   <span><Sparkles size={14}/>Assistant draft</span>
                   <span>{Math.round(qrAiDraft.confidence*100)}% confidence</span>
@@ -2953,6 +2991,25 @@ export function TicketWalletPage(){
                 </div>
 
                 {error&&<div className="notice error">{error}</div>}
+
+                <div className="qr-ai-extra-actions">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    disabled={!canWriteFiles||qrLinkSaving||qrLinkSaved}
+                    onClick={()=>void saveQrPageLink()}
+                  >
+                    <FileText size={14}/>{qrLinkSaved?'Link saved':'Save website link'}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    disabled={!canWrite||qrWalletSaving}
+                    onClick={()=>void saveQrPageTicket()}
+                  >
+                    <Ticket size={14}/>{qrWalletSaving?'Saving…':'Save Wallet ticket'}
+                  </button>
+                </div>
 
                 <div className="modal-actions qr-event-actions">
                   <button type="button" className="secondary-button" disabled={qrEventSaving} onClick={()=>setQrAiDraft(null)}>
