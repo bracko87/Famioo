@@ -40,6 +40,45 @@ function LoadingScreen() {
       </div>
 
       <div className="mobile-launch-screen" aria-label="Opening Famioo">
+        <svg className="launch-network" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <g className="launch-network-spokes">
+            <line x1="50" y1="50" x2="18" y2="12" />
+            <line x1="50" y1="50" x2="77" y2="18" />
+            <line x1="50" y1="50" x2="9" y2="27" />
+            <line x1="50" y1="50" x2="91" y2="30" />
+            <line x1="50" y1="50" x2="28" y2="38" />
+            <line x1="50" y1="50" x2="70" y2="40" />
+            <line x1="50" y1="50" x2="7" y2="51" />
+            <line x1="50" y1="50" x2="94" y2="55" />
+            <line x1="50" y1="50" x2="23" y2="64" />
+            <line x1="50" y1="50" x2="78" y2="68" />
+            <line x1="50" y1="50" x2="10" y2="76" />
+            <line x1="50" y1="50" x2="90" y2="80" />
+            <line x1="50" y1="50" x2="34" y2="88" />
+            <line x1="50" y1="50" x2="68" y2="90" />
+          </g>
+          <g className="launch-network-links">
+            <line x1="18" y1="12" x2="77" y2="18" />
+            <line x1="18" y1="12" x2="28" y2="38" />
+            <line x1="77" y1="18" x2="70" y2="40" />
+            <line x1="9" y1="27" x2="28" y2="38" />
+            <line x1="91" y1="30" x2="70" y2="40" />
+            <line x1="9" y1="27" x2="7" y2="51" />
+            <line x1="91" y1="30" x2="94" y2="55" />
+            <line x1="28" y1="38" x2="23" y2="64" />
+            <line x1="70" y1="40" x2="78" y2="68" />
+            <line x1="7" y1="51" x2="23" y2="64" />
+            <line x1="94" y1="55" x2="78" y2="68" />
+            <line x1="23" y1="64" x2="10" y2="76" />
+            <line x1="78" y1="68" x2="90" y2="80" />
+            <line x1="10" y1="76" x2="34" y2="88" />
+            <line x1="90" y1="80" x2="68" y2="90" />
+            <line x1="34" y1="88" x2="68" y2="90" />
+            <line x1="28" y1="38" x2="70" y2="40" />
+            <line x1="23" y1="64" x2="78" y2="68" />
+          </g>
+        </svg>
+
         <span className="launch-orbit launch-orbit-1" title="Calendar"><CalendarDays size={18} /></span>
         <span className="launch-orbit launch-orbit-2" title="Tasks"><ClipboardList size={18} /></span>
         <span className="launch-orbit launch-orbit-3" title="Checklists"><CheckSquare size={17} /></span>
@@ -55,9 +94,8 @@ function LoadingScreen() {
         <span className="launch-orbit launch-orbit-13" title="Tickets"><Ticket size={18} /></span>
         <span className="launch-orbit launch-orbit-14" title="AI Assistant"><Sparkles size={18} /></span>
 
-        <img className="launch-app-icon" src="/famioo-app-icon.svg" alt="" />
-        <strong>Famioo</strong>
-        <span>Family life, organized.</span>
+        <strong className="launch-wordmark">Famioo</strong>
+        <span className="launch-tagline">Family life, organized.</span>
         <i className="launch-loader" />
       </div>
     </main>
