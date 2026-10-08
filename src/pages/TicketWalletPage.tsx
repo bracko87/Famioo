@@ -5,12 +5,25 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 function websiteFromQr(value:string){
   const trimmed=value.trim()
   if(!trimmed) return ''
-  try{
-    const url=new URL(trimmed)
-    return url.protocol==='https:'||url.protocol==='http:' ? url.toString() : ''
-  }catch{
-    return ''
+
+  const candidates=[trimmed]
+
+  if(/^www\./i.test(trimmed)){
+    candidates.push('https://'+trimmed)
+  }else if(/^[a-z0-9.-]+\.[a-z]{2,}(?:[/:?#]|$)/i.test(trimmed)){
+    candidates.push('https://'+trimmed)
   }
+
+  for(const candidate of candidates){
+    try{
+      const url=new URL(candidate)
+      if(url.protocol==='https:'||url.protocol==='http:') return url.toString()
+    }catch{
+      // Try the next normalized form.
+    }
+  }
+
+  return ''
 }
 
 export function TicketWalletPage(){
