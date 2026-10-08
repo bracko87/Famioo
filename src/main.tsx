@@ -4,6 +4,9 @@ import { BrowserRouter } from 'react-router-dom'
 import { App } from './App'
 import './styles.css'
 
+delete document.documentElement.dataset.famiooTheme
+window.localStorage.removeItem('famioo.mobile.theme')
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
