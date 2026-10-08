@@ -1,3 +1,4 @@
+import { ArrowLeft, Bell, Boxes, CloudSun, Grid3X3, KeyRound, ListChecks, Palette, Settings2, ShieldCheck, Smartphone, Tags, Users } from 'lucide-react'
 import { useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { CategoriesSettings } from '../components/settings/CategoriesSettings'
@@ -27,19 +28,19 @@ type SettingsTab =
   | 'privacy-security'
   | 'mobile-app'
 
-const settingsTabs: Array<{ id: SettingsTab; label: string }> = [
-  { id: 'general', label: 'General' },
-  { id: 'modules', label: 'Modules' },
-  { id: 'categories', label: 'Categories' },
-  { id: 'templates', label: 'Templates' },
-  { id: 'types', label: 'Types' },
-  { id: 'users', label: 'Users' },
-  { id: 'permissions', label: 'Permissions' },
-  { id: 'category-availability', label: 'Category availability' },
-  { id: 'weather', label: 'Weather' },
-  { id: 'notifications-security', label: 'Notifications & security' },
-  { id: 'privacy-security', label: 'Privacy & encryption' },
-  { id: 'mobile-app', label: 'Mobile app' },
+const settingsTabs: Array<{ id: SettingsTab; label: string; icon: typeof Settings2 }> = [
+  { id: 'general', label: 'General', icon: Settings2 },
+  { id: 'modules', label: 'Modules', icon: Boxes },
+  { id: 'categories', label: 'Categories', icon: Palette },
+  { id: 'templates', label: 'Templates', icon: ListChecks },
+  { id: 'types', label: 'Types', icon: Tags },
+  { id: 'users', label: 'Users', icon: Users },
+  { id: 'permissions', label: 'Permissions', icon: KeyRound },
+  { id: 'category-availability', label: 'Category availability', icon: Grid3X3 },
+  { id: 'weather', label: 'Weather', icon: CloudSun },
+  { id: 'notifications-security', label: 'Notifications & security', icon: Bell },
+  { id: 'privacy-security', label: 'Privacy & encryption', icon: ShieldCheck },
+  { id: 'mobile-app', label: 'Mobile app', icon: Smartphone },
 ]
 
 export function SettingsPage() {
@@ -53,9 +54,36 @@ export function SettingsPage() {
     setSearchParams(tab === 'general' ? {} : { tab })
   }
 
+  const mobileDetailOpen = searchParams.has('tab')
+  const activeLabel = settingsTabs.find((tab) => tab.id === activeTab)?.label ?? 'Settings'
+
   return (
     <div className="page settings-page">
       <div className="page-label">SETTINGS</div>
+
+      <section className="mobile-settings-menu" aria-label="Settings menu">
+        <header className="mobile-settings-title">Settings</header>
+        {settingsTabs.map((tab) => {
+          const Icon = tab.icon
+          return (
+            <button type="button" key={'mobile-'+tab.id} onClick={() => setSearchParams({ tab: tab.id })}>
+              <Icon size={21} />
+              <span>{tab.label}</span>
+              <span className="mobile-settings-chevron">›</span>
+            </button>
+          )
+        })}
+      </section>
+
+      {mobileDetailOpen && (
+        <div className="mobile-settings-detail-head">
+          <button type="button" onClick={() => setSearchParams({})} aria-label="Back to settings">
+            <ArrowLeft size={20} />
+          </button>
+          <strong>{activeLabel}</strong>
+          <span />
+        </div>
+      )}
 
       <nav className="settings-tabs" aria-label="Settings sections">
         {settingsTabs.map((tab) => (
@@ -70,7 +98,7 @@ export function SettingsPage() {
         ))}
       </nav>
 
-      <section className="settings-tab-content">
+      <section className={'settings-tab-content ' + (!mobileDetailOpen ? 'mobile-settings-closed' : '')}>
         {activeTab === 'general' && <GeneralSettings />}
         {activeTab === 'categories' && <CategoriesSettings />}
         {activeTab === 'modules' && <ModulesSettings />}
