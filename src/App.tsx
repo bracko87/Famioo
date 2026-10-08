@@ -30,6 +30,7 @@ import { FilesPage } from './pages/FilesPage'
 import { VaccinationPage } from './pages/VaccinationPage'
 import { TicketWalletPage } from './pages/TicketWalletPage'
 import { AssistantPage } from './pages/AssistantPage'
+import { BrandMark } from './components/Brand'
 
 function LoadingScreen() {
   return (
@@ -120,12 +121,7 @@ function LoadingScreen() {
         <span className="launch-orbit launch-orbit-14" title="AI Assistant"><Sparkles size={19} /></span>
 
         <div className="launch-brand">
-          <div className="launch-brand-logo" aria-hidden="true">
-            <span className="launch-petal launch-petal-purple" />
-            <span className="launch-petal launch-petal-pink" />
-            <span className="launch-petal launch-petal-green" />
-            <span className="launch-petal launch-petal-blue" />
-          </div>
+          <BrandMark className="launch-brand-logo" />
           <strong className="launch-brand-name">Famio</strong>
           <i className="launch-loader" aria-hidden="true" />
         </div>
