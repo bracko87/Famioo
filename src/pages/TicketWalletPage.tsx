@@ -1020,6 +1020,7 @@ export function TicketWalletPage(){
   const [qrAiLoading,setQrAiLoading]=useState(false)
   const [qrEventSaving,setQrEventSaving]=useState(false)
   const [qrWalletSaving,setQrWalletSaving]=useState(false)
+  const [qrApplyAllSaving,setQrApplyAllSaving]=useState(false)
   const [qrReminder,setQrReminder]=useState('60')
   const [saving,setSaving]=useState(false)
   const [error,setError]=useState('')
@@ -1618,6 +1619,17 @@ export function TicketWalletPage(){
 
     setMessage('QR page saved as an active Wallet ticket.')
     await load()
+  }
+
+  async function applyAllQrSuggestions(){
+    if(qrApplyAllSaving||!qrAiAnalyzed) return
+    setQrApplyAllSaving(true)
+
+    if(canWriteFiles&&!qrLinkSaved) await saveQrPageLink()
+    if(canWrite&&qrAiSuggestTicket) await saveQrPageTicket()
+    if(qrAiDraft&&canWriteCalendar) await saveQrAssistantEvent()
+
+    setQrApplyAllSaving(false)
   }
 
   async function saveQrAssistantEvent(){
@@ -2848,6 +2860,18 @@ export function TicketWalletPage(){
                   </Link>
                 </div>
 
+                {qrAiAnalyzed&&(
+                  <button
+                    type="button"
+                    className="primary-button qr-use-all-button"
+                    disabled={qrApplyAllSaving}
+                    onClick={()=>void applyAllQrSuggestions()}
+                  >
+                    <Check size={15}/>
+                    {qrApplyAllSaving?'Applying…':'Use all suggested actions'}
+                  </button>
+                )}
+
                 {!canWriteCalendar&&(
                   <div className="module-access-note">Calendar write access is required to create an event.</div>
                 )}
@@ -3010,6 +3034,16 @@ export function TicketWalletPage(){
                     <Ticket size={14}/>{qrWalletSaving?'Saving…':'Save Wallet ticket'}
                   </button>
                 </div>
+
+                <button
+                  type="button"
+                  className="primary-button qr-use-all-button"
+                  disabled={qrApplyAllSaving}
+                  onClick={()=>void applyAllQrSuggestions()}
+                >
+                  <Check size={15}/>
+                  {qrApplyAllSaving?'Applying…':'Use all suggested actions'}
+                </button>
 
                 <div className="modal-actions qr-event-actions">
                   <button type="button" className="secondary-button" disabled={qrEventSaving} onClick={()=>setQrAiDraft(null)}>
