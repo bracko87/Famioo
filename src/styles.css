@@ -17611,3 +17611,13 @@ b {
     background-size: cover;
   }
 }
+
+
+@media (max-width: 767px) {
+  .qr-use-all-button {
+    width: 100%;
+    min-height: 46px;
+    margin-top: 8px;
+    justify-content: center;
+  }
+}
