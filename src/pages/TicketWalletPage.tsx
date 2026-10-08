@@ -1114,9 +1114,8 @@ export function TicketWalletPage(){
     setQrAiSuggestTicket(false)
     setQrAiDraft(null)
     setQrLinkSaved(false)
-    setQrPageOpen(true)
     setError('')
-    setScannerMessage('QR destination found. Return to Famioo after viewing the page to save the link or create an event.')
+    setScannerMessage('')
 
     try{
       localStorage.setItem('famioo:pending-qr-page',JSON.stringify({
