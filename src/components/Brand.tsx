@@ -1,10 +1,7 @@
 export function BrandMark({ className = '' }: { className?: string }) {
   return (
     <span className={['brand-mark', className].filter(Boolean).join(' ')} aria-hidden="true">
-      <i className="brand-petal brand-petal-purple" />
-      <i className="brand-petal brand-petal-pink" />
-      <i className="brand-petal brand-petal-green" />
-      <i className="brand-petal brand-petal-cyan" />
+      <img src="/famioo-logo-white.svg" alt="" />
     </span>
   )
 }
