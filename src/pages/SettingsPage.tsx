@@ -1,5 +1,5 @@
-import { ArrowLeft, Bell, Boxes, CloudSun, Grid3X3, KeyRound, ListChecks, Palette, Settings2, ShieldCheck, Smartphone, Tags, Users } from 'lucide-react'
-import { useMemo } from 'react'
+import { ArrowLeft, Bell, Boxes, CloudSun, Grid3X3, KeyRound, ListChecks, Moon, Palette, Settings2, ShieldCheck, Smartphone, Sun, Tags, Users } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { CategoriesSettings } from '../components/settings/CategoriesSettings'
 import { GeneralSettings } from '../components/settings/GeneralSettings'
@@ -45,6 +45,14 @@ const settingsTabs: Array<{ id: SettingsTab; label: string; icon: typeof Setting
 
 export function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const [mobileTheme,setMobileTheme]=useState<'light'|'dark'>(()=>
+    window.localStorage.getItem('famioo.mobile.theme')==='dark' ? 'dark' : 'light',
+  )
+
+  useEffect(()=>{
+    document.documentElement.dataset.famiooTheme=mobileTheme
+    window.localStorage.setItem('famioo.mobile.theme',mobileTheme)
+  },[mobileTheme])
   const activeTab = useMemo<SettingsTab>(() => {
     const requested = searchParams.get('tab') as SettingsTab | null
     return settingsTabs.some((tab) => tab.id === requested) ? requested! : 'general'
@@ -61,19 +69,36 @@ export function SettingsPage() {
     <div className="page settings-page">
       <div className="page-label">SETTINGS</div>
 
-      <section className="mobile-settings-menu" aria-label="Settings menu">
-        <header className="mobile-settings-title">Settings</header>
-        {settingsTabs.map((tab) => {
-          const Icon = tab.icon
-          return (
-            <button type="button" key={'mobile-'+tab.id} onClick={() => setSearchParams({ tab: tab.id })}>
-              <Icon size={21} />
-              <span>{tab.label}</span>
-              <span className="mobile-settings-chevron">›</span>
-            </button>
-          )
-        })}
-      </section>
+      {!mobileDetailOpen && (
+        <section className="mobile-settings-menu" aria-label="Settings menu">
+          <header className="mobile-settings-title">Settings</header>
+
+          <div className="mobile-settings-theme-row">
+            <span className="mobile-settings-theme-icon">
+              {mobileTheme==='dark' ? <Moon size={20}/> : <Sun size={20}/>}
+            </span>
+            <span>
+              <strong>Appearance</strong>
+              <small>{mobileTheme==='dark' ? 'Dark' : 'Light'} mode</small>
+            </span>
+            <div className="mobile-theme-toggle" role="group" aria-label="Choose app appearance">
+              <button type="button" className={mobileTheme==='light'?'active':''} onClick={()=>setMobileTheme('light')}>Light</button>
+              <button type="button" className={mobileTheme==='dark'?'active':''} onClick={()=>setMobileTheme('dark')}>Dark</button>
+            </div>
+          </div>
+
+          {settingsTabs.map((tab) => {
+            const Icon = tab.icon
+            return (
+              <button type="button" key={'mobile-'+tab.id} onClick={() => setSearchParams({ tab: tab.id })}>
+                <Icon size={21} />
+                <span>{tab.label}</span>
+                <span className="mobile-settings-chevron">›</span>
+              </button>
+            )
+          })}
+        </section>
+      )}
 
       {mobileDetailOpen && (
         <div className="mobile-settings-detail-head">
