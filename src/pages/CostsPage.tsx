@@ -1,4 +1,4 @@
-import { CalendarClock, Plus, Receipt, ShoppingBag, WalletCards, X } from 'lucide-react'
+import { BarChart3, CalendarClock, Plus, Receipt, ShoppingBag, WalletCards, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { DatePicker } from '../components/ui/DatePicker'
 import { Select } from '../components/ui/Select'
@@ -110,6 +110,7 @@ export function CostsPage() {
   const [saving, setSaving] = useState(false)
   const [savingFinance, setSavingFinance] = useState(false)
   const [error, setError] = useState('')
+  const [mobilePanel,setMobilePanel]=useState<'plan'|'report'|'entries'|null>(null)
 
   async function load() {
     setError('')
@@ -530,7 +531,7 @@ export function CostsPage() {
   }
 
   return (
-    <div className="page costs-page">
+    <div className={'page costs-page mobile-cost-panel-'+(mobilePanel??'closed')}>
       <div className="page-heading-row">
         <div>
           <div className="page-label">HOUSEHOLD COSTS</div>
@@ -552,8 +553,24 @@ export function CostsPage() {
       {access?.enabled && !canWrite && <div className="module-access-note">Read-only access</div>}
       {error && !composerOpen && <div className="notice error">{error}</div>}
 
+      <nav className="mobile-cost-side-tabs" aria-label="Household cost tools">
+        <button type="button" className={mobilePanel==='plan'?'active':''} onClick={()=>setMobilePanel((current)=>current==='plan'?null:'plan')} aria-label="Budget and income">
+          <WalletCards size={18}/>
+          <span>Budget</span>
+        </button>
+        <button type="button" className={mobilePanel==='report'?'active':''} onClick={()=>setMobilePanel((current)=>current==='report'?null:'report')} aria-label="Cost reporting">
+          <BarChart3 size={18}/>
+          <span>Reports</span>
+        </button>
+        <button type="button" className={mobilePanel==='entries'?'active':''} onClick={()=>setMobilePanel((current)=>current==='entries'?null:'entries')} aria-label="Cost entries">
+          <Receipt size={18}/>
+          <span>Entries</span>
+        </button>
+      </nav>
+
       <section className="finance-overview-grid">
         <form className="list-card finance-plan-card" onSubmit={saveFinance}>
+          <button type="button" className="mobile-cost-drawer-close" onClick={()=>setMobilePanel(null)} aria-label="Close budget and income"><X size={19}/></button>
           <div className="finance-card-heading">
             <div>
               <span className="eyebrow">MONTHLY PLAN</span>
@@ -624,6 +641,7 @@ export function CostsPage() {
       </section>
 
       <section className="cost-report-card list-card">
+        <button type="button" className="mobile-cost-drawer-close" onClick={()=>setMobilePanel(null)} aria-label="Close reporting"><X size={19}/></button>
         <div className="cost-report-head">
           <div>
             <span className="eyebrow">REPORTING</span>
@@ -704,6 +722,14 @@ export function CostsPage() {
       </section>
 
       <section className="list-card cost-list">
+        <button type="button" className="mobile-cost-drawer-close" onClick={()=>setMobilePanel(null)} aria-label="Close cost entries"><X size={19}/></button>
+        <div className="mobile-cost-entry-actions">
+          {canWrite && (
+            <button type="button" className="primary-button compact" onClick={()=>setComposerOpen(true)}>
+              <Plus size={15}/>Add cost
+            </button>
+          )}
+        </div>
         <div className="cost-list-head">
           <div>
             <span className="eyebrow">COST ENTRIES</span>
