@@ -1,4 +1,4 @@
-import { ArrowLeft, ChefHat, Clock3, ExternalLink, Globe2, Users } from 'lucide-react'
+import { ArrowLeft, Clock3, ExternalLink, Globe2, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
@@ -82,11 +82,12 @@ export function RecipeDetailPage(){
 
       {recipe && (
         <article className="recipe-detail">
-          {recipe.source_image_url ? (
-            <img className="recipe-detail-image" src={recipe.source_image_url} alt={recipe.title}/>
-          ) : (
-            <div className="recipe-detail-image-placeholder"><ChefHat size={38}/></div>
-          )}
+          <img
+            className="recipe-detail-image"
+            src={recipe.source_image_url?.trim() || '/defaults/recipe-'+(recipe.meal_type || 'other')+'.svg'}
+            alt={recipe.title}
+            onError={(event)=>{ event.currentTarget.src='/defaults/recipe-other.svg' }}
+          />
 
           <section className="recipe-detail-hero">
             <span className="eyebrow">{recipe.meal_type.toUpperCase()}</span>
