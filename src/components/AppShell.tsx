@@ -29,6 +29,7 @@ import type { ModuleCode } from '../lib/types'
 import { Brand } from './Brand'
 import { FooterWeather } from './FooterWeather'
 import { Select } from './ui/Select'
+import { MobileAssistantQuick } from './MobileAssistantQuick'
 
 const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>> = {
   shopping: ShoppingBag,
@@ -275,6 +276,8 @@ export function AppShell() {
         <FooterWeather />
         <span>One household space. Everything organized.</span>
       </footer>
+
+      <MobileAssistantQuick />
 
       <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
         <NavLink to="/app" end><Home size={19} /><span>Home</span></NavLink>
