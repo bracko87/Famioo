@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarDays, CheckSquare, ClipboardList, FileText, FolderKanban, GraduationCap, House, Receipt, ShoppingBag, Sparkles, Syringe, Ticket, Utensils, Wrench } from 'lucide-react'
+import { CalendarDays, CheckSquare, ClipboardList, FileText, Folder, FolderKanban, GraduationCap, Receipt, ShoppingBag, Sparkles, Syringe, Ticket, Utensils, Wrench } from 'lucide-react'
 import type { Session, User } from '@supabase/supabase-js'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { supabase } from './lib/supabase'
@@ -50,7 +50,7 @@ function LoadingScreen() {
         <span className="launch-orbit launch-orbit-8" title="Life Admin"><FileText size={18} /></span>
         <span className="launch-orbit launch-orbit-9" title="Projects"><FolderKanban size={18} /></span>
         <span className="launch-orbit launch-orbit-10" title="Meals & Recipes"><Utensils size={18} /></span>
-        <span className="launch-orbit launch-orbit-11" title="Files"><House size={18} /></span>
+        <span className="launch-orbit launch-orbit-11" title="Files"><Folder size={18} /></span>
         <span className="launch-orbit launch-orbit-12" title="Vaccinations"><Syringe size={18} /></span>
         <span className="launch-orbit launch-orbit-13" title="Tickets"><Ticket size={18} /></span>
         <span className="launch-orbit launch-orbit-14" title="AI Assistant"><Sparkles size={18} /></span>
