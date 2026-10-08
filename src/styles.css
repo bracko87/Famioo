@@ -17402,3 +17402,212 @@ b {
     stroke-width: .48;
   }
 }
+
+
+/* =========================================================
+   Mobile visual corrections: launch ring, Settings, QR flow
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .launch-brand {
+    width: 126px;
+    height: 126px;
+    border-radius: 34px;
+    display: grid;
+    place-items: center;
+    background: transparent;
+  }
+
+  .launch-brand-app-icon {
+    width: 116px;
+    height: 116px;
+    display: block;
+    border-radius: 29px;
+    box-shadow: 0 18px 44px rgba(35,16,44,.22);
+  }
+
+  .launch-orbit {
+    width: 39px !important;
+    height: 39px !important;
+  }
+
+  .launch-orbit-1  { top: 8%; left: 50%; transform: translate(-50%,-50%) rotate(-8deg); }
+  .launch-orbit-2  { top: 11%; left: 69%; transform: translate(-50%,-50%) rotate(8deg); }
+  .launch-orbit-3  { top: 20%; left: 84%; transform: translate(-50%,-50%) rotate(-5deg); }
+  .launch-orbit-4  { top: 34%; left: 94%; transform: translate(-50%,-50%) rotate(9deg); }
+  .launch-orbit-5  { top: 52%; left: 96%; transform: translate(-50%,-50%) rotate(-6deg); }
+  .launch-orbit-6  { top: 70%; left: 90%; transform: translate(-50%,-50%) rotate(7deg); }
+  .launch-orbit-7  { top: 84%; left: 76%; transform: translate(-50%,-50%) rotate(-9deg); }
+  .launch-orbit-8  { top: 92%; left: 56%; transform: translate(-50%,-50%) rotate(6deg); }
+  .launch-orbit-9  { top: 90%; left: 36%; transform: translate(-50%,-50%) rotate(-7deg); }
+  .launch-orbit-10 { top: 82%; left: 20%; transform: translate(-50%,-50%) rotate(8deg); }
+  .launch-orbit-11 { top: 68%; left: 8%; transform: translate(-50%,-50%) rotate(-5deg); }
+  .launch-orbit-12 { top: 50%; left: 5%; transform: translate(-50%,-50%) rotate(7deg); }
+  .launch-orbit-13 { top: 31%; left: 10%; transform: translate(-50%,-50%) rotate(-8deg); }
+  .launch-orbit-14 { top: 16%; left: 25%; transform: translate(-50%,-50%) rotate(6deg); }
+
+  .launch-network-spokes line {
+    stroke: rgba(255,255,255,.16);
+  }
+
+  .launch-network-links line {
+    stroke: rgba(255,255,255,.095);
+  }
+}
+
+@media (max-width: 767px) {
+  /* App content is already positioned below the fixed header. Sticky Settings
+     subheads therefore belong at top:0, not another header-height lower. */
+  .mobile-settings-detail-head {
+    top: 0 !important;
+  }
+
+  .settings-page {
+    padding-top: 0 !important;
+  }
+
+  .settings-tab-content {
+    padding: 10px !important;
+  }
+
+  .settings-tab-content > .settings-card,
+  .settings-tab-content > div,
+  .settings-tab-content > section {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .settings-card {
+    padding: 14px !important;
+  }
+
+  .settings-card-heading,
+  .settings-section-head {
+    gap: 8px;
+  }
+
+  .settings-card-heading > svg,
+  .settings-section-head > svg {
+    display: none;
+  }
+
+  .weather-search-input {
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) auto !important;
+    gap: 7px;
+  }
+
+  .weather-search-input input {
+    min-width: 0;
+  }
+
+  .weather-search-input .secondary-button {
+    width: auto !important;
+    min-width: 76px;
+  }
+
+  .notification-security-grid {
+    gap: 10px;
+  }
+
+  .notification-settings-card {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .settings-switch-row {
+    grid-template-columns: minmax(0,1fr) auto !important;
+    gap: 10px;
+  }
+
+  .summary-schedule-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Returning from a scanned website feels like a dedicated QR result screen,
+     not a small popup floating above the Wallet. */
+  .qr-page-backdrop {
+    padding: 0 !important;
+    align-items: stretch !important;
+    background: #f7f4f8 !important;
+    backdrop-filter: none !important;
+  }
+
+  .qr-page-card {
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 100dvh;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: calc(12px + env(safe-area-inset-top)) 12px calc(82px + env(safe-area-inset-bottom)) !important;
+    border-radius: 0 !important;
+    overflow-y: auto;
+    box-shadow: none !important;
+  }
+
+  .qr-page-card > header {
+    top: calc(-12px - env(safe-area-inset-top)) !important;
+    margin: calc(-12px - env(safe-area-inset-top)) -12px 10px !important;
+    padding: calc(12px + env(safe-area-inset-top)) 12px 11px !important;
+  }
+
+  .qr-page-source {
+    min-height: 110px;
+    padding: 14px;
+    border-radius: 15px;
+    background-position: center;
+    background-size: cover;
+    overflow: hidden;
+  }
+
+  .qr-page-source.has-image {
+    min-height: 145px;
+  }
+
+  .qr-ai-summary {
+    padding: 13px;
+    border: 1px solid #e7ddec;
+    border-radius: 14px;
+    display: grid;
+    gap: 7px;
+    background: #fbf8fc;
+  }
+
+  .qr-ai-summary > span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #784b91;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .qr-ai-summary p {
+    margin: 0;
+    color: #665a6b;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .qr-page-choice-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .qr-ai-extra-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+
+  .qr-ai-extra-actions .secondary-button {
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .ticket-digital-poster.website-artwork {
+    background-position: center;
+    background-size: cover;
+  }
+}
