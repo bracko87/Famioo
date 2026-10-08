@@ -1521,7 +1521,7 @@ export function TicketWalletPage(){
   async function readQrPageWithAssistant(){
     if(!qrPageUrl||qrAiLoading) return
     if(!hasAiAssistant){
-      setError('AI Assistant is required to read the QR destination page and create an event draft.')
+      setError('AI Assistant is required to analyze this QR destination page.')
       return
     }
 
@@ -1544,9 +1544,14 @@ export function TicketWalletPage(){
       return
     }
 
+    setQrAiAnalyzed(true)
+    setQrAiSummary(String(result.data?.summary||'Assistant analyzed the page.').slice(0,900))
+    setQrAiSuggestTicket(Boolean(result.data?.suggest_ticket))
+    if(result.data?.image_url&&isWebQr(String(result.data.image_url))) setQrPageImageUrl(String(result.data.image_url))
+
     const event=result.data?.event
     if(!event?.found_event){
-      setError('Assistant opened the page but did not find one clear calendar event. You can still use the page normally or create an event manually in Calendar.')
+      setQrAiDraft(null)
       return
     }
 
@@ -1562,6 +1567,57 @@ export function TicketWalletPage(){
       confidence:Math.max(0,Math.min(1,Number(event.confidence??0))),
       source_url:String(result.data?.source_url||qrPageUrl),
     })
+  }
+
+  async function saveQrPageTicket(){
+    if(!canWrite||qrWalletSaving||!qrPageUrl) return
+
+    const draft=qrAiDraft
+    const ticketTitle=(draft?.title||qrPageTitle||hostTitle(qrPageUrl)).trim().slice(0,200)
+    const summary=(qrAiSummary||qrPageDescription).trim()
+    const cover=qrPageImageUrl&&isWebQr(qrPageImageUrl)?QR_COVER_PREFIX+qrPageImageUrl+QR_COVER_SUFFIX:''
+    const notes=[
+      cover,
+      summary,
+      'Source page: '+qrPageUrl,
+    ].filter(Boolean).join('\n\n')
+
+    setQrWalletSaving(true)
+    setError('')
+
+    const result=await supabase.rpc('save_ticket_wallet_entry_v1',{
+      p_id:null,
+      p_household_id:household.id,
+      p_title:ticketTitle||'QR page',
+      p_ticket_type:ticketTypeFromText([ticketTitle,summary].join(' ')),
+      p_holder_profile_id:currentProfile?.id??null,
+      p_start_date:draft?.date||null,
+      p_start_time:draft&&!draft.all_day&&draft.start_time?draft.start_time:null,
+      p_end_date:draft?.end_date||null,
+      p_end_time:draft&&!draft.all_day&&draft.end_time?draft.end_time:null,
+      p_location_text:draft?.location.trim()||null,
+      p_provider_text:hostTitle(qrPageUrl),
+      p_booking_reference:null,
+      p_qr_value:qrPageUrl,
+      p_notes:notes||null,
+      p_status:'active',
+      p_calendar_id:null,
+      p_sync_calendar:false,
+      p_file_path:null,
+      p_file_name:null,
+      p_file_mime_type:null,
+      p_file_size:null,
+    })
+
+    setQrWalletSaving(false)
+
+    if(result.error){
+      setError(result.error.message)
+      return
+    }
+
+    setMessage('QR page saved as an active Wallet ticket.')
+    await load()
   }
 
   async function saveQrAssistantEvent(){
