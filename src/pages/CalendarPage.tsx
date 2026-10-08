@@ -1,4 +1,4 @@
-import { Archive, CalendarSync, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, EyeOff, FolderKanban, LockKeyhole, Pencil, Plus, Settings2, Trash2, WalletCards, X } from 'lucide-react'
+import { Archive, CalendarSync, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, EyeOff, FolderKanban, LockKeyhole, Pencil, Plus, Search, Settings2, Trash2, WalletCards, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
@@ -293,6 +293,8 @@ export function CalendarPage() {
   const [calendarSaving,setCalendarSaving] = useState(false)
   const [editingExternalReadOnly,setEditingExternalReadOnly] = useState(false)
   const [editingExternalSource,setEditingExternalSource] = useState('')
+  const [calendarSearchOpen,setCalendarSearchOpen] = useState(false)
+  const [calendarSearchQuery,setCalendarSearchQuery] = useState('')
 
   const range = useMemo(
     () => rangeFor(view, anchor, mondayFirst),
@@ -374,10 +376,22 @@ export function CalendarPage() {
     [calendars],
   )
 
-  const visibleEvents = useMemo(
-    () => events.filter((event) => !hiddenCalendarIds.includes(event.calendar_id)),
-    [events, hiddenCalendarIds],
-  )
+  const visibleEvents = useMemo(() => {
+    const query=calendarSearchQuery.trim().toLocaleLowerCase()
+    return events.filter((event) => {
+      if(hiddenCalendarIds.includes(event.calendar_id)) return false
+      if(!query) return true
+
+      const category=event.category_id ? categoriesById.get(event.category_id) : undefined
+      const calendar=calendarsById.get(event.calendar_id)
+      return [
+        event.title,
+        event.location_text ?? '',
+        category?.name ?? '',
+        calendar?.name ?? '',
+      ].some((value)=>value.toLocaleLowerCase().includes(query))
+    })
+  }, [events, hiddenCalendarIds, calendarSearchQuery, categoriesById, calendarsById])
 
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarOccurrence[]>()
@@ -1226,6 +1240,18 @@ export function CalendarPage() {
               )
             })}
           </div>
+          <button
+            type="button"
+            className={calendarSearchOpen ? 'icon-button mobile-calendar-search-button active' : 'icon-button mobile-calendar-search-button'}
+            aria-label="Search calendar"
+            aria-expanded={calendarSearchOpen}
+            onClick={()=>{
+              setCalendarSearchOpen((current)=>!current)
+              if(calendarSearchOpen) setCalendarSearchQuery('')
+            }}
+          >
+            <Search size={17}/>
+          </button>
           {canWrite ? (
             <button className="primary-button compact mobile-calendar-event-button" onClick={() => openComposer(dateKey(new Date()))}>
               <Plus size={17} />
@@ -1235,6 +1261,24 @@ export function CalendarPage() {
             <span className="read-only-chip">Read only</span>
           )}
         </div>
+
+        {calendarSearchOpen && (
+          <div className="mobile-calendar-search">
+            <Search size={16}/>
+            <input
+              value={calendarSearchQuery}
+              onChange={(event)=>setCalendarSearchQuery(event.target.value)}
+              placeholder="Search events, calendars or categories"
+              aria-label="Search calendar events"
+              autoFocus
+            />
+            {calendarSearchQuery && (
+              <button type="button" onClick={()=>setCalendarSearchQuery('')} aria-label="Clear calendar search">
+                <X size={15}/>
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="mobile-calendar-secondary-row">
           <button className="secondary-button compact" onClick={() => routeNavigate('/app/calendar/connections')}>
@@ -1310,27 +1354,78 @@ export function CalendarPage() {
       )}
 
       {view === 'week' && (
-        <section className="week-calendar">
-          {weekDays.map((day) => {
-            const key = dateKey(day)
-            const dayEvents = eventsByDay.get(key) ?? []
-            const today = key === dateKey(new Date())
+        <>
+          <section className="mobile-week-calendar">
+            <div className="mobile-week-strip" aria-label="Week days">
+              {weekDays.map((day)=>{
+                const key=dateKey(day)
+                const selected=key===dateKey(anchor)
+                const today=key===dateKey(new Date())
+                return (
+                  <button
+                    type="button"
+                    className={(selected?'selected ':'')+(today?'today':'')}
+                    key={'strip-'+key}
+                    onClick={()=>setAnchor(day)}
+                  >
+                    <small>{day.toLocaleDateString(undefined,{ weekday:'narrow' })}</small>
+                    <strong>{day.getDate()}</strong>
+                  </button>
+                )
+              })}
+            </div>
 
-            return (
-              <article className={today ? 'week-day today' : 'week-day'} key={key}>
-                <button type="button" className="week-day-head" onClick={() => openComposer(key)} disabled={!canWrite}>
-                  <small>{day.toLocaleDateString(undefined, { weekday: 'short' })}</small>
-                  <strong>{day.getDate()}</strong>
-                </button>
-                <div className="week-day-events">
-                  {dayEvents.length
-                    ? dayEvents.map((item) => <EventPill item={item} detailed key={item.occurrence_key} />)
-                    : <span className="calendar-empty-mini">No events</span>}
-                </div>
-              </article>
-            )
-          })}
-        </section>
+            <div className="mobile-week-agenda">
+              {weekDays.map((day)=>{
+                const key=dateKey(day)
+                const dayEvents=eventsByDay.get(key)??[]
+                const today=key===dateKey(new Date())
+                return (
+                  <article className={today?'mobile-week-day today':'mobile-week-day'} key={'agenda-'+key}>
+                    <header>
+                      <div>
+                        <strong>{day.toLocaleDateString(undefined,{ weekday:'long' })}</strong>
+                        <span>{day.toLocaleDateString(undefined,{ day:'numeric',month:'long' })}</span>
+                      </div>
+                      {canWrite && (
+                        <button type="button" onClick={()=>openComposer(key)} aria-label={'Add event on '+day.toLocaleDateString()}>
+                          <Plus size={22}/>
+                        </button>
+                      )}
+                    </header>
+                    <div className="mobile-week-day-events">
+                      {dayEvents.length
+                        ? dayEvents.map((item)=><EventPill item={item} detailed key={item.occurrence_key}/>)
+                        : <span className="mobile-week-empty">Nothing planned</span>}
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          </section>
+
+          <section className="week-calendar desktop-week-calendar">
+            {weekDays.map((day) => {
+              const key = dateKey(day)
+              const dayEvents = eventsByDay.get(key) ?? []
+              const today = key === dateKey(new Date())
+
+              return (
+                <article className={today ? 'week-day today' : 'week-day'} key={key}>
+                  <button type="button" className="week-day-head" onClick={() => openComposer(key)} disabled={!canWrite}>
+                    <small>{day.toLocaleDateString(undefined, { weekday: 'short' })}</small>
+                    <strong>{day.getDate()}</strong>
+                  </button>
+                  <div className="week-day-events">
+                    {dayEvents.length
+                      ? dayEvents.map((item) => <EventPill item={item} detailed key={item.occurrence_key} />)
+                      : <span className="calendar-empty-mini">No events</span>}
+                  </div>
+                </article>
+              )
+            })}
+          </section>
+        </>
       )}
 
       {view === 'day' && (
