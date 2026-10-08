@@ -47,6 +47,51 @@ Possible later extensions:
 - smartwatch / lock-screen shortcut
 - emergency contacts outside the Famioo household
 - critical/high-priority notification support where the mobile OS permits it
+- hardware-button / locked-phone SOS trigger where the mobile operating system permits it
+
+### Family Messenger
+Status: Approved idea
+
+Private household/group chat with text, photo and voice messages, with video messages as a possible later extension.
+
+### Family Contacts Directory
+Status: Approved idea — partial technical foundation already exists
+
+A shared household directory for important people and services beyond Famioo account members.
+
+Current Famioo foundation:
+- Household member email/phone data is already exposed through `household_users_v1`.
+- This is not yet a true shared contacts directory.
+
+Planned directory scope:
+- grandparents and relatives
+- babysitters
+- doctors and pharmacies
+- School/Kita contacts
+- neighbours
+- emergency contacts
+- addresses, phone numbers, email and notes
+- optional links to Calendar events and Safety/SOS
+
+### Comments & Photos Directly on Events
+Status: Approved idea
+
+Allow household members to add comments, photos and files directly to a Calendar event so planning and discussion stay with the event.
+
+### Family Photo Albums Linked to Events
+Status: Approved idea
+
+Shared family albums connected to Calendar events/dates, with photos from birthdays, holidays, trips, school events and other memories.
+
+### Child Rewards Economy
+Status: Approved idea
+
+Connect chores/tasks to configurable points or stars and allow parents to create a controlled reward catalogue for children.
+
+### Shared Memo / Someday Area
+Status: Approved idea
+
+A shared place for undated ideas, notes, places to visit and future plans that can later be converted into Calendar events, Tasks or Projects.
 
 ## Existing future-module ideas
 
@@ -63,26 +108,11 @@ Possible later extensions:
 
 ## Research candidates — not yet approved
 
-### Family Messenger
-Private household/group chat with text, photo, voice and optionally video messages.
-
-### Event comments & event attachments
-Comments, photos and files attached directly to a calendar event so planning conversations remain with the event.
-
-### Family Memories / Event Albums
-Shared photo albums that can be linked to calendar events and dates.
-
 ### Multiple Circles / Groups
 Separate private spaces for household, extended family, grandparents, friends, neighbours or a sports group.
 
 ### Safe Places / Arrival & Departure Alerts
 Define places such as Home, School, Kita or Work and notify selected family members when someone arrives or leaves.
-
-### Family Directory
-Shared important contacts such as grandparents, babysitters, doctors, school contacts, neighbours and emergency contacts.
-
-### Child Rewards Store
-Configurable points for chores/tasks and a parent-managed reward catalogue.
 
 ### Custom Dashboard Widgets
 Let each household/member choose dashboard widgets such as upcoming events, chores, meals, favourite lists, family members or school items.
@@ -92,9 +122,6 @@ Save repeatable weekly meal plans and keep an unscheduled queue of meals to cook
 
 ### Shopping Barcode Scanner
 Scan product barcodes to add items to shopping lists quickly.
-
-### Family Memo / Someday Board
-Shared notes, ideas, places to visit and unscheduled plans that can later be converted into calendar events or tasks.
 
 ### Crash / Journey Safety
 Longer-term safety concept using phone motion/location data to detect a likely crash or failed arrival and alert trusted family members.
