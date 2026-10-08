@@ -157,20 +157,30 @@ function pageText(html:string){
     ||""
   ).trim()
 
+  const rawImage=(
+    $('meta[property="og:image"]').attr("content")
+    ||$('meta[name="twitter:image"]').attr("content")
+    ||$('meta[property="twitter:image"]').attr("content")
+    ||$('link[rel="image_src"]').attr("href")
+    ||""
+  ).trim()
+
   const body=$("body").text()
     .replace(/\s+/g," ")
     .trim()
     .slice(0,45_000)
 
-  return {title,description,body}
+  return {title,description,body,rawImage}
 }
 
 const schema={
   type:"object",
   additionalProperties:false,
-  required:["found_event","title","date","end_date","start_time","end_time","all_day","location","description","confidence"],
+  required:["summary","found_event","suggest_ticket","title","date","end_date","start_time","end_time","all_day","location","description","confidence"],
   properties:{
+    summary:{type:"string",maxLength:900},
     found_event:{type:"boolean"},
+    suggest_ticket:{type:"boolean"},
     title:{type:["string","null"],maxLength:200},
     date:{type:["string","null"],pattern:"^\\d{4}-\\d{2}-\\d{2}$"},
     end_date:{type:["string","null"],pattern:"^\\d{4}-\\d{2}-\\d{2}$"},
@@ -284,6 +294,10 @@ Deno.serve(async(req)=>{
   if(html.length>5_000_000) return json({error:"The QR destination page is too large to analyze safely."},413)
 
   const page=pageText(html)
+  let pageImageUrl=""
+  if(page.rawImage){
+    try{ pageImageUrl=new URL(page.rawImage,response.url||url.toString()).toString() }catch{ pageImageUrl="" }
+  }
   if(!page.body&&!page.title){
     return json({error:"Famioo opened the page, but there was no readable information."},422)
   }
@@ -295,6 +309,7 @@ Deno.serve(async(req)=>{
         title:page.title.slice(0,200)||new URL(response.url||url.toString()).hostname.replace(/^www\./,""),
         description:page.description.slice(0,700)||null,
         source_url:response.url||url.toString(),
+        image_url:pageImageUrl||null,
       },
     })
   }
@@ -344,8 +359,10 @@ Deno.serve(async(req)=>{
   }).format(new Date())
 
   const instruction=[
-    "You extract ONE calendar event from a webpage opened from a QR code.",
-    "The page may be a concert, invitation, fair, exhibition, appointment, registration page, commercial flyer landing page, job fair, sports event, or a page with no event at all.",
+    "You summarize a webpage opened from a QR code and decide which Famioo actions are useful.",
+    "The page may be a concert, invitation, fair, exhibition, appointment, registration page, commercial flyer landing page, travel/ticket page, booking page, sports event, ordinary website, or a page with no event at all.",
+    "Return a short plain-language summary of what the page is about.",
+    "Set suggest_ticket=true only when keeping this page as an active pass/ticket/booking/reference in Ticket Wallet would genuinely be useful.",
     "Never invent missing information. If this page does not clearly describe a schedulable event, set found_event=false and return null event fields.",
     "Use only the supplied webpage text. Ignore navigation, ads, cookie notices, recommendations, unrelated future events and footer content.",
     "For a clear event, return its concise name, date, optional end date, start/end times, location and a short useful description.",
@@ -441,6 +458,9 @@ Deno.serve(async(req)=>{
     ok:true,
     source_url:response.url||url.toString(),
     model,
+    summary:String(parsed.summary||"").slice(0,900),
+    suggest_ticket:Boolean(parsed.suggest_ticket),
+    image_url:pageImageUrl||null,
     event:{
       found_event:Boolean(parsed.found_event),
       title:parsed.title?String(parsed.title).slice(0,200):null,
