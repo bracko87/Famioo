@@ -33,6 +33,10 @@ const actionLabels: Record<string, string> = {
   work_calendar_image: 'Calendar screenshot import',
   work_calendar_text: 'Calendar text import',
   quick_assistant: 'Quick Assistant',
+  create_calendar_event: 'Created calendar event',
+  create_task: 'Created task',
+  create_checklist: 'Created checklist',
+  create_shopping_list: 'Created shopping list',
 }
 
 function toSummary(row: Record<string, unknown>): UsageSummary {
