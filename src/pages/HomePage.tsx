@@ -75,7 +75,7 @@ export function HomePage() {
 
     const observer = new IntersectionObserver(([entry]) => {
       setShowMobilePromo(entry.isIntersecting)
-    }, { threshold: 0.01 })
+    }, { threshold: 0.01, rootMargin: '140px 0px 0px 0px' })
 
     observer.observe(sentinel)
     return () => observer.disconnect()
