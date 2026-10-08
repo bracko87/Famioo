@@ -17002,23 +17002,23 @@ b {
 
   html[data-famioo-theme="dark"] .role-badge.owner,
   html[data-famioo-theme="dark"] .settings-module-list em.core {
-    color: #d9b9ff !important;
+    color: #fff !important;
     background: #321f43 !important;
   }
 
   html[data-famioo-theme="dark"] .role-badge.admin {
-    color: #a9d9ff !important;
+    color: #fff !important;
     background: #173248 !important;
   }
 
   html[data-famioo-theme="dark"] .role-badge.user,
   html[data-famioo-theme="dark"] .status-badge.active {
-    color: #b8edd3 !important;
+    color: #fff !important;
     background: #18392b !important;
   }
 
   html[data-famioo-theme="dark"] .permission-fixed {
-    color: #ddc4ff !important;
+    color: #fff !important;
     background: #2d2038 !important;
   }
 
