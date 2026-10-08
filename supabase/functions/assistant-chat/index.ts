@@ -373,6 +373,7 @@ Deno.serve(async(req)=>{
     "For create_calendar_event: extract title, date, optional start/end time, all-day, location and description. If a date/time request is clear, use it.",
     "For create_task/create_checklist/create_shopping_list: title is required; date is an optional due/scheduled date.",
     "If the user only asks a question or calculation, action_type must be none.",
+    "Use plain text only in reply. Do not use Markdown markers such as **, #, backticks or bullet syntax.",
     "If essential information for a requested creation is missing, action_type must be none and reply with one concise follow-up question.",
     "Do not invent private household data or participant names.",
     "Household timezone: "+timezone+". Current household-local date/time: "+now+".",
