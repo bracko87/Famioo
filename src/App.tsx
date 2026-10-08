@@ -42,46 +42,42 @@ function LoadingScreen() {
       <div className="mobile-launch-screen" aria-label="Opening Famioo">
         <svg className="launch-network" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <g className="launch-network-spokes">
-            <line x1="50" y1="49" x2="14" y2="10" />
-            <line x1="50" y1="49" x2="67" y2="14" />
-            <line x1="50" y1="49" x2="38" y2="24" />
-            <line x1="50" y1="49" x2="88" y2="28" />
-            <line x1="50" y1="49" x2="10" y2="39" />
-            <line x1="50" y1="49" x2="72" y2="38" />
-            <line x1="50" y1="49" x2="24" y2="54" />
-            <line x1="50" y1="49" x2="92" y2="56" />
-            <line x1="50" y1="49" x2="12" y2="70" />
-            <line x1="50" y1="49" x2="76" y2="66" />
-            <line x1="50" y1="49" x2="39" y2="76" />
-            <line x1="50" y1="49" x2="88" y2="83" />
-            <line x1="50" y1="49" x2="20" y2="91" />
-            <line x1="50" y1="49" x2="61" y2="89" />
+            <line x1="50" y1="50" x2="50" y2="8" />
+            <line x1="50" y1="50" x2="69" y2="11" />
+            <line x1="50" y1="50" x2="84" y2="20" />
+            <line x1="50" y1="50" x2="94" y2="34" />
+            <line x1="50" y1="50" x2="96" y2="52" />
+            <line x1="50" y1="50" x2="90" y2="70" />
+            <line x1="50" y1="50" x2="76" y2="84" />
+            <line x1="50" y1="50" x2="56" y2="92" />
+            <line x1="50" y1="50" x2="36" y2="90" />
+            <line x1="50" y1="50" x2="20" y2="82" />
+            <line x1="50" y1="50" x2="8" y2="68" />
+            <line x1="50" y1="50" x2="5" y2="50" />
+            <line x1="50" y1="50" x2="10" y2="31" />
+            <line x1="50" y1="50" x2="25" y2="16" />
           </g>
           <g className="launch-network-links">
-            <line x1="14" y1="10" x2="38" y2="24" />
-            <line x1="14" y1="10" x2="10" y2="39" />
-            <line x1="67" y1="14" x2="38" y2="24" />
-            <line x1="67" y1="14" x2="88" y2="28" />
-            <line x1="38" y1="24" x2="72" y2="38" />
-            <line x1="38" y1="24" x2="24" y2="54" />
-            <line x1="88" y1="28" x2="72" y2="38" />
-            <line x1="88" y1="28" x2="92" y2="56" />
-            <line x1="10" y1="39" x2="24" y2="54" />
-            <line x1="10" y1="39" x2="12" y2="70" />
-            <line x1="72" y1="38" x2="92" y2="56" />
-            <line x1="72" y1="38" x2="76" y2="66" />
-            <line x1="24" y1="54" x2="12" y2="70" />
-            <line x1="24" y1="54" x2="39" y2="76" />
-            <line x1="24" y1="54" x2="76" y2="66" />
-            <line x1="92" y1="56" x2="76" y2="66" />
-            <line x1="92" y1="56" x2="88" y2="83" />
-            <line x1="12" y1="70" x2="20" y2="91" />
-            <line x1="76" y1="66" x2="39" y2="76" />
-            <line x1="76" y1="66" x2="88" y2="83" />
-            <line x1="39" y1="76" x2="20" y2="91" />
-            <line x1="39" y1="76" x2="61" y2="89" />
-            <line x1="88" y1="83" x2="61" y2="89" />
-            <line x1="20" y1="91" x2="61" y2="89" />
+            <line x1="50" y1="8" x2="69" y2="11" />
+            <line x1="69" y1="11" x2="84" y2="20" />
+            <line x1="84" y1="20" x2="94" y2="34" />
+            <line x1="94" y1="34" x2="96" y2="52" />
+            <line x1="96" y1="52" x2="90" y2="70" />
+            <line x1="90" y1="70" x2="76" y2="84" />
+            <line x1="76" y1="84" x2="56" y2="92" />
+            <line x1="56" y1="92" x2="36" y2="90" />
+            <line x1="36" y1="90" x2="20" y2="82" />
+            <line x1="20" y1="82" x2="8" y2="68" />
+            <line x1="8" y1="68" x2="5" y2="50" />
+            <line x1="5" y1="50" x2="10" y2="31" />
+            <line x1="10" y1="31" x2="25" y2="16" />
+            <line x1="25" y1="16" x2="50" y2="8" />
+            <line x1="25" y1="16" x2="84" y2="20" />
+            <line x1="10" y1="31" x2="69" y2="11" />
+            <line x1="5" y1="50" x2="94" y2="34" />
+            <line x1="8" y1="68" x2="96" y2="52" />
+            <line x1="20" y1="82" x2="90" y2="70" />
+            <line x1="36" y1="90" x2="76" y2="84" />
           </g>
         </svg>
 
@@ -101,10 +97,7 @@ function LoadingScreen() {
         <span className="launch-orbit launch-orbit-14" title="AI Assistant"><Sparkles size={18} /></span>
 
         <div className="launch-brand">
-          <img className="launch-brand-mark" src="/famioo-mark.svg" alt="" />
-          <strong className="launch-wordmark">Famioo</strong>
-          <span className="launch-tagline">Family life, organized.</span>
-          <i className="launch-loader" />
+          <img className="launch-brand-app-icon" src="/famioo-app-icon.svg" alt="Famioo" />
         </div>
       </div>
     </main>
