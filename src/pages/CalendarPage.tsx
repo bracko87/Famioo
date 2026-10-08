@@ -1203,6 +1203,53 @@ export function CalendarPage() {
         )}
       </section>
 
+      <section className="mobile-calendar-action-panel" aria-label="Mobile calendar actions">
+        <div className="mobile-calendar-primary-row">
+          <div className="mobile-calendar-layer-scroll">
+            {calendars.map((calendar)=> {
+              const visible=!hiddenCalendarIds.includes(calendar.id)
+              return (
+                <button
+                  type="button"
+                  className={visible ? 'calendar-layer-chip active' : 'calendar-layer-chip'}
+                  key={'mobile-'+calendar.id}
+                  onClick={()=>setHiddenCalendarIds((current)=>
+                    visible ? [...current,calendar.id] : current.filter((id)=>id!==calendar.id)
+                  )}
+                  aria-pressed={visible}
+                >
+                  {visible ? <Eye size={13}/> : <EyeOff size={13}/>}
+                  <span className="calendar-layer-dot" style={{ backgroundColor:categoryColor(calendar.color_key) }}/>
+                  <span>{calendar.name}</span>
+                  {calendar.is_default && <small>Default</small>}
+                </button>
+              )
+            })}
+          </div>
+          {canWrite ? (
+            <button className="primary-button compact mobile-calendar-event-button" onClick={() => openComposer(dateKey(new Date()))}>
+              <Plus size={17} />
+              Event
+            </button>
+          ) : (
+            <span className="read-only-chip">Read only</span>
+          )}
+        </div>
+
+        <div className="mobile-calendar-secondary-row">
+          <button className="secondary-button compact" onClick={() => routeNavigate('/app/calendar/connections')}>
+            <CalendarSync size={15}/>
+            Work import
+          </button>
+          {canWrite && (
+            <button type="button" className="secondary-button compact" onClick={()=>setCalendarManagerOpen(true)}>
+              <Settings2 size={14}/>
+              Manage calendars
+            </button>
+          )}
+        </div>
+      </section>
+
       <section className="calendar-layer-bar" aria-label="Calendar visibility">
         <div className="calendar-layer-list">
           {calendars.map((calendar)=> {
