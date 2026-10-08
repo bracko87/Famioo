@@ -17621,3 +17621,194 @@ b {
     justify-content: center;
   }
 }
+
+
+/* =========================================================
+   Approved Famio mobile loading screen
+   Coded to match the accepted visual reference.
+   ========================================================= */
+@media (max-width: 900px) {
+  .loading-screen {
+    min-height: 100dvh;
+    background:
+      radial-gradient(circle at 18% 16%, rgba(255,255,255,.10), transparent 27%),
+      radial-gradient(circle at 82% 78%, rgba(238,93,186,.18), transparent 31%),
+      linear-gradient(160deg,#542166 0%,#6b2879 45%,#a63f93 100%);
+  }
+
+  .mobile-launch-screen {
+    position: relative;
+    isolation: isolate;
+    width: 100%;
+    min-height: 100dvh;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .launch-network {
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .launch-network line,
+  .launch-network circle {
+    vector-effect: non-scaling-stroke;
+  }
+
+  .launch-network-spokes line {
+    stroke: rgba(255,255,255,.13);
+    stroke-width: .7;
+    stroke-linecap: round;
+  }
+
+  .launch-network-links line {
+    stroke: rgba(255,255,255,.075);
+    stroke-width: .55;
+    stroke-linecap: round;
+  }
+
+  .launch-network-nodes circle {
+    fill: rgba(255,255,255,.62);
+    filter: drop-shadow(0 0 3px rgba(255,255,255,.35));
+  }
+
+  .launch-orbit {
+    position: absolute;
+    z-index: 2;
+    width: 46px !important;
+    height: 46px !important;
+    right: auto !important;
+    bottom: auto !important;
+    border: 1px solid rgba(255,255,255,.20);
+    border-radius: 15px;
+    display: grid;
+    place-items: center;
+    color: rgba(255,255,255,.97);
+    background: linear-gradient(145deg,rgba(255,255,255,.12),rgba(255,255,255,.055));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.12),
+      0 10px 24px rgba(32,14,40,.12);
+    backdrop-filter: blur(9px);
+    -webkit-backdrop-filter: blur(9px);
+  }
+
+  .launch-orbit svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2;
+  }
+
+  .launch-orbit-1  { top: 8%;  left: 50%; transform: translate(-50%,-50%) rotate(-5deg); }
+  .launch-orbit-2  { top: 14%; left: 75%; transform: translate(-50%,-50%) rotate(6deg); }
+  .launch-orbit-3  { top: 27%; left: 88%; transform: translate(-50%,-50%) rotate(-4deg); }
+  .launch-orbit-4  { top: 42%; left: 92%; transform: translate(-50%,-50%) rotate(5deg); }
+  .launch-orbit-5  { top: 59%; left: 90%; transform: translate(-50%,-50%) rotate(-3deg); }
+  .launch-orbit-6  { top: 73%; left: 83%; transform: translate(-50%,-50%) rotate(4deg); }
+  .launch-orbit-7  { top: 85%; left: 71%; transform: translate(-50%,-50%) rotate(-5deg); }
+  .launch-orbit-8  { top: 92%; left: 58%; transform: translate(-50%,-50%) rotate(3deg); }
+  .launch-orbit-9  { top: 91%; left: 37%; transform: translate(-50%,-50%) rotate(-4deg); }
+  .launch-orbit-10 { top: 83%; left: 22%; transform: translate(-50%,-50%) rotate(4deg); }
+  .launch-orbit-11 { top: 69%; left: 10%; transform: translate(-50%,-50%) rotate(-3deg); }
+  .launch-orbit-12 { top: 51%; left: 8%;  transform: translate(-50%,-50%) rotate(4deg); }
+  .launch-orbit-13 { top: 32%; left: 13%; transform: translate(-50%,-50%) rotate(-5deg); }
+  .launch-orbit-14 { top: 16%; left: 27%; transform: translate(-50%,-50%) rotate(4deg); }
+
+  .launch-brand {
+    position: absolute !important;
+    z-index: 5;
+    top: 49%;
+    left: 50%;
+    width: 188px !important;
+    height: auto !important;
+    transform: translate(-50%,-50%);
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  .launch-brand-app-icon {
+    width: 112px !important;
+    height: 112px !important;
+    display: block;
+    border-radius: 29px !important;
+    box-shadow:
+      0 18px 42px rgba(29,12,38,.22),
+      0 0 0 1px rgba(255,255,255,.08);
+  }
+
+  .launch-brand-name {
+    margin-top: 13px;
+    color: #fff;
+    font-size: 34px;
+    font-weight: 720;
+    line-height: 1;
+    letter-spacing: -.035em;
+    text-shadow: 0 6px 20px rgba(31,14,39,.18);
+  }
+
+  .launch-brand .launch-loader {
+    position: relative;
+    z-index: 6;
+    width: 138px !important;
+    height: 12px !important;
+    margin-top: 18px !important;
+    border: 1.5px solid rgba(255,255,255,.52);
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(255,255,255,.08);
+    box-shadow: inset 0 0 0 1px rgba(88,46,111,.10);
+  }
+
+  .launch-brand .launch-loader::after {
+    content: "";
+    position: absolute;
+    top: 1px;
+    bottom: 1px;
+    left: 1px;
+    width: 58%;
+    border-radius: 999px;
+    background: linear-gradient(90deg,#a653f2 0%,#c98bff 55%,#f1ddff 100%);
+    box-shadow: 0 0 10px rgba(207,147,255,.35);
+    animation: famio-approved-progress 1.7s ease-in-out infinite alternate;
+  }
+}
+
+@media (max-width: 480px) {
+  .launch-orbit {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 14px;
+  }
+
+  .launch-orbit svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .launch-brand-app-icon {
+    width: 106px !important;
+    height: 106px !important;
+    border-radius: 27px !important;
+  }
+
+  .launch-brand-name {
+    font-size: 32px;
+  }
+
+  .launch-brand .launch-loader {
+    width: 132px !important;
+  }
+}
+
+@keyframes famio-approved-progress {
+  0% { width: 40%; }
+  100% { width: 72%; }
+}
