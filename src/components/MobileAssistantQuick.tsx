@@ -33,6 +33,7 @@ export function MobileAssistantQuick() {
   const listRef = useRef<HTMLDivElement | null>(null)
   const recognitionRef = useRef<any>(null)
   const voiceBaseMessageRef = useRef('')
+  const conversationIdRef = useRef(crypto.randomUUID())
 
   const cycleLabel = useMemo(() => {
     if (!summary?.cycle_end) return ''
@@ -204,6 +205,7 @@ export function MobileAssistantQuick() {
         message: value,
         history,
         page_path: location.pathname,
+        conversation_id: conversationIdRef.current,
       },
     })
 
