@@ -295,6 +295,7 @@ export function CalendarPage() {
   const [editingExternalSource,setEditingExternalSource] = useState('')
   const [calendarSearchOpen,setCalendarSearchOpen] = useState(false)
   const [calendarSearchQuery,setCalendarSearchQuery] = useState('')
+  const [upcomingDays,setUpcomingDays] = useState(30)
 
   const range = useMemo(
     () => rangeFor(view, anchor, mondayFirst),
@@ -423,6 +424,12 @@ export function CalendarPage() {
     const start = startOfWeek(anchor, mondayFirst)
     return Array.from({ length: 7 }, (_, index) => addDays(start, index))
   }, [anchor, mondayFirst])
+
+  const upcomingDayList = useMemo(() => {
+    const today=new Date()
+    today.setHours(12,0,0,0)
+    return Array.from({ length: upcomingDays }, (_, index)=>addDays(today,index))
+  }, [upcomingDays])
 
   const weekdayNames = mondayFirst
     ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -1179,7 +1186,10 @@ export function CalendarPage() {
             key={item}
             onClick={() => {
               setView(item)
-              if (item === 'upcoming') setAnchor(new Date())
+              if (item === 'upcoming') {
+                setAnchor(new Date())
+                setUpcomingDays(30)
+              }
             }}
           >
             {item === 'upcoming' ? 'Upcoming' : item[0].toUpperCase() + item.slice(1)}
@@ -1187,7 +1197,7 @@ export function CalendarPage() {
         ))}
       </nav>
 
-      <section className="calendar-toolbar">
+      <section className={view === 'upcoming' ? 'calendar-toolbar upcoming-calendar-toolbar' : 'calendar-toolbar'}>
         <button className="icon-button" aria-label="Previous period" onClick={() => navigate(-1)}>
           <ChevronLeft size={18} />
         </button>
@@ -1479,22 +1489,31 @@ export function CalendarPage() {
 
       {view === 'upcoming' && (
         <section className="upcoming-calendar">
-          {visibleEvents.length === 0 ? (
-            <div className="empty-state"><strong>No upcoming events.</strong><span>Nothing is planned in the next 60 days.</span></div>
-          ) : Array.from(eventsByDay.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([key, dayEvents]) => {
-            const day = new Date(key + 'T12:00:00')
+          {upcomingDayList.map((day,index) => {
+            const key=dateKey(day)
+            const dayEvents=eventsByDay.get(key)??[]
+            const today=index===0
+
             return (
-              <article className="upcoming-day" key={key}>
+              <article className={today ? 'upcoming-day today' : 'upcoming-day'} key={key}>
                 <div className="upcoming-date">
-                  <strong>{day.getDate()}</strong>
+                  <strong>{today ? 'Today' : day.getDate()}</strong>
                   <span>{day.toLocaleDateString(undefined, { weekday: 'short', month: 'short' })}</span>
                 </div>
                 <div className="upcoming-events">
-                  {dayEvents.map((item) => <EventPill item={item} detailed key={item.occurrence_key} />)}
+                  {dayEvents.length
+                    ? dayEvents.map((item) => <EventPill item={item} detailed key={item.occurrence_key} />)
+                    : <span className="upcoming-empty-day">Nothing planned</span>}
                 </div>
               </article>
             )
           })}
+
+          {upcomingDays === 30 && (
+            <button type="button" className="secondary-button upcoming-load-more" onClick={()=>setUpcomingDays(60)}>
+              <Plus size={15}/>Load next 30 days
+            </button>
+          )}
         </section>
       )}
 
