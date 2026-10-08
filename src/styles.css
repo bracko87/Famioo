@@ -16883,3 +16883,142 @@ b {
     background: #111 !important;
   }
 }
+
+
+@media (max-width: 767px) {
+  /* Permissions are cards on phones instead of a desktop-width table. */
+  .permissions-table-wrap {
+    overflow: visible;
+  }
+
+  .permissions-table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .permissions-head {
+    display: none;
+  }
+
+  .permissions-row {
+    width: 100%;
+    min-width: 0;
+    padding: 12px 0;
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .permissions-row .permission-module {
+    grid-column: 1 / -1;
+    padding-bottom: 3px;
+  }
+
+  .permissions-row > span:nth-child(n+2) {
+    min-width: 0;
+    display: grid;
+    gap: 5px;
+  }
+
+  .permissions-row > span:nth-child(2)::before,
+  .permissions-row > span:nth-child(3)::before,
+  .permissions-row > span:nth-child(4)::before {
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .permissions-row > span:nth-child(2)::before { content: "Owner"; }
+  .permissions-row > span:nth-child(3)::before { content: "Admin"; }
+  .permissions-row > span:nth-child(4)::before { content: "User"; }
+
+  .permissions-row .custom-select,
+  .permissions-row .permission-select,
+  .permissions-row .custom-select-trigger {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .settings-module-list > div {
+    min-width: 0;
+    grid-template-columns: minmax(0,1fr) auto;
+    gap: 8px;
+  }
+
+  .module-status-group {
+    min-width: 0;
+    max-width: 120px;
+    display: flex !important;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  /* Finish the dark theme for controls that previously stayed white. */
+  html[data-famioo-theme="dark"] button:not(.primary-button):not(.mobile-assistant-tab):not(.shopping-compare-tab):not(.mobile-cost-side-tabs > button) {
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+    border-color: #383838 !important;
+    background-color: #151515 !important;
+    box-shadow: none !important;
+  }
+
+  html[data-famioo-theme="dark"] .calendar-layer-chip,
+  html[data-famioo-theme="dark"] .calendar-view-tabs button,
+  html[data-famioo-theme="dark"] .cost-range-tabs button,
+  html[data-famioo-theme="dark"] .mode-switch button,
+  html[data-famioo-theme="dark"] .identity-switch button,
+  html[data-famioo-theme="dark"] .mobile-theme-toggle button {
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+    border-color: #383838 !important;
+    background: #151515 !important;
+  }
+
+  html[data-famioo-theme="dark"] .calendar-layer-chip.active,
+  html[data-famioo-theme="dark"] .calendar-view-tabs button.active,
+  html[data-famioo-theme="dark"] .cost-range-tabs button.active,
+  html[data-famioo-theme="dark"] .mode-switch button.active,
+  html[data-famioo-theme="dark"] .identity-switch button.active,
+  html[data-famioo-theme="dark"] .mobile-theme-toggle button.active {
+    border-color: #6f477b !important;
+    background: #2a1b30 !important;
+  }
+
+  html[data-famioo-theme="dark"] select,
+  html[data-famioo-theme="dark"] option {
+    color: #fff !important;
+    background: #151515 !important;
+  }
+
+  html[data-famioo-theme="dark"] .role-badge,
+  html[data-famioo-theme="dark"] .status-badge,
+  html[data-famioo-theme="dark"] .permission-fixed,
+  html[data-famioo-theme="dark"] .module-status-group em {
+    -webkit-text-fill-color: currentColor !important;
+  }
+
+  html[data-famioo-theme="dark"] .role-badge.owner,
+  html[data-famioo-theme="dark"] .settings-module-list em.core {
+    color: #d9b9ff !important;
+    background: #321f43 !important;
+  }
+
+  html[data-famioo-theme="dark"] .role-badge.admin {
+    color: #a9d9ff !important;
+    background: #173248 !important;
+  }
+
+  html[data-famioo-theme="dark"] .role-badge.user,
+  html[data-famioo-theme="dark"] .status-badge.active {
+    color: #b8edd3 !important;
+    background: #18392b !important;
+  }
+
+  html[data-famioo-theme="dark"] .permission-fixed {
+    color: #ddc4ff !important;
+    background: #2d2038 !important;
+  }
+}
