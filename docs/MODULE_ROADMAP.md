@@ -54,12 +54,17 @@ Last updated: 2026-10-09
    - household-member contact cards remain synced automatically from Famioo profiles
    - manual directory contacts remain separate from login/member records
 
-5. [ ] Shared Memo / Someday — NEXT
-   - undated family ideas and notes
-   - places to visit / things to do
-   - convert later to Calendar, Task or Project
+5. [x] Shared Memo / Someday — PWA V1 implemented
+   - shared household ideas and notes
+   - Places to Visit, Things to Do, Wishes, Notes, Ideas and Someday categories
+   - pinned memos
+   - optional links
+   - search and category filtering
+   - archive and restore
+   - author / last-updated information
+   - later: direct conversion into Calendar events, Tasks or Projects
 
-6. [ ] Child Rewards Economy
+6. [ ] Child Rewards Economy — NEXT
    - points/stars for tasks and chores
    - parent-managed reward catalogue
    - earn/spend history
