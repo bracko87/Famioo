@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { BadgeAlert, CalendarDays, CarFront, CheckSquare, ClipboardList, ContactRound, FileText, Folder, FolderKanban, Gift, GraduationCap, MapPinned, MessageCircle, PawPrint, Plane, Receipt, ScanLine, ShieldAlert, ShoppingBag, Sparkles, StickyNote, Syringe, Ticket, Utensils, Wrench } from 'lucide-react'
+import { BadgeAlert, CalendarDays, CarFront, CheckSquare, ClipboardList, ContactRound, FileText, Folder, FolderKanban, Gift, GraduationCap, MapPinned, MessageCircle, MessagesSquare, PawPrint, Plane, Receipt, ScanLine, ShieldAlert, ShoppingBag, Sparkles, StickyNote, Syringe, Ticket, Utensils, Wrench } from 'lucide-react'
 import type { Session, User } from '@supabase/supabase-js'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { supabase } from './lib/supabase'
@@ -165,6 +165,7 @@ function LoadingScreen() {
         <span className="launch-orbit launch-orbit-23" title="Pets"><PawPrint size={19} /></span>
         <span className="launch-orbit launch-orbit-24" title="Family Inbox / Scan"><ScanLine size={19} /></span>
         <span className="launch-orbit launch-orbit-25" title="Emergency Information"><BadgeAlert size={19} /></span>
+        <span className="launch-orbit launch-orbit-26" title="Calendar Comments & Photos"><MessagesSquare size={19} /></span>
 
         <div className="launch-brand">
           <BrandMark className="launch-brand-logo" />
