@@ -11,7 +11,6 @@ import {
   ContactRound,
   FileText,
   FolderKanban,
-  Gift,
   GraduationCap,
   Home,
   House,
