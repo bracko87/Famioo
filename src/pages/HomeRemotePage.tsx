@@ -2,7 +2,7 @@ import {
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CirclePower, Home as HomeIcon, Minus,
   MoreHorizontal, Pause, Plus, RadioTower, Settings2, Square, Volume2, VolumeX, X
 } from 'lucide-react'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
@@ -133,7 +133,7 @@ export function HomeRemotePage(){
   }
 
   function has(command:string){return Boolean(selected?.capabilities.includes(command))}
-  const cmd=(command:string,label:string,icon:React.ReactNode)=><button type="button" disabled={!selected||!canControl(selected)||!has(command)||Boolean(busyCommand)} onClick={()=>void send(command)} title={label}>{icon}<span>{label}</span></button>
+  const cmd=(command:string,label:string,icon:ReactNode)=><button type="button" disabled={!selected||!canControl(selected)||!has(command)||Boolean(busyCommand)} onClick={()=>void send(command)} title={label}>{icon}<span>{label}</span></button>
 
   return <div className="page home-remote-page">
     <div className="page-heading-row remote-heading">
