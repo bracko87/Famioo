@@ -142,14 +142,17 @@ Last updated: 2026-10-09
     - automatic first-photo cover and album archive/restore
     - responsive desktop/mobile album gallery
 
-14. [ ] Family Check-In — NEXT
-    - I'm home
-    - I'm safe
-    - Pick me up
-    - Running late
-    - optional location and Calendar context
+14. [x] Family Check-In — PWA V1 implemented
+    - one-tap I'm home, I'm safe, Pick me up and Running late updates
+    - optional note and ETA for delays
+    - optional one-time device location attached only when explicitly selected
+    - optional Calendar event context from nearby occurrences
+    - shared household feed with profile attribution and auto-refresh
+    - map link for location-bearing check-ins
+    - owner/admin or sender removal controls
+    - responsive desktop/mobile check-in composer and feed
 
-15. [ ] Pickup Authorization
+15. [ ] Pickup Authorization — NEXT
     - approved child pickup person for the day
     - one-time authorization
     - guardian confirmation
