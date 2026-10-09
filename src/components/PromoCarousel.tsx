@@ -42,6 +42,7 @@ const routeByModule: Record<ModuleCode, string> = {
   pets: '/app/pets',
   inbox_scan: '/app/inbox',
   emergency_info: '/app/emergency',
+  calendar_context: '/app/calendar',
   shopping: '/app/shopping',
   costs: '/app/costs',
   school: '/app/school',
