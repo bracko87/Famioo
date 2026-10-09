@@ -122,12 +122,17 @@ Last updated: 2026-10-09
     - authenticated Quick Guardian View with large one-tap call actions
     - responsive desktop/mobile emergency dashboard
 
-12. [ ] Comments & Photos on Calendar Events — NEXT
-    - comments/discussion on events
-    - photos and file attachments
-    - keep planning context with the event
+12. [x] Comments & Photos on Calendar Events — PWA V1 implemented
+    - comments/discussion embedded directly in existing Calendar events
+    - household-member attribution and timestamped conversation
+    - photo uploads with in-event preview grid
+    - file attachments with open/download access through private Famioo Files
+    - optional attachment captions
+    - comment and attachment removal controls
+    - works with synced read-only external events while leaving source event data untouched
+    - responsive desktop/mobile event context panel
 
-13. [ ] Family Photo Albums / Memories
+13. [ ] Family Photo Albums / Memories — NEXT
     - shared albums
     - connect photos to Calendar events and dates
     - birthdays, trips, holidays and school events
