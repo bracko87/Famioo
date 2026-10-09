@@ -35,6 +35,7 @@ const routeByModule: Record<ModuleCode, string> = {
   location: '/app/location',
   messenger: '/app/messenger',
   contacts: '/app/contacts',
+  memo: '/app/memo',
   shopping: '/app/shopping',
   costs: '/app/costs',
   school: '/app/school',
