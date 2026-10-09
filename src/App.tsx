@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarDays, CarFront, CheckSquare, ClipboardList, ContactRound, FileText, Folder, FolderKanban, Gift, GraduationCap, MapPinned, MessageCircle, Plane, Receipt, ShieldAlert, ShoppingBag, Sparkles, StickyNote, Syringe, Ticket, Utensils, Wrench } from 'lucide-react'
+import { CalendarDays, CarFront, CheckSquare, ClipboardList, ContactRound, FileText, Folder, FolderKanban, Gift, GraduationCap, MapPinned, MessageCircle, PawPrint, Plane, Receipt, ShieldAlert, ShoppingBag, Sparkles, StickyNote, Syringe, Ticket, Utensils, Wrench } from 'lucide-react'
 import type { Session, User } from '@supabase/supabase-js'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { supabase } from './lib/supabase'
@@ -38,6 +38,7 @@ import { MemoPage } from './pages/MemoPage'
 import { RewardsPage } from './pages/RewardsPage'
 import { TravelPage } from './pages/TravelPage'
 import { VehiclesPage } from './pages/VehiclesPage'
+import { PetsPage } from './pages/PetsPage'
 import { BrandMark } from './components/Brand'
 
 function LoadingScreen() {
@@ -159,6 +160,7 @@ function LoadingScreen() {
         <span className="launch-orbit launch-orbit-20" title="Child Rewards"><Gift size={19} /></span>
         <span className="launch-orbit launch-orbit-21" title="Travel & Trips"><Plane size={19} /></span>
         <span className="launch-orbit launch-orbit-22" title="Vehicles"><CarFront size={19} /></span>
+        <span className="launch-orbit launch-orbit-23" title="Pets"><PawPrint size={19} /></span>
 
         <div className="launch-brand">
           <BrandMark className="launch-brand-logo" />
@@ -270,6 +272,7 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Route path="rewards" element={<RewardsPage />} />
           <Route path="travel" element={<TravelPage />} />
           <Route path="vehicles" element={<VehiclesPage />} />
+          <Route path="pets" element={<PetsPage />} />
           <Route path="settings" element={<SettingsPage />} />
 
           <Route path="shopping" element={<ShoppingPage />} />
