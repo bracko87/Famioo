@@ -31,7 +31,6 @@ export function MobileAssistantQuick() {
   const [listening, setListening] = useState(false)
   const [transcribing, setTranscribing] = useState(false)
   const [keyboardOpen,setKeyboardOpen]=useState(false)
-  const [autoSendVoice,setAutoSendVoice]=useState(false)
   const speechRef=useRef<any>(null)
   const speechFinalRef=useRef('')
   const voiceModeRef=useRef<'live'|'recording'|null>(null)
@@ -131,6 +130,7 @@ export function MobileAssistantQuick() {
       // Recorder may already be stopped.
     }
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
+    speechRef.current?.abort()
   }, [])
 
   function playMicStartSound() {
