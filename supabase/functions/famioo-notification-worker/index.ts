@@ -91,12 +91,12 @@ async function sendPushes() {
             body:item.body,
             icon:'/famioo-icon-192.png',
             badge:'/famioo-icon-192.png',
-            tag:item.notification_type==='safety_sos' ? 'famioo-safety-'+item.entity_id : 'famioo-'+item.id,
-            url:item.notification_type==='safety_sos' ? '/app/safety' : '/app/calendar',
+            tag:item.notification_type.startsWith('safety_') ? 'famioo-safety-'+item.entity_id : 'famioo-'+item.id,
+            url:item.notification_type.startsWith('safety_') ? '/app/safety' : '/app/calendar',
           }),
           {
-            TTL:item.notification_type==='safety_sos' ? 300 : 3600,
-            urgency:item.notification_type==='safety_sos' ? 'high' : 'normal',
+            TTL:item.notification_type.startsWith('safety_') ? 300 : 3600,
+            urgency:item.notification_type.startsWith('safety_') ? 'high' : 'normal',
           },
         )
         pushed+=1
