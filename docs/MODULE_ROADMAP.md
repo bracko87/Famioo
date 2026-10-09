@@ -93,12 +93,17 @@ Last updated: 2026-10-09
    - registration, insurance, inspection, service and invoice documents linked from Famioo Files
    - responsive desktop/mobile vehicle dashboard
 
-9. [ ] Pets — NEXT
-   - pet profiles
-   - vet appointments, vaccinations and medication
-   - insurance, documents and recurring care
+9. [x] Pets — PWA V1 implemented
+   - pet profiles with species, breed, sex, birth date, chip number, weight and notes
+   - vet appointments, vaccinations, medication and health records
+   - optional Calendar reminders for due health items
+   - pet health costs mirrored into Household Costs
+   - recurring care routines with one-tap completion and automatic next due date
+   - pet insurance policies
+   - vaccination, insurance, vet, prescription and registration documents linked from Famioo Files
+   - responsive desktop/mobile pet dashboard
 
-10. [ ] Family Inbox / Scan
+10. [ ] Family Inbox / Scan — NEXT
     - photograph/upload letters, flyers, invitations and school notices
     - extract useful information
     - suggest Calendar / Task / File / School actions
