@@ -22269,9 +22269,9 @@ b {
 
 @media (max-width: 900px) {
   .launch-orbit-27 {
-    top: 91% !important;
-    left: 58% !important;
-    transform: translate(-50%,-50%) rotate(-3deg) !important;
+    top: 7% !important;
+    left: 18% !important;
+    transform: translate(-50%,-50%) rotate(-4deg) !important;
   }
 }
 
@@ -22309,7 +22309,7 @@ b {
 
 @media (max-width: 900px) {
   .launch-orbit-28 {
-    top: 80% !important;
+    top: 7% !important;
     left: 89% !important;
     transform: translate(-50%,-50%) rotate(4deg) !important;
   }
@@ -22345,8 +22345,8 @@ b {
 
 @media (max-width: 900px) {
   .launch-orbit-29 {
-    top: 73% !important;
-    left: 93% !important;
+    top: 20% !important;
+    left: 55% !important;
     transform: translate(-50%,-50%) rotate(-4deg) !important;
   }
 }
@@ -22383,8 +22383,8 @@ b {
    ========================================================= */
 
 @media (max-width: 900px) {
-  .launch-orbit-30 { top: 66% !important; left: 95% !important; transform: translate(-50%,-50%) rotate(3deg) !important; }
-  .launch-orbit-31 { top: 58% !important; left: 96% !important; transform: translate(-50%,-50%) rotate(-3deg) !important; }
+  .launch-orbit-30 { top: 25% !important; left: 37% !important; transform: translate(-50%,-50%) rotate(3deg) !important; }
+  .launch-orbit-31 { top: 32% !important; left: 63% !important; transform: translate(-50%,-50%) rotate(-3deg) !important; }
 }
 
 .home-remote-page,.voice-page{max-width:1160px}
@@ -22729,3 +22729,27 @@ button.notification-item.messenger-notification-item{
 .inbox-preview-actions button.danger{color:#a24458}
 .inbox-preview-actions button.danger:hover{background:#fff4f6;color:#b43350}
 .inbox-preview-actions button:disabled{opacity:.5;cursor:default}
+
+
+/* Screenshot correction: scan archive/delete controls stay on the true lower-right edge. */
+.inbox-preview .inbox-preview-actions{
+  top:auto !important;
+  right:10px !important;
+  bottom:10px !important;
+  left:auto !important;
+  align-self:end !important;
+  justify-self:end !important;
+  transform:none !important;
+}
+@media(max-width:760px){
+  .inbox-preview{
+    position:relative !important;
+    overflow:hidden !important;
+  }
+  .inbox-preview .inbox-preview-actions{
+    top:auto !important;
+    right:10px !important;
+    bottom:10px !important;
+    left:auto !important;
+  }
+}
