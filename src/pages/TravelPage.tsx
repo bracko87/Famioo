@@ -275,8 +275,9 @@ export function TravelPage(){
     })
     if(result.error){setSaving(false);setError(result.error.message);return}
     const id=String(result.data)
-    if(tripDraft.calendar_event_id){
-      const linked=await supabase.from('family_trips').update({calendar_event_id:tripDraft.calendar_event_id}).eq('household_id',household.id).eq('id',id)
+    if(tripDraft.calendar_event_id || (!tripDraft.sync_calendar && tripDraft.id)){
+      // A manually linked event is never rewritten by the trip's automatic Calendar sync.
+      const linked=await supabase.from('family_trips').update({calendar_event_id:tripDraft.calendar_event_id||null}).eq('household_id',household.id).eq('id',id)
       if(linked.error){setSaving(false);setError('Trip saved, but event linking failed: '+linked.error.message);return}
     }
     if(tripPhotoFile){
