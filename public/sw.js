@@ -65,6 +65,8 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  const safetyAlert = String(payload.tag || '').startsWith('famioo-safety-')
+
   event.waitUntil(
     self.registration.showNotification(payload.title || 'Famioo', {
       body: payload.body,
@@ -72,7 +74,9 @@ self.addEventListener('push', (event) => {
       badge: payload.badge || '/famioo-icon-192.png',
       tag: payload.tag || 'famioo-notification',
       data: { url: payload.url || '/app' },
-      renotify: false,
+      renotify: safetyAlert,
+      requireInteraction: safetyAlert,
+      vibrate: safetyAlert ? [300, 150, 300, 150, 450] : undefined,
     }),
   )
 })
