@@ -101,6 +101,67 @@ function outputText(payload:any){
   return ""
 }
 
+async function loadHouseholdContext(userClient:any,householdId:string){
+  const configs=[
+    ["family_profiles",80],
+    ["calendar_events",160],
+    ["tasks",160],
+    ["checklists",120],
+    ["checklist_items",220],
+    ["shopping_lists",120],
+    ["shopping_items",260],
+    ["shopping_receipts",300],
+    ["shopping_receipt_items",500],
+    ["household_costs",300],
+    ["school_entries",160],
+    ["family_contacts",120],
+    ["family_memos",120],
+    ["family_points_ledger",220],
+    ["family_trips",100],
+    ["family_trip_itinerary",180],
+    ["family_vehicles",80],
+    ["vehicle_events",180],
+    ["family_pets",80],
+    ["pet_health_events",180],
+    ["pet_care_routines",120],
+    ["family_inbox_items",120],
+    ["family_memory_albums",120],
+    ["family_checkins",160],
+    ["family_pickup_authorizations",120],
+    ["home_care_assets",120],
+    ["home_care_activity",180],
+    ["home_care_maintenance",160],
+    ["home_care_repairs",160],
+    ["life_admin_items",160],
+    ["household_projects",120],
+    ["project_work_items",200],
+    ["recipes",120],
+    ["recipe_ingredients",240],
+    ["meal_plan_entries",160],
+    ["household_files",140],
+    ["family_emergency_profiles",80],
+    ["safe_places",100],
+    ["safety_alerts",100],
+    ["ticket_wallet_entries",140],
+    ["notifications",120],
+  ] as Array<[string,number]>
+
+  const rows=await Promise.all(configs.map(async([table,limit])=>{
+    try{
+      const result=await userClient.from(table).select("*").eq("household_id",householdId).limit(limit)
+      if(result.error)return [table,[]]
+      return [table,result.data??[]]
+    }catch{
+      return [table,[]]
+    }
+  }))
+
+  const data=Object.fromEntries(rows)
+  let encoded=JSON.stringify(data)
+  if(encoded.length>70000) encoded=encoded.slice(0,70000)
+  return encoded
+}
+
 function localDateTimeToIso(date:string,time:string,timeZone:string){
   const [year,month,day]=date.split("-").map(Number)
   const [hour,minute]=time.split(":").map(Number)
@@ -464,6 +525,8 @@ Deno.serve(async(req)=>{
     hour:"2-digit",minute:"2-digit",hour12:false,
   }).format(new Date())
 
+  const householdContext=await loadHouseholdContext(userClient,householdId)
+
   const instructions=[
     "You are Famioo Assistant inside a household organization app.",
     "You can answer questions and can directly create safe household records when the user clearly asks you to do so.",
@@ -477,8 +540,13 @@ Deno.serve(async(req)=>{
     "If the user only asks a question or calculation, action_type must be none.",
     "Use plain text only in reply. Do not use Markdown markers such as **, #, backticks or bullet syntax.",
     "If essential information for a requested creation is missing, action_type must be none and reply with one concise follow-up question.",
-    "Do not invent private household data or participant names.",
+    "You have read-only access to the current household data snapshot provided below. Use it to answer calculations, totals, counts, comparisons, schedules, status questions and cross-module questions directly.",
+    "Never claim that you cannot access household records when the needed records are present in the supplied household snapshot.",
+    "Respect the signed-in user's existing Famioo permissions: the snapshot only contains rows allowed by current RLS.",
+    "Do not expose credentials, tokens, encryption material or secrets. Those are intentionally not included.",
+    "Do not invent private household data or participant names. If the snapshot does not contain enough data, say exactly what is missing.",
     "Household timezone: "+timezone+". Current household-local date/time: "+now+".",
+    "CURRENT HOUSEHOLD DATA SNAPSHOT (JSON): "+householdContext,
     body.page_path?"Current Famioo page: "+String(body.page_path).slice(0,160)+".":"",
   ].filter(Boolean).join("\n")
 
