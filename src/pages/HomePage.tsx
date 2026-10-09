@@ -2,6 +2,7 @@ import {
   BadgeAlert,
   CalendarDays,
   CarFront,
+  CheckCircle2,
   CheckSquare,
   ClipboardList,
   ContactRound,
@@ -63,6 +64,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   emergency_info: BadgeAlert,
   calendar_context: MessagesSquare,
   memories: Images,
+  checkin: CheckCircle2,
 }
 
 const routeByModule: Record<ModuleCode, string> = {
@@ -94,6 +96,7 @@ const routeByModule: Record<ModuleCode, string> = {
   emergency_info: '/app/emergency',
   calendar_context: '/app/calendar',
   memories: '/app/memories',
+  checkin: '/app/check-in',
 }
 
 export function HomePage() {
