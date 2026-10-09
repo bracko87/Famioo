@@ -1264,7 +1264,7 @@ export function ShoppingPage() {
                 <span className="eyebrow">AI RECEIPT CAPTURE</span>
                 <h2>{standaloneReceiptStatus==='done'?'Receipt saved':'Reading receipt'}</h2>
               </div>
-              {standaloneReceiptStatus==='done'&&<button className="icon-button" type="button" onClick={()=>{setReceiptUploadOpen(false);setStandaloneReceiptStatus('idle');setStandaloneReceiptSummary(null)}}><X size={18}/></button>}
+              {(standaloneReceiptStatus==='done'||standaloneReceiptStatus==='idle')&&<button className="icon-button" type="button" onClick={()=>{setReceiptUploadOpen(false);setStandaloneReceiptStatus('idle');setStandaloneReceiptSummary(null);setError('')}}><X size={18}/></button>}
             </header>
             {standaloneReceiptStatus!=='done'?(
               <div className="shopping-receipt-processing">
