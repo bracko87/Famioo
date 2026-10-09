@@ -113,13 +113,16 @@ Last updated: 2026-10-09
     - AI Assistant allowance/accounting reused for extraction
     - responsive desktop/mobile inbox
 
-11. [ ] Emergency Information — NEXT
-    - emergency contacts
-    - doctors and insurance
-    - important family medical/safety notes
-    - fast guardian access
+11. [x] Emergency Information — PWA V1 implemented
+    - per-family-member emergency profile
+    - priority guardian/emergency contacts reused from Family Contacts
+    - primary doctor linkage reused from Family Contacts
+    - insurance provider, phone, member number and policy number
+    - allergies, current medication, medical notes and safety notes
+    - authenticated Quick Guardian View with large one-tap call actions
+    - responsive desktop/mobile emergency dashboard
 
-12. [ ] Comments & Photos on Calendar Events
+12. [ ] Comments & Photos on Calendar Events — NEXT
     - comments/discussion on events
     - photos and file attachments
     - keep planning context with the event
