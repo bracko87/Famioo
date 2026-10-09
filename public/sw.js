@@ -76,6 +76,7 @@ self.addEventListener('push', (event) => {
       data: { url: payload.url || '/app' },
       renotify: safetyAlert,
       requireInteraction: safetyAlert,
+      silent: false,
       vibrate: safetyAlert ? [300, 150, 300, 150, 450] : undefined,
     }),
   )
