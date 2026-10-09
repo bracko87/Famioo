@@ -21378,3 +21378,578 @@ b {
     justify-content: center;
   }
 }
+
+
+/* =========================================================
+   Shared Memo / Someday
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .launch-orbit-19 {
+    top: 63% !important;
+    left: 73% !important;
+    transform: translate(-50%,-50%) rotate(-5deg) !important;
+  }
+}
+
+.memo-page {
+  max-width: 1140px;
+}
+
+.memo-heading {
+  align-items: center;
+}
+
+.memo-quick-add {
+  margin-bottom: 14px;
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 8px;
+}
+
+.memo-quick-add > button {
+  min-height: 72px;
+  padding: 10px 11px;
+  border: 1px solid #e6deea;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #76547f;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 7px 20px rgba(57,40,63,.04);
+}
+
+.memo-quick-add > button:hover {
+  background: #faf7fc;
+}
+
+.memo-quick-add > button > svg {
+  flex: 0 0 auto;
+}
+
+.memo-quick-add > button > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.memo-quick-add strong {
+  color: #584c5d;
+  font-size: 10px;
+}
+
+.memo-quick-add small {
+  color: #9a8d9e;
+  font-size: 8px;
+}
+
+.memo-toolbar {
+  margin-bottom: 15px;
+  padding: 9px;
+  border: 1px solid #e8e1ea;
+  border-radius: 14px;
+  display: grid;
+  grid-template-columns: minmax(240px,1fr) 190px auto;
+  gap: 7px;
+  background: #fbfafc;
+}
+
+.memo-search {
+  min-height: 39px;
+  padding: 0 9px;
+  border: 1px solid #ddd4e1;
+  border-radius: 10px;
+  display: grid;
+  grid-template-columns: auto minmax(0,1fr) auto;
+  align-items: center;
+  gap: 7px;
+  background: #fff;
+}
+
+.memo-search svg {
+  color: #8c7895;
+}
+
+.memo-search input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: #574b5b;
+  background: transparent;
+  font: inherit;
+  font-size: 10px;
+}
+
+.memo-search button {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #908294;
+  background: transparent;
+  cursor: pointer;
+}
+
+.memo-toolbar select {
+  min-height: 39px;
+  padding: 0 9px;
+  border: 1px solid #ddd4e1;
+  border-radius: 10px;
+  color: #5f5364;
+  background: #fff;
+  font: inherit;
+  font-size: 10px;
+}
+
+.memo-archive-toggle {
+  min-height: 39px;
+  padding: 0 10px;
+  border: 1px solid #dfd6e3;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: #77697c;
+  background: #fff;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.memo-archive-toggle.active {
+  color: #715080;
+  border-color: #d9cae0;
+  background: #f5eff8;
+}
+
+.memo-archive-toggle b {
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: #8b58a0;
+  font-size: 8px;
+}
+
+.memo-section {
+  margin-bottom: 17px;
+}
+
+.memo-section-head {
+  margin-bottom: 9px;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.memo-section-head h2 {
+  margin: 3px 0 0;
+  color: #56495a;
+  font-size: 17px;
+}
+
+.memo-section-head > small {
+  min-width: 27px;
+  height: 27px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #77697b;
+  background: #f0ecf2;
+  font-size: 9px;
+}
+
+.memo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(270px,1fr));
+  gap: 9px;
+}
+
+.memo-grid.pinned {
+  grid-template-columns: repeat(auto-fit,minmax(300px,1fr));
+}
+
+.memo-card {
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid #e7dfe9;
+  border-radius: 14px;
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  background: #fff;
+  box-shadow: 0 7px 22px rgba(57,39,64,.045);
+}
+
+.memo-grid.pinned .memo-card {
+  border-color: #dacbe0;
+  background: #fdfaff;
+}
+
+.memo-card.archived {
+  opacity: .68;
+  background: #f8f7f9;
+}
+
+.memo-card > header {
+  display: grid;
+  grid-template-columns: 38px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.memo-category-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: #8b5ca0;
+}
+
+.memo-category-icon.idea { background: #b78b3f; }
+.memo-category-icon.place { background: #5d8ca3; }
+.memo-category-icon.activity { background: #c66a90; }
+.memo-category-icon.wish { background: #ad667b; }
+.memo-category-icon.note { background: #7276a4; }
+.memo-category-icon.someday { background: #6d8b6b; }
+
+.memo-card-heading {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.memo-card-heading small {
+  color: #998d9c;
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.memo-card-heading strong {
+  overflow: hidden;
+  color: #554959;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memo-pin {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: #a095a3;
+  background: #f4f1f5;
+  cursor: pointer;
+}
+
+.memo-pin.active {
+  color: #b68235;
+  background: #fff5df;
+}
+
+.memo-card > p {
+  margin: 0;
+  color: #75697a;
+  font-size: 9px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.memo-link {
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid #e3dae6;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #755681;
+  background: #faf8fb;
+  font-size: 8px;
+  text-decoration: none;
+}
+
+.memo-link span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memo-meta {
+  padding-top: 3px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 10px;
+  color: #a095a3;
+  font-size: 7px;
+}
+
+.memo-card > footer {
+  padding-top: 7px;
+  border-top: 1px solid #eee8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.memo-card > footer button {
+  min-height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #746778;
+  background: #f1edf3;
+  font: inherit;
+  font-size: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.memo-empty {
+  min-height: 210px;
+  padding: 22px;
+  border: 1px dashed #ddd5e1;
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  color: #95899a;
+  background: #fbfafc;
+  text-align: center;
+}
+
+.memo-empty > svg {
+  color: #9771a4;
+}
+
+.memo-empty strong {
+  color: #625567;
+  font-size: 12px;
+}
+
+.memo-empty span {
+  max-width: 440px;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.memo-future-note {
+  margin-top: 3px;
+  padding: 10px 11px;
+  border: 1px solid #e5deea;
+  border-radius: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #716475;
+  background: #faf8fb;
+}
+
+.memo-future-note > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: #9367a1;
+}
+
+.memo-future-note > span {
+  display: grid;
+  gap: 2px;
+}
+
+.memo-future-note strong {
+  color: #5e5262;
+  font-size: 10px;
+}
+
+.memo-future-note small {
+  color: #978a9a;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.memo-editor-backdrop {
+  z-index: 2600;
+}
+
+.memo-editor {
+  width: min(620px,calc(100vw - 24px));
+  padding: 16px;
+}
+
+.memo-editor > header {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.memo-editor h2 {
+  margin: 3px 0 0;
+  color: #554959;
+  font-size: 19px;
+}
+
+.memo-editor form {
+  display: grid;
+  gap: 9px;
+}
+
+.memo-editor form > label {
+  display: grid;
+  gap: 5px;
+}
+
+.memo-editor form > label > span {
+  color: #756779;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.memo-editor input,
+.memo-editor select,
+.memo-editor textarea {
+  width: 100%;
+  min-height: 39px;
+  padding: 8px 9px;
+  border: 1px solid #ddd4e1;
+  border-radius: 10px;
+  color: #554a59;
+  background: #fff;
+  font: inherit;
+  font-size: 10px;
+  outline: none;
+}
+
+.memo-editor textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.memo-editor input:focus,
+.memo-editor select:focus,
+.memo-editor textarea:focus {
+  border-color: #aa83b8;
+  box-shadow: 0 0 0 3px rgba(142,83,160,.08);
+}
+
+.memo-pin-setting {
+  min-height: 42px;
+  padding: 8px 9px;
+  border: 1px solid #e8e1ea;
+  border-radius: 10px;
+  display: flex !important;
+  align-items: center;
+  gap: 7px !important;
+  background: #faf8fb;
+}
+
+.memo-pin-setting input {
+  width: 17px;
+  min-height: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  padding: 0;
+  accent-color: #8c58a0;
+}
+
+.memo-pin-setting span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.memo-editor form > footer {
+  margin-top: 3px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+@media (max-width: 760px) {
+  .memo-page {
+    padding: 12px 12px calc(90px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .memo-heading {
+    grid-template-columns: minmax(0,1fr) auto !important;
+    align-items: start;
+  }
+
+  .memo-heading p {
+    display: none;
+  }
+
+  .memo-quick-add {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+
+  .memo-quick-add > button {
+    min-height: 64px;
+  }
+
+  .memo-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .memo-grid,
+  .memo-grid.pinned {
+    grid-template-columns: 1fr;
+  }
+
+  .memo-editor-backdrop {
+    padding: 0 !important;
+    align-items: stretch !important;
+  }
+
+  .memo-editor {
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 100dvh;
+    padding:
+      calc(15px + env(safe-area-inset-top))
+      12px
+      calc(20px + env(safe-area-inset-bottom)) !important;
+    border-radius: 0 !important;
+  }
+
+  .memo-editor form > footer {
+    position: sticky;
+    bottom: 0;
+    margin: 8px -12px -20px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid #e7e0e9;
+    background: rgba(255,255,255,.97);
+  }
+
+  .memo-editor form > footer .primary-button,
+  .memo-editor form > footer .secondary-button {
+    flex: 1;
+    justify-content: center;
+  }
+}
