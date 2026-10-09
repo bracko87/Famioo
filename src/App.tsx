@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarDays, CheckSquare, ClipboardList, ContactRound, FileText, Folder, FolderKanban, GraduationCap, MapPinned, MessageCircle, Receipt, ShieldAlert, ShoppingBag, Sparkles, Syringe, Ticket, Utensils, Wrench } from 'lucide-react'
+import { CalendarDays, CheckSquare, ClipboardList, ContactRound, FileText, Folder, FolderKanban, GraduationCap, MapPinned, MessageCircle, Receipt, ShieldAlert, ShoppingBag, Sparkles, StickyNote, Syringe, Ticket, Utensils, Wrench } from 'lucide-react'
 import type { Session, User } from '@supabase/supabase-js'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { supabase } from './lib/supabase'
@@ -34,6 +34,7 @@ import { SafetyPage } from './pages/SafetyPage'
 import { LocationPage } from './pages/LocationPage'
 import { MessengerPage } from './pages/MessengerPage'
 import { ContactsPage } from './pages/ContactsPage'
+import { MemoPage } from './pages/MemoPage'
 import { BrandMark } from './components/Brand'
 
 function LoadingScreen() {
@@ -65,6 +66,7 @@ function LoadingScreen() {
             <line x1="50" y1="49" x2="70" y2="44" />
             <line x1="50" y1="49" x2="48" y2="72" />
             <line x1="50" y1="49" x2="26" y2="62" />
+            <line x1="50" y1="49" x2="73" y2="63" />
           </g>
 
           <g className="launch-network-links">
@@ -104,6 +106,9 @@ function LoadingScreen() {
             <line x1="26" y1="62" x2="8" y2="64" />
             <line x1="26" y1="62" x2="35" y2="87" />
             <line x1="26" y1="62" x2="48" y2="72" />
+            <line x1="73" y1="63" x2="91" y2="69" />
+            <line x1="73" y1="63" x2="48" y2="72" />
+            <line x1="73" y1="63" x2="82" y2="55" />
           </g>
 
           <g className="launch-network-nodes">
@@ -125,6 +130,7 @@ function LoadingScreen() {
             <circle cx="70" cy="44" r=".65" />
             <circle cx="48" cy="72" r=".65" />
             <circle cx="26" cy="62" r=".65" />
+            <circle cx="73" cy="63" r=".65" />
           </g>
         </svg>
 
@@ -146,6 +152,7 @@ function LoadingScreen() {
         <span className="launch-orbit launch-orbit-16" title="Family Location"><MapPinned size={19} /></span>
         <span className="launch-orbit launch-orbit-17" title="Family Messenger"><MessageCircle size={19} /></span>
         <span className="launch-orbit launch-orbit-18" title="Family Contacts"><ContactRound size={19} /></span>
+        <span className="launch-orbit launch-orbit-19" title="Memo / Someday"><StickyNote size={19} /></span>
 
         <div className="launch-brand">
           <BrandMark className="launch-brand-logo" />
@@ -253,6 +260,7 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Route path="location" element={<LocationPage />} />
           <Route path="messenger" element={<MessengerPage />} />
           <Route path="contacts" element={<ContactsPage />} />
+          <Route path="memo" element={<MemoPage />} />
           <Route path="settings" element={<SettingsPage />} />
 
           <Route path="shopping" element={<ShoppingPage />} />
