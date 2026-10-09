@@ -73,10 +73,13 @@ for select to authenticated
 using(private.has_module_access(household_id,'memories','read'));
 
 drop policy if exists family_memory_albums_write on public.family_memory_albums;
-create policy family_memory_albums_write
+drop policy if exists family_memory_albums_insert on public.family_memory_albums;
+drop policy if exists family_memory_albums_update on public.family_memory_albums;
+drop policy if exists family_memory_albums_delete on public.family_memory_albums;
+
+create policy family_memory_albums_insert
 on public.family_memory_albums
-for all to authenticated
-using(private.has_module_access(household_id,'memories','full'))
+for insert to authenticated
 with check(
   private.has_module_access(household_id,'memories','full')
   and created_by_user_id=auth.uid()
@@ -89,27 +92,34 @@ with check(
   )
 );
 
-drop policy if exists family_memory_photos_read on public.family_memory_photos;
-create policy family_memory_photos_read
-on public.family_memory_photos
-for select to authenticated
-using(
-  private.has_module_access(household_id,'memories','read')
-  and exists(
-    select 1 from public.family_memory_albums a
-    where a.id=album_id and a.household_id=household_id and a.archived_at is null
-  )
-  and exists(
-    select 1 from public.household_files hf
-    where hf.id=file_id and hf.household_id=household_id and hf.status='active'
+create policy family_memory_albums_update
+on public.family_memory_albums
+for update to authenticated
+using(private.has_module_access(household_id,'memories','full'))
+with check(
+  private.has_module_access(household_id,'memories','full')
+  and (
+    event_id is null
+    or exists(
+      select 1 from public.calendar_events ce
+      where ce.id=event_id and ce.household_id=household_id and ce.deleted_at is null
+    )
   )
 );
 
+create policy family_memory_albums_delete
+on public.family_memory_albums
+for delete to authenticated
+using(private.has_module_access(household_id,'memories','full'));
+
 drop policy if exists family_memory_photos_write on public.family_memory_photos;
-create policy family_memory_photos_write
+drop policy if exists family_memory_photos_insert on public.family_memory_photos;
+drop policy if exists family_memory_photos_update on public.family_memory_photos;
+drop policy if exists family_memory_photos_delete on public.family_memory_photos;
+
+create policy family_memory_photos_insert
 on public.family_memory_photos
-for all to authenticated
-using(private.has_module_access(household_id,'memories','full'))
+for insert to authenticated
 with check(
   private.has_module_access(household_id,'memories','full')
   and created_by_user_id=auth.uid()
@@ -123,6 +133,28 @@ with check(
       and coalesce(hf.mime_type,'') like 'image/%'
   )
 );
+
+create policy family_memory_photos_update
+on public.family_memory_photos
+for update to authenticated
+using(private.has_module_access(household_id,'memories','full'))
+with check(
+  private.has_module_access(household_id,'memories','full')
+  and exists(
+    select 1 from public.family_memory_albums a
+    where a.id=album_id and a.household_id=household_id and a.archived_at is null
+  )
+  and exists(
+    select 1 from public.household_files hf
+    where hf.id=file_id and hf.household_id=household_id and hf.status='active'
+      and coalesce(hf.mime_type,'') like 'image/%'
+  )
+);
+
+create policy family_memory_photos_delete
+on public.family_memory_photos
+for delete to authenticated
+using(private.has_module_access(household_id,'memories','full'));
 
 grant select,insert,update,delete on public.family_memory_albums,public.family_memory_photos to authenticated;
 
