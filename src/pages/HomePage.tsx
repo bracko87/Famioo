@@ -1,5 +1,6 @@
 import {
   BadgeAlert,
+  BadgeCheck,
   CalendarDays,
   CarFront,
   CheckCircle2,
@@ -65,6 +66,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   calendar_context: MessagesSquare,
   memories: Images,
   checkin: CheckCircle2,
+  pickup_authorization: BadgeCheck,
 }
 
 const routeByModule: Record<ModuleCode, string> = {
@@ -97,6 +99,7 @@ const routeByModule: Record<ModuleCode, string> = {
   calendar_context: '/app/calendar',
   memories: '/app/memories',
   checkin: '/app/check-in',
+  pickup_authorization: '/app/pickup-authorization',
 }
 
 export function HomePage() {
