@@ -23143,3 +23143,31 @@ button.notification-item.messenger-notification-item{
   .pet-photo-field{grid-template-columns:58px minmax(0,1fr);padding:8px}
   .pet-photo-preview{width:58px;height:58px;border-radius:14px}
 }
+
+
+/* =========================================================
+   Final mobile launch-layout collision cleanup
+   Move the five crowded late-added module icons into free upper positions.
+   ========================================================= */
+@media(max-width:900px){
+  .launch-orbit-22{top:18%!important;left:6%!important;transform:translate(-50%,-50%) rotate(4deg)!important}
+  .launch-orbit-23{top:18%!important;left:90%!important;transform:translate(-50%,-50%) rotate(-5deg)!important}
+  .launch-orbit-24{top:6%!important;left:60%!important;transform:translate(-50%,-50%) rotate(3deg)!important}
+  .launch-orbit-25{top:22%!important;left:72%!important;transform:translate(-50%,-50%) rotate(-4deg)!important}
+  .launch-orbit-26{top:34%!important;left:48%!important;transform:translate(-50%,-50%) rotate(5deg)!important}
+}
+
+/* All ordinary modal headers use the title directly; remove redundant uppercase kicker lines. */
+.modal-card>header .eyebrow,
+.modal-card>header>.eyebrow{
+  display:none!important;
+}
+
+/* Keep scan item archive/delete controls visually anchored at the bottom edge. */
+.inbox-preview .inbox-preview-actions{
+  top:auto!important;
+  right:8px!important;
+  bottom:6px!important;
+  left:auto!important;
+  transform:none!important;
+}
