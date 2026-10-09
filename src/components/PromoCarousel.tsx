@@ -45,6 +45,7 @@ const routeByModule: Record<ModuleCode, string> = {
   calendar_context: '/app/calendar',
   memories: '/app/memories',
   checkin: '/app/check-in',
+  pickup_authorization: '/app/pickup-authorization',
   shopping: '/app/shopping',
   costs: '/app/costs',
   school: '/app/school',
