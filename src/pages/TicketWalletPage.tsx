@@ -448,7 +448,7 @@ export function TicketWalletPage(){
   return <div className="page qr-repository-page">
     <div className="page-heading-row qr-repository-heading">
       <div>
-        <h1>QR Scanner & Wallet</h1>
+        <h1>QR Scanner</h1>
         <p>Scan a QR code. Famioo reads public destination pages when possible and files the result automatically.</p>
       </div>
       {canWrite&&<button type="button" className="primary-button compact" onClick={openScanner}><Camera size={16}/>Scan QR code</button>}
