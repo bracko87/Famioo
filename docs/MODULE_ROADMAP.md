@@ -21,14 +21,17 @@ Last updated: 2026-10-09
    - canonical native Safety release/test plan: `docs/NATIVE_RELEASE_SAFETY_PLAN.md`
    - later native extensions: live background SOS location, native incoming VoIP, lock-screen/watch/hardware-trigger research, critical/high-priority notifications, discreet SOS
 
-2. [ ] Family Location + Safe Places — NEXT
-   - family map
-   - live / last-known location
-   - Home, School, Kita, Work and custom safe places
-   - arrival / departure alerts
-   - member-level privacy controls
+2. [x] Family Location + Safe Places — PWA V1 implemented
+   - shared family map with OpenStreetMap tiles
+   - live / last-known locations while Famioo remains active
+   - Home, School, Kita, Work, Grandparents and custom Safe Places
+   - configurable geofence radius
+   - automatic arrival / departure alerts
+   - Household / Adults only / Private visibility controls
+   - each linked member controls their own location sharing
+   - native Android/iOS background/locked-screen location remains a later native enhancement
 
-3. [ ] Family Messenger
+3. [ ] Family Messenger — NEXT
    - household chat
    - text, photos and voice messages
    - later: video messages
@@ -151,5 +154,7 @@ These already exist and are not counted as new modules above:
 ## Rule
 
 When a planned module is implemented, mark it complete here and move the next unfinished item to **NEXT**. This file is the canonical source for “what comes next?”.
+
+Every newly implemented module must also receive its own icon on the Famioo mobile loading screen in the same implementation cycle. Family Safety and Family Location are included from this point onward.
 
 When native Android/iOS packaging begins, Family Safety is not considered release-complete until the mandatory implementation and real-device test gates in `docs/NATIVE_RELEASE_SAFETY_PLAN.md` pass on Android, iOS and cross-platform combinations.
