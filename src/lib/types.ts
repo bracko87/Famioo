@@ -29,6 +29,7 @@ export type ModuleCode =
   | 'calendar_connections'
   | 'tasks'
   | 'checklists'
+  | 'safety'
   | 'shopping'
   | 'costs'
   | 'school'
