@@ -184,7 +184,7 @@ export function AppShell() {
     }
   })
   const [notificationOpen, setNotificationOpen] = useState(false)
-  const [openSidebarCategory, setOpenSidebarCategory] = useState<string>('plan')
+  const [openSidebarCategory, setOpenSidebarCategory] = useState<string>('')
   const [notifications, setNotifications] = useState<HeaderNotification[]>([])
   const [profileAvatarUrl, setProfileAvatarUrl] = useState('')
   const visibleSidebarModules = useMemo(() => {
