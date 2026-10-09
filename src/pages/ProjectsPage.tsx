@@ -23,8 +23,9 @@ import { categoryColor } from '../lib/categoryColors'
 import { firstName } from '../lib/personName'
 import { supabase } from '../lib/supabase'
 import type { EventCategory } from '../lib/types'
+import { RewardsPage } from './RewardsPage'
 
-type ProjectsTab = 'projects' | 'chores' | 'standing'
+type ProjectsTab = 'projects' | 'chores' | 'standing' | 'rewards'
 type ItemSource = 'new' | 'task' | 'template' | 'event'
 type DurationScore = 'under_15' | '15_30' | '30_45' | '45_60' | '1_2h' | '2_3h' | '3_5h' | 'over_5h'
 type EffortScore = 'very_low' | 'low' | 'medium' | 'high' | 'very_high' | 'extreme'
@@ -209,7 +210,8 @@ export function ProjectsPage() {
   const canSyncTasks = Boolean(modules.find((module) => module.code === 'tasks')?.can_write)
   const canSyncCalendar = Boolean(modules.find((module) => module.code === 'calendar')?.can_write)
 
-  const [tab,setTab] = useState<ProjectsTab>('projects')
+  const requestedTab=searchParams.get('tab')
+  const [tab,setTab] = useState<ProjectsTab>(requestedTab==='projects'||requestedTab==='chores'||requestedTab==='standing'||requestedTab==='rewards'?requestedTab:'projects')
   const [projects,setProjects] = useState<ProjectRow[]>([])
   const [items,setItems] = useState<WorkItem[]>([])
   const [points,setPoints] = useState<PointsRow[]>([])
@@ -609,7 +611,7 @@ export function ProjectsPage() {
     if (externalSourceHandled || !canWrite || !categories.length) return
 
     const requestedTab=searchParams.get('tab')
-    if (requestedTab === 'projects' || requestedTab === 'chores' || requestedTab === 'standing') {
+    if (requestedTab === 'projects' || requestedTab === 'chores' || requestedTab === 'standing' || requestedTab === 'rewards') {
       setTab(requestedTab)
     }
 
@@ -1126,12 +1128,11 @@ export function ProjectsPage() {
     <div className="page projects-page">
       <div className="page-heading-row projects-heading">
         <div>
-          <div className="page-label">PROJECTS & CHORES</div>
-          <h1>Projects, chores & points</h1>
-          <p className="page-subtitle">Plan household projects, import existing Tasks, assign responsibilities and award points only for work that belongs to this module.</p>
+          <h1>Projects, chores & rewards</h1>
+          <p className="page-subtitle">Plan household projects and chores, assign responsibilities, earn points and manage child rewards in one place.</p>
         </div>
 
-        {canWrite && (
+        {canWrite && tab!=='rewards' && (
           <div className="projects-heading-actions">
             <button type="button" className="secondary-button compact" onClick={() => openProject()}>
               <Plus size={15} />
@@ -1149,6 +1150,7 @@ export function ProjectsPage() {
         <button type="button" className={tab === 'projects' ? 'active' : ''} onClick={() => setTab('projects')}>Projects</button>
         <button type="button" className={tab === 'chores' ? 'active' : ''} onClick={() => setTab('chores')}>Chores</button>
         <button type="button" className={tab === 'standing' ? 'active' : ''} onClick={() => setTab('standing')}>Family standing</button>
+        <button type="button" className={tab === 'rewards' ? 'active' : ''} onClick={() => setTab('rewards')}>Child rewards</button>
       </nav>
 
       {!access?.enabled && <div className="module-access-note">Projects & Chores is not enabled for this household.</div>}
@@ -1220,6 +1222,8 @@ export function ProjectsPage() {
           </Link>
         </div>
       )}
+
+      {tab === 'rewards' && <RewardsPage embedded />}
 
       {tab === 'standing' && (
         <section className="family-standing-card list-card">
