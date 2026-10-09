@@ -20638,3 +20638,18 @@ b {
     max-height: none;
   }
 }
+
+
+.notification-item.messenger-notification-item {
+  color: inherit;
+  text-decoration: none;
+  background: #faf6fc;
+}
+
+.notification-item.messenger-notification-item > span {
+  background: #9256a7;
+}
+
+.notification-item.messenger-notification-item:hover {
+  background: #f5edf8;
+}
