@@ -45,6 +45,11 @@ export function MobileAssistantQuick() {
   const audioChunksRef = useRef<Blob[]>([])
   const voiceBaseMessageRef = useRef('')
   const conversationIdRef = useRef(crypto.randomUUID())
+  // Invalidate asynchronous replies and transcription callbacks when the popup closes.
+  const openRef = useRef(false)
+  const sessionRef = useRef(0)
+  const voiceGenerationRef = useRef(0)
+  const sendingRef = useRef(false)
 
   const cycleLabel = useMemo(() => {
     if (!summary?.cycle_end) return ''
@@ -55,11 +60,12 @@ export function MobileAssistantQuick() {
   }, [summary?.cycle_end])
 
   async function loadSummary() {
+    const session = sessionRef.current
     const result = await supabase.rpc('assistant_usage_summary_v1', {
       p_household_id: household.id,
     })
 
-    if (result.error) return
+    if (result.error || !openRef.current || sessionRef.current !== session) return
 
     const row = Array.isArray(result.data) ? result.data[0] : result.data
     if (!row) return
@@ -110,15 +116,15 @@ export function MobileAssistantQuick() {
   },[open])
 
   useEffect(() => {
-    setOpen(false)
+    closeConversation()
   }, [household.id])
 
   useEffect(() => {
     function handlePrefill(event: Event) {
       const detail=(event as CustomEvent<{ message?: string }>).detail
       const nextMessage=detail?.message?.trim()
-      if(nextMessage) setMessage(nextMessage)
-      setOpen(true)
+      if (!openRef.current) openConversation(nextMessage ?? '')
+      else if (nextMessage) setMessage(nextMessage)
     }
 
     window.addEventListener('famioo:assistant-prefill',handlePrefill)
@@ -137,6 +143,70 @@ export function MobileAssistantQuick() {
     speechRef.current?.abort()
     if(previewTimerRef.current)clearInterval(previewTimerRef.current)
   }, [])
+
+  function cancelVoice() {
+    voiceGenerationRef.current += 1
+    sendAfterStopRef.current = false
+    if (previewTimerRef.current) {
+      clearInterval(previewTimerRef.current)
+      previewTimerRef.current = null
+    }
+    const recognition = speechRef.current
+    speechRef.current = null
+    if (recognition) {
+      recognition.onresult = null
+      recognition.onend = null
+      recognition.onerror = null
+      try { recognition.abort() } catch { /* Already stopped. */ }
+    }
+    const recorder = mediaRecorderRef.current
+    mediaRecorderRef.current = null
+    if (recorder) {
+      recorder.ondataavailable = null
+      recorder.onstart = null
+      recorder.onstop = null
+      recorder.onerror = null
+      try { if (recorder.state !== 'inactive') recorder.stop() } catch { /* Already stopped. */ }
+    }
+    mediaStreamRef.current?.getTracks().forEach(track => track.stop())
+    mediaStreamRef.current = null
+    audioChunksRef.current = []
+    voiceModeRef.current = null
+    voiceBaseMessageRef.current = ''
+    liveTranscriptRef.current = ''
+    speechFinalRef.current = ''
+    setListening(false)
+    setTranscribing(false)
+  }
+
+  function closeConversation() {
+    // Closing really ends the chat session, including in-flight responses and voice recognition.
+    openRef.current = false
+    sessionRef.current += 1
+    cancelVoice()
+    sendingRef.current = false
+    setOpen(false)
+    setChat([])
+    setMessage('')
+    setError('')
+    setSummary(null)
+    setSending(false)
+    setKeyboardOpen(false)
+    conversationIdRef.current = crypto.randomUUID()
+  }
+
+  function openConversation(initialMessage = '') {
+    openRef.current = true
+    sessionRef.current += 1
+    setChat([])
+    setMessage(initialMessage)
+    setError('')
+    setSummary(null)
+    setSending(false)
+    sendingRef.current = false
+    conversationIdRef.current = crypto.randomUUID()
+    setOpen(true)
+  }
 
   function playMicStartSound() {
     try {
@@ -168,6 +238,8 @@ export function MobileAssistantQuick() {
   }
 
   async function transcribeRecording(blob: Blob, mimeType: string) {
+    const session = sessionRef.current
+    const voiceGeneration = voiceGenerationRef.current
     if (!blob.size) {
       setError('No speech was recorded.')
       return
@@ -193,6 +265,7 @@ export function MobileAssistantQuick() {
     const result = await supabase.functions.invoke('assistant-transcribe', {
       body: formData,
     })
+    if (!openRef.current || sessionRef.current !== session || voiceGenerationRef.current !== voiceGeneration) return
 
     if (result.error) {
       let detail = result.error.message
@@ -205,6 +278,7 @@ export function MobileAssistantQuick() {
           // Keep the function error message.
         }
       }
+      if (sessionRef.current !== session || voiceGenerationRef.current !== voiceGeneration) return
       setError(detail)
       sendAfterStopRef.current=false
     } else {
@@ -223,6 +297,8 @@ export function MobileAssistantQuick() {
   }
 
   async function previewRecordedSpeech(mimeType:string){
+    const session = sessionRef.current
+    const voiceGeneration = voiceGenerationRef.current
     if(previewInFlightRef.current||voiceModeRef.current!=='recording'||audioChunksRef.current.length===0)return
     previewInFlightRef.current=true
     try{
@@ -234,7 +310,7 @@ export function MobileAssistantQuick() {
       payload.append('file',new File([blob],'interim.'+ext,{type:mimeType||'audio/webm'}))
       const result=await supabase.functions.invoke('assistant-transcribe',{body:payload})
       const text=(result.data as {text?:string}|null)?.text?.trim()
-      if(!result.error&&text&&voiceModeRef.current==='recording'){
+      if(!result.error&&text&&openRef.current&&sessionRef.current===session&&voiceGenerationRef.current===voiceGeneration&&voiceModeRef.current==='recording'){
         const preview=[voiceBaseMessageRef.current,text].filter(Boolean).join(' ')
         liveTranscriptRef.current=preview
         setMessage(preview)
@@ -270,6 +346,8 @@ export function MobileAssistantQuick() {
     if(SpeechRecognitionCtor){
       try{
         const recognition=new SpeechRecognitionCtor()
+        const session = sessionRef.current
+        const voiceGeneration = voiceGenerationRef.current
         speechFinalRef.current=''
         liveTranscriptRef.current=''
         sendAfterStopRef.current=false
@@ -278,6 +356,7 @@ export function MobileAssistantQuick() {
         recognition.interimResults=true
         recognition.lang=navigator.language||'en-US'
         recognition.onresult=(event:any)=>{
+          if(!openRef.current || sessionRef.current !== session || voiceGenerationRef.current !== voiceGeneration)return
           let interim=''
           for(let i=event.resultIndex;i<event.results.length;i++){
             const phrase=event.results[i][0]?.transcript||''
@@ -289,11 +368,13 @@ export function MobileAssistantQuick() {
           setMessage(liveText)
         }
         recognition.onerror=(event:any)=>{
+          if(!openRef.current || sessionRef.current !== session || voiceGenerationRef.current !== voiceGeneration)return
           sendAfterStopRef.current=false
           setError(event.error==='not-allowed'?'Microphone permission is required.':'Live transcription interrupted. Please try again.')
           setListening(false);speechRef.current=null;voiceModeRef.current=null
         }
         recognition.onend=()=>{
+          if(!openRef.current || sessionRef.current !== session || voiceGenerationRef.current !== voiceGeneration)return
           setListening(false);speechRef.current=null;voiceModeRef.current=null
           if(sendAfterStopRef.current){
             sendAfterStopRef.current=false
@@ -315,12 +396,18 @@ export function MobileAssistantQuick() {
     }
 
     try {
+      const session = sessionRef.current
+      const voiceGeneration = voiceGenerationRef.current
       setError('')
       voiceBaseMessageRef.current = message.trim()
       liveTranscriptRef.current=message.trim()
       sendAfterStopRef.current=false
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      if (!openRef.current || sessionRef.current !== session || voiceGenerationRef.current !== voiceGeneration) {
+        stream.getTracks().forEach(track=>track.stop())
+        return
+      }
       mediaStreamRef.current = stream
       audioChunksRef.current = []
 
@@ -339,10 +426,12 @@ export function MobileAssistantQuick() {
       mediaRecorderRef.current = recorder
 
       recorder.ondataavailable = (event) => {
+        if (!openRef.current || sessionRef.current !== session || voiceGenerationRef.current !== voiceGeneration) return
         if (event.data.size > 0) audioChunksRef.current.push(event.data)
       }
 
       recorder.onstart = () => {
+        if (!openRef.current || sessionRef.current !== session || voiceGenerationRef.current !== voiceGeneration) return
         setListening(true)
         playMicStartSound()
         // Request cumulative audio periodically to show interim text on browsers without SpeechRecognition.
@@ -355,6 +444,7 @@ export function MobileAssistantQuick() {
       }
 
       recorder.onstop = () => {
+        if (!openRef.current || sessionRef.current !== session || voiceGenerationRef.current !== voiceGeneration) return
         if(previewTimerRef.current){clearInterval(previewTimerRef.current);previewTimerRef.current=null}
         setListening(false)
         const finalType = recorder.mimeType || mimeType || 'audio/webm'
@@ -368,6 +458,7 @@ export function MobileAssistantQuick() {
       }
 
       recorder.onerror = () => {
+        if (!openRef.current || sessionRef.current !== session || voiceGenerationRef.current !== voiceGeneration) return
         if(previewTimerRef.current){clearInterval(previewTimerRef.current);previewTimerRef.current=null}
         sendAfterStopRef.current=false
         setListening(false)
@@ -379,6 +470,7 @@ export function MobileAssistantQuick() {
 
       recorder.start(250)
     } catch {
+      if (!openRef.current) return
       setListening(false)
       mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
       mediaStreamRef.current = null
@@ -388,8 +480,12 @@ export function MobileAssistantQuick() {
 
   async function sendText(text:string) {
     const value=text.trim()
-    if (!value || sending || !assistantEnabled || summary?.total_remaining===0) return
+    if (!value || !openRef.current || sendingRef.current || !assistantEnabled || summary?.total_remaining===0) return
 
+    const session = sessionRef.current
+    sendingRef.current = true
+    // Prevent a late SpeechRecognition result or audio upload from restoring the sent text.
+    cancelVoice()
     setError('')
     setMessage('')
     setChat((current) => [...current, { role: 'user', content: value }])
@@ -405,6 +501,7 @@ export function MobileAssistantQuick() {
         conversation_id: conversationIdRef.current,
       },
     })
+    if (!openRef.current || sessionRef.current !== session) return
 
     if (result.error) {
       let detail = result.error.message
@@ -417,6 +514,7 @@ export function MobileAssistantQuick() {
           // Keep the function error message.
         }
       }
+      if (!openRef.current || sessionRef.current !== session) return
       setError(detail)
     } else {
       const payload = result.data as {
@@ -441,6 +539,7 @@ export function MobileAssistantQuick() {
       }
     }
 
+    sendingRef.current = false
     setSending(false)
   }
 
@@ -453,7 +552,7 @@ export function MobileAssistantQuick() {
       <button
         className={open ? 'mobile-assistant-tab active' : 'mobile-assistant-tab'}
         type="button"
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => { if (openRef.current) closeConversation(); else openConversation() }}
         aria-label={open ? 'Close AI Assistant' : 'Open AI Assistant'}
         aria-expanded={open}
       >
@@ -467,7 +566,7 @@ export function MobileAssistantQuick() {
             className="mobile-assistant-backdrop"
             type="button"
             aria-label="Close AI Assistant"
-            onClick={() => setOpen(false)}
+            onClick={closeConversation}
           />
 
           <aside className={keyboardOpen?"mobile-assistant-drawer keyboard-open":"mobile-assistant-drawer"} aria-label="AI Assistant">
@@ -488,7 +587,7 @@ export function MobileAssistantQuick() {
                 </div>
               </div>
 
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close Assistant">
+              <button type="button" onClick={closeConversation} aria-label="Close Assistant">
                 <X size={19} />
               </button>
             </div>
@@ -545,7 +644,7 @@ export function MobileAssistantQuick() {
               <button
                 className="mobile-assistant-send"
                 type="submit"
-                disabled={sending || transcribing || !message.trim() || summary?.total_remaining === 0}
+                disabled={sending || listening || transcribing || !message.trim() || summary?.total_remaining === 0}
                 aria-label="Send to Assistant"
               >
                 <Send size={17} />
@@ -556,7 +655,7 @@ export function MobileAssistantQuick() {
               className="mobile-assistant-full-link"
               type="button"
               onClick={() => {
-                setOpen(false)
+                closeConversation()
                 navigate('/app/assistant')
               }}
             >
