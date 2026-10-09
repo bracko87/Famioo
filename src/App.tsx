@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarDays, CarFront, CheckSquare, ClipboardList, ContactRound, FileText, Folder, FolderKanban, Gift, GraduationCap, MapPinned, MessageCircle, PawPrint, Plane, Receipt, ScanLine, ShieldAlert, ShoppingBag, Sparkles, StickyNote, Syringe, Ticket, Utensils, Wrench } from 'lucide-react'
+import { BadgeAlert, CalendarDays, CarFront, CheckSquare, ClipboardList, ContactRound, FileText, Folder, FolderKanban, Gift, GraduationCap, MapPinned, MessageCircle, PawPrint, Plane, Receipt, ScanLine, ShieldAlert, ShoppingBag, Sparkles, StickyNote, Syringe, Ticket, Utensils, Wrench } from 'lucide-react'
 import type { Session, User } from '@supabase/supabase-js'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { supabase } from './lib/supabase'
@@ -40,6 +40,7 @@ import { TravelPage } from './pages/TravelPage'
 import { VehiclesPage } from './pages/VehiclesPage'
 import { PetsPage } from './pages/PetsPage'
 import { InboxScanPage } from './pages/InboxScanPage'
+import { EmergencyPage } from './pages/EmergencyPage'
 import { BrandMark } from './components/Brand'
 
 function LoadingScreen() {
@@ -163,6 +164,7 @@ function LoadingScreen() {
         <span className="launch-orbit launch-orbit-22" title="Vehicles"><CarFront size={19} /></span>
         <span className="launch-orbit launch-orbit-23" title="Pets"><PawPrint size={19} /></span>
         <span className="launch-orbit launch-orbit-24" title="Family Inbox / Scan"><ScanLine size={19} /></span>
+        <span className="launch-orbit launch-orbit-25" title="Emergency Information"><BadgeAlert size={19} /></span>
 
         <div className="launch-brand">
           <BrandMark className="launch-brand-logo" />
@@ -276,6 +278,7 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Route path="vehicles" element={<VehiclesPage />} />
           <Route path="pets" element={<PetsPage />} />
           <Route path="inbox" element={<InboxScanPage />} />
+          <Route path="emergency" element={<EmergencyPage />} />
           <Route path="settings" element={<SettingsPage />} />
 
           <Route path="shopping" element={<ShoppingPage />} />
