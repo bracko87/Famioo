@@ -46,6 +46,8 @@ const routeByModule: Record<ModuleCode, string> = {
   memories: '/app/memories',
   checkin: '/app/check-in',
   pickup_authorization: '/app/pickup-authorization',
+  home_remote: '/app/home-remote',
+  voice_integration: '/app/voice',
   shopping: '/app/shopping',
   costs: '/app/costs',
   school: '/app/school',
