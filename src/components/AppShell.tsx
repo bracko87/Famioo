@@ -23,6 +23,7 @@ import {
   MessagesSquare,
   PawPrint,
   Plane,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   RadioTower,
@@ -38,7 +39,7 @@ import {
   Utensils,
   X,
 } from 'lucide-react'
-import { useEffect, useState, type ComponentType } from 'react'
+import { useEffect, useMemo, useState, type ComponentType } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
@@ -111,6 +112,56 @@ const routeByModule: Partial<Record<ModuleCode, string>> = {
   voice_integration: '/app/voice',
 }
 
+
+type SidebarModuleItem = {
+  code: ModuleCode
+  label: string
+  category: 'plan' | 'family' | 'life' | 'connected'
+}
+
+const sidebarModuleItems: SidebarModuleItem[] = [
+  { code: 'calendar', label: 'Calendar', category: 'plan' },
+  { code: 'tasks', label: 'Tasks', category: 'plan' },
+  { code: 'checklists', label: 'Checklists', category: 'plan' },
+  { code: 'memo', label: 'Memo / Someday', category: 'plan' },
+  { code: 'inbox_scan', label: 'Inbox / Scan', category: 'plan' },
+
+  { code: 'safety', label: 'Family Safety', category: 'family' },
+  { code: 'location', label: 'Family Location', category: 'family' },
+  { code: 'messenger', label: 'Family Messenger', category: 'family' },
+  { code: 'contacts', label: 'Family Contacts', category: 'family' },
+  { code: 'rewards', label: 'Child Rewards', category: 'family' },
+  { code: 'memories', label: 'Memories', category: 'family' },
+  { code: 'checkin', label: 'Check-In', category: 'family' },
+  { code: 'pickup_authorization', label: 'Pickup Authorization', category: 'family' },
+  { code: 'emergency_info', label: 'Emergency Info', category: 'family' },
+  { code: 'school', label: 'School & Kita', category: 'family' },
+
+  { code: 'shopping', label: 'Shopping', category: 'life' },
+  { code: 'costs', label: 'Household Costs', category: 'life' },
+  { code: 'meals', label: 'Meals & Recipes', category: 'life' },
+  { code: 'home_care', label: 'Home Care', category: 'life' },
+  { code: 'life_admin', label: 'Life Admin', category: 'life' },
+  { code: 'projects', label: 'Projects & Chores', category: 'life' },
+  { code: 'travel', label: 'Travel & Trips', category: 'life' },
+  { code: 'vehicles', label: 'Vehicles', category: 'life' },
+  { code: 'pets', label: 'Pets', category: 'life' },
+  { code: 'files', label: 'Files', category: 'life' },
+  { code: 'vaccinations', label: 'Prevention', category: 'life' },
+  { code: 'tickets', label: 'Tickets / QR Wallet', category: 'life' },
+
+  { code: 'assistant', label: 'AI Assistant', category: 'connected' },
+  { code: 'home_remote', label: 'Home Remote', category: 'connected' },
+  { code: 'voice_integration', label: 'Alexa / Voice', category: 'connected' },
+]
+
+const sidebarCategories = [
+  { id: 'plan' as const, label: 'Plan' },
+  { id: 'family' as const, label: 'Family' },
+  { id: 'life' as const, label: 'Home & Life' },
+  { id: 'connected' as const, label: 'Connected' },
+]
+
 type HeaderNotification = {
   id: string
   notification_type: string
@@ -133,9 +184,14 @@ export function AppShell() {
     }
   })
   const [notificationOpen, setNotificationOpen] = useState(false)
+  const [openSidebarCategory, setOpenSidebarCategory] = useState<string>('plan')
   const [notifications, setNotifications] = useState<HeaderNotification[]>([])
   const [profileAvatarUrl, setProfileAvatarUrl] = useState('')
-  const enabledPaid = modules.filter((module) => module.enabled && !module.is_core)
+  const visibleSidebarModules = useMemo(() => {
+    const enabledCodes = new Set(modules.filter((module) => module.enabled).map((module) => module.code))
+    return sidebarModuleItems.filter((item) => enabledCodes.has(item.code) && routeByModule[item.code])
+  }, [modules])
+  const useCategorizedSidebar = visibleSidebarModules.length > 15
 
   const currentProfile = profiles.find((profile) => profile.linked_user_id === user.id)
   const profileName = currentProfile?.display_name
@@ -243,37 +299,48 @@ export function AppShell() {
           {sidebarCollapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
         </button>
 
-        <nav className="side-nav" aria-label="Main navigation">
+        <nav className={'side-nav '+(useCategorizedSidebar?'side-nav-categorized':'side-nav-flat')} aria-label="Main navigation">
           <span className="nav-label">PLAN</span>
           <NavLink to="/app" end onClick={() => setMobileMenu(false)} title="Home"><Home size={18} /><span className="nav-text">Home</span></NavLink>
-          <NavLink to="/app/calendar" onClick={() => setMobileMenu(false)} title="Calendar"><CalendarDays size={18} /><span className="nav-text">Calendar</span></NavLink>
-          <NavLink to="/app/tasks" onClick={() => setMobileMenu(false)} title="Tasks"><ClipboardList size={18} /><span className="nav-text">Tasks</span></NavLink>
-          <NavLink to="/app/checklists" onClick={() => setMobileMenu(false)} title="Checklists"><CheckSquare size={18} /><span className="nav-text">Checklists</span></NavLink>
-          <NavLink to="/app/safety" onClick={() => setMobileMenu(false)} title="Family Safety"><ShieldAlert size={18} /><span className="nav-text">Family Safety</span></NavLink>
-          <NavLink to="/app/location" onClick={() => setMobileMenu(false)} title="Family Location"><MapPinned size={18} /><span className="nav-text">Family Location</span></NavLink>
-          <NavLink to="/app/messenger" onClick={() => setMobileMenu(false)} title="Family Messenger"><MessageCircle size={18} /><span className="nav-text">Family Messenger</span></NavLink>
-          <NavLink to="/app/contacts" onClick={() => setMobileMenu(false)} title="Family Contacts"><ContactRound size={18} /><span className="nav-text">Family Contacts</span></NavLink>
-          <NavLink to="/app/memo" onClick={() => setMobileMenu(false)} title="Memo / Someday"><StickyNote size={18} /><span className="nav-text">Memo / Someday</span></NavLink>
-          <NavLink to="/app/rewards" onClick={() => setMobileMenu(false)} title="Child Rewards"><Gift size={18} /><span className="nav-text">Child Rewards</span></NavLink>
-          <NavLink to="/app/travel" onClick={() => setMobileMenu(false)} title="Travel & Trips"><Plane size={18} /><span className="nav-text">Travel & Trips</span></NavLink>
-          <NavLink to="/app/vehicles" onClick={() => setMobileMenu(false)} title="Vehicles"><CarFront size={18} /><span className="nav-text">Vehicles</span></NavLink>
-          <NavLink to="/app/pets" onClick={() => setMobileMenu(false)} title="Pets"><PawPrint size={18} /><span className="nav-text">Pets</span></NavLink>
-          <NavLink to="/app/inbox" onClick={() => setMobileMenu(false)} title="Family Inbox / Scan"><ScanLine size={18} /><span className="nav-text">Inbox / Scan</span></NavLink>
-          <NavLink to="/app/emergency" onClick={() => setMobileMenu(false)} title="Emergency Information"><BadgeAlert size={18} /><span className="nav-text">Emergency Info</span></NavLink>
-          <NavLink to="/app/memories" onClick={() => setMobileMenu(false)} title="Family Photo Albums / Memories"><Images size={18} /><span className="nav-text">Memories</span></NavLink>
-          <NavLink to="/app/check-in" onClick={() => setMobileMenu(false)} title="Family Check-In"><CheckCircle2 size={18} /><span className="nav-text">Check-In</span></NavLink>
-          <NavLink to="/app/pickup-authorization" onClick={() => setMobileMenu(false)} title="Pickup Authorization"><BadgeCheck size={18} /><span className="nav-text">Pickup Authorization</span></NavLink>
-          <NavLink to="/app/home-remote" onClick={() => setMobileMenu(false)} title="TV Remote / Home Remote"><RadioTower size={18} /><span className="nav-text">Home Remote</span></NavLink>
-          <NavLink to="/app/voice" onClick={() => setMobileMenu(false)} title="Alexa / Voice Integration"><AudioLines size={18} /><span className="nav-text">Alexa / Voice</span></NavLink>
-          <NavLink to="/app/files" onClick={() => setMobileMenu(false)} title="Files"><FileText size={18} /><span className="nav-text">Files</span></NavLink>
 
-          {enabledPaid.length > 0 && <span className="nav-label nav-label-spaced">HOUSEHOLD</span>}
-          {enabledPaid.map((module) => {
-            const Icon = iconByModule[module.code] ?? Sparkles
-            const route = routeByModule[module.code]
-            if (!route) return null
-            return <NavLink to={route} key={module.code} onClick={() => setMobileMenu(false)} title={module.name}><Icon size={18} /><span className="nav-text">{module.name}</span></NavLink>
-          })}
+          <div className="sidebar-flat-modules">
+            {visibleSidebarModules.map((item) => {
+              const Icon = iconByModule[item.code] ?? Sparkles
+              const route = routeByModule[item.code]
+              if (!route) return null
+              return <NavLink to={route} key={item.code} onClick={() => setMobileMenu(false)} title={item.label}><Icon size={18} /><span className="nav-text">{item.label}</span></NavLink>
+            })}
+          </div>
+
+          <div className="sidebar-category-modules">
+            {sidebarCategories.map((category) => {
+              const items = visibleSidebarModules.filter((item) => item.category === category.id)
+              if (!items.length) return null
+              const open = openSidebarCategory === category.id
+              return (
+                <section className={open ? 'sidebar-module-group open' : 'sidebar-module-group'} key={category.id}>
+                  <button
+                    type="button"
+                    className="sidebar-module-group-toggle"
+                    onClick={() => setOpenSidebarCategory((current) => current === category.id ? '' : category.id)}
+                    aria-expanded={open}
+                  >
+                    <span>{category.label}</span>
+                    <small>{items.length}</small>
+                    <ChevronDown size={15} />
+                  </button>
+                  <div className="sidebar-module-group-links">
+                    {items.map((item) => {
+                      const Icon = iconByModule[item.code] ?? Sparkles
+                      const route = routeByModule[item.code]
+                      if (!route) return null
+                      return <NavLink to={route} key={item.code} onClick={() => setMobileMenu(false)} title={item.label}><Icon size={18} /><span className="nav-text">{item.label}</span></NavLink>
+                    })}
+                  </div>
+                </section>
+              )
+            })}
+          </div>
         </nav>
 
         <nav className="side-nav side-nav-bottom">
