@@ -16,6 +16,7 @@ import {
   MapPinned,
   Menu,
   MessageCircle,
+  MessagesSquare,
   PawPrint,
   Plane,
   ChevronLeft,
@@ -66,6 +67,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   pets: PawPrint,
   inbox_scan: ScanLine,
   emergency_info: BadgeAlert,
+  calendar_context: MessagesSquare,
 }
 
 const routeByModule: Partial<Record<ModuleCode, string>> = {
@@ -91,6 +93,7 @@ const routeByModule: Partial<Record<ModuleCode, string>> = {
   pets: '/app/pets',
   inbox_scan: '/app/inbox',
   emergency_info: '/app/emergency',
+  calendar_context: '/app/calendar',
 }
 
 type HeaderNotification = {
