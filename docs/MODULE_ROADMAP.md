@@ -42,14 +42,19 @@ Last updated: 2026-10-09
    - private Messenger media storage
    - later: video messages, reactions, editing/deleting and native call/message enhancements
 
-4. [ ] Family Contacts Directory — NEXT
-   - grandparents, relatives, babysitters
+4. [x] Family Contacts Directory — PWA V1 implemented
+   - shared household directory
+   - grandparents, relatives and babysitters
    - doctors, pharmacies, School/Kita contacts
-   - neighbours and emergency contacts
-   - phone, email, address and notes
-   - note: household-member contact data already exists, but not a true shared directory
+   - neighbours, emergency contacts, services and custom contacts
+   - phone, second phone, email, address, website and notes
+   - one-tap Call / Text / Email / Map / Website actions
+   - favourites and emergency-contact flags
+   - search and contact-type filters
+   - household-member contact cards remain synced automatically from Famioo profiles
+   - manual directory contacts remain separate from login/member records
 
-5. [ ] Shared Memo / Someday
+5. [ ] Shared Memo / Someday — NEXT
    - undated family ideas and notes
    - places to visit / things to do
    - convert later to Calendar, Task or Project
