@@ -18939,3 +18939,18 @@ b {
     justify-content: center;
   }
 }
+
+
+.notification-item.safety-notification-item {
+  color: inherit;
+  text-decoration: none;
+  background: #fff7f8;
+}
+
+.notification-item.safety-notification-item > span {
+  background: #d64561;
+}
+
+.notification-item.safety-notification-item:hover {
+  background: #fff1f4;
+}
