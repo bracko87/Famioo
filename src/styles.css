@@ -18954,3 +18954,413 @@ b {
 .notification-item.safety-notification-item:hover {
   background: #fff1f4;
 }
+
+
+/* =========================================================
+   Auth mobile separation + Family Safety contacts/calls/maps
+   ========================================================= */
+
+@media (max-width: 560px) {
+  .auth-brand-panel {
+    min-height: 0;
+    padding-bottom: 24px;
+  }
+
+  .auth-form-panel {
+    margin-top: 0 !important;
+    padding-top: 14px !important;
+  }
+
+  .auth-card {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+.safety-contact-warning {
+  margin-bottom: 14px;
+  padding: 12px 13px;
+  border: 1px solid #efd5bb;
+  border-radius: 13px;
+  display: grid;
+  grid-template-columns: 24px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 9px;
+  color: #765f47;
+  background: #fff9f1;
+}
+
+.safety-contact-warning > svg {
+  color: #b7793f;
+}
+
+.safety-contact-warning > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.safety-contact-warning strong {
+  color: #6b533d;
+  font-size: 12px;
+}
+
+.safety-contact-warning small {
+  color: #96816d;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.safety-contact-warning > a {
+  color: #8c5a32;
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.safety-desktop-readonly {
+  min-height: 58px;
+  padding: 11px 13px;
+  border: 1px solid #e7dfe9;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #766b7a;
+  background: #faf8fb;
+}
+
+.safety-desktop-readonly > svg {
+  color: #9b67a5;
+}
+
+.safety-desktop-readonly > span {
+  display: grid;
+  gap: 2px;
+}
+
+.safety-desktop-readonly strong {
+  color: #5f5363;
+  font-size: 12px;
+}
+
+.safety-desktop-readonly small {
+  color: #9a8e9d;
+  font-size: 10px;
+}
+
+.safety-contact-panel {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #e8e0eb;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 12px 34px rgba(60,40,70,.06);
+}
+
+.safety-contact-list {
+  display: grid;
+  gap: 8px;
+}
+
+.safety-contact-row {
+  min-height: 62px;
+  padding: 9px 10px;
+  border: 1px solid #eee8ef;
+  border-radius: 13px;
+  display: grid;
+  grid-template-columns: minmax(150px,1fr) minmax(0,auto);
+  align-items: center;
+  gap: 10px;
+  background: #fcfbfd;
+}
+
+.safety-contact-row > span:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.safety-contact-row > span:first-child strong {
+  color: #5b4e60;
+  font-size: 12px;
+}
+
+.safety-contact-row > span:first-child small {
+  overflow: hidden;
+  color: #9a8d9e;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.safety-contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.safety-contact-actions.compact {
+  display: contents;
+}
+
+.safety-action-button {
+  min-height: 35px;
+  padding: 0 10px;
+  border: 1px solid #e5dce8;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #65586a;
+  background: #fff;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.safety-action-button.call {
+  border-color: #cee4d5;
+  color: #46765a;
+  background: #f5fbf7;
+}
+
+.safety-action-button.text {
+  border-color: #d9dff2;
+  color: #536c9b;
+  background: #f7f8fd;
+}
+
+.safety-action-button.internet {
+  border-color: #decfe7;
+  color: #7a4b8b;
+  background: #fbf7fd;
+}
+
+.safety-map-wrap {
+  overflow: hidden;
+  border: 1px solid #eadfe9;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.safety-map {
+  width: 100%;
+  height: 220px;
+  display: block;
+  border: 0;
+  background: #f4f0f5;
+}
+
+.safety-map-wrap .safety-location-card {
+  border: 0;
+  border-top: 1px solid #eee7ef;
+  border-radius: 0;
+}
+
+.safety-incoming-call,
+.safety-live-call {
+  margin-bottom: 12px;
+  padding: 11px 12px;
+  border-radius: 14px;
+  display: grid;
+  align-items: center;
+  gap: 10px;
+}
+
+.safety-incoming-call {
+  grid-template-columns: 38px minmax(0,1fr) auto;
+  border: 1px solid #e5c8d2;
+  color: #694552;
+  background: #fff4f6;
+  box-shadow: 0 10px 28px rgba(118,48,67,.09);
+}
+
+.safety-incoming-call-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(145deg,#aa3556,#e15c70);
+}
+
+.safety-incoming-call > span:nth-child(2),
+.safety-live-call > span:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.safety-incoming-call strong,
+.safety-live-call strong {
+  font-size: 12px;
+}
+
+.safety-incoming-call small,
+.safety-live-call small {
+  color: #9a7e86;
+  font-size: 10px;
+}
+
+.safety-incoming-call > div {
+  display: flex;
+  gap: 6px;
+}
+
+.safety-live-call {
+  grid-template-columns: 12px minmax(0,1fr) auto;
+  border: 1px solid #cfe4d6;
+  color: #476c56;
+  background: #f4faf6;
+}
+
+.safety-live-call-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #55a779;
+  box-shadow: 0 0 0 5px rgba(85,167,121,.12);
+}
+
+.safety-call-status {
+  margin-bottom: 10px;
+  color: #7e7082;
+  font-size: 10px;
+}
+
+.safety-call-error {
+  margin-top: 0;
+}
+
+.safety-phone-settings {
+  margin: 12px 0 16px;
+  padding: 13px;
+  border: 1px solid #eee4f0;
+  border-radius: 14px;
+  background: #fcfafc;
+}
+
+.safety-phone-settings-head h3 {
+  margin: 4px 0 4px;
+  color: #5c4d61;
+  font-size: 15px;
+}
+
+.safety-phone-settings-head p {
+  margin: 0 0 10px;
+  color: #938596;
+  font-size: 10px;
+}
+
+.safety-phone-settings-list {
+  display: grid;
+  gap: 7px;
+}
+
+.safety-phone-row {
+  min-height: 48px;
+  padding: 7px 8px;
+  border: 1px solid #e9e2eb;
+  border-radius: 11px;
+  display: grid;
+  grid-template-columns: minmax(140px,.9fr) minmax(170px,1.2fr) auto;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+}
+
+.safety-phone-row.missing {
+  border-color: #efd9c5;
+  background: #fffaf4;
+}
+
+.safety-phone-row > span:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.safety-phone-row > span:first-child strong {
+  color: #5e5262;
+  font-size: 11px;
+}
+
+.safety-phone-row > span:first-child small {
+  color: #9b8fa0;
+  font-size: 9px;
+}
+
+.safety-phone-row input {
+  min-height: 36px;
+  padding: 7px 9px;
+  font-size: 11px;
+}
+
+.safety-phone-readonly {
+  color: #817584;
+  font-size: 10px;
+}
+
+@media (max-width: 700px) {
+  .safety-contact-warning {
+    grid-template-columns: 22px minmax(0,1fr);
+  }
+
+  .safety-contact-warning > a {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .safety-contact-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .safety-contact-actions {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    justify-content: stretch;
+  }
+
+  .safety-action-button.internet {
+    grid-column: 1 / -1;
+  }
+
+  .safety-map {
+    height: 190px;
+  }
+
+  .safety-incoming-call {
+    grid-template-columns: 36px minmax(0,1fr);
+  }
+
+  .safety-incoming-call > div {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .safety-live-call {
+    grid-template-columns: 12px minmax(0,1fr);
+  }
+
+  .safety-live-call > button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .safety-phone-row {
+    grid-template-columns: 1fr;
+  }
+
+  .safety-phone-row .secondary-button {
+    width: 100%;
+  }
+}
