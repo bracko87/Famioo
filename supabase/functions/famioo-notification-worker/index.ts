@@ -95,12 +95,16 @@ async function sendPushes() {
               ? 'famioo-safety-'+item.entity_id
               : item.notification_type.startsWith('location_')
                 ? 'famioo-location-'+item.entity_id
-                : 'famioo-'+item.id,
+                : item.notification_type==='messenger_message'
+                  ? 'famioo-messenger-'+item.entity_id
+                  : 'famioo-'+item.id,
             url:item.notification_type.startsWith('safety_')
               ? '/app/safety'
               : item.notification_type.startsWith('location_')
                 ? '/app/location'
-                : '/app/calendar',
+                : item.notification_type==='messenger_message'
+                  ? '/app/messenger'
+                  : '/app/calendar',
           }),
           {
             TTL:item.notification_type.startsWith('safety_') ? 300 : 3600,
