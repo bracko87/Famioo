@@ -195,6 +195,7 @@ export function LocationPage(){
 
     if(result.error){
       setError(result.error.message)
+      await load(false)
       return
     }
 
@@ -396,7 +397,7 @@ export function LocationPage(){
                   {item.latitude!=null
                     ?relativeTime(item.captured_at)
                     :item.linked_user_id
-                      ?item.sharing_enabled?'Location unavailable':'Not sharing'
+                      ?item.sharing_enabled?'Private or unavailable':'Not sharing'
                       :'No login device'}
                 </small>
               </span>
