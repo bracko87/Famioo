@@ -30,6 +30,7 @@ export type ModuleCode =
   | 'tasks'
   | 'checklists'
   | 'safety'
+  | 'location'
   | 'shopping'
   | 'costs'
   | 'school'
