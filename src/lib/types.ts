@@ -36,6 +36,7 @@ export type ModuleCode =
   | 'memo'
   | 'rewards'
   | 'travel'
+  | 'vehicles'
   | 'shopping'
   | 'costs'
   | 'school'
