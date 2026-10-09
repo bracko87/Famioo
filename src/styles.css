@@ -22110,3 +22110,55 @@ b {
   .vehicle-editor form>footer{position:sticky;bottom:0;margin:8px -12px -20px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #e7e0e9;background:rgba(255,255,255,.97)}
   .vehicle-editor form>footer .primary-button,.vehicle-editor form>footer .secondary-button{flex:1;justify-content:center}
 }
+
+
+/* =========================================================
+   Pets
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .launch-orbit-23 {
+    top: 88% !important;
+    left: 70% !important;
+    transform: translate(-50%,-50%) rotate(-5deg) !important;
+  }
+}
+
+.pets-page{max-width:1160px}
+.pets-heading{align-items:center}
+.pets-strip{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px}
+.pet-chip{min-width:200px;padding:9px 10px;border:1px solid #e4dde7;border-radius:13px;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;text-align:left;background:#fff;color:#756879;cursor:pointer}
+.pet-chip.active{border-color:#c8a9d1;background:#fbf7fc;box-shadow:0 0 0 2px rgba(139,88,160,.07)}
+.pet-chip>span{min-width:0;display:grid;gap:2px}.pet-chip strong{font-size:10px;color:#5b4f5f}.pet-chip small{font-size:7px;color:#998d9d}
+.pet-hero{padding:14px;border:1px solid #e5dee8;border-radius:16px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;background:linear-gradient(135deg,#fbf8fc,#fff);box-shadow:0 8px 22px rgba(56,39,63,.04);margin-bottom:14px}
+.pet-hero-icon{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:#966f8d;color:#fff}
+.pet-hero h2{margin:0;color:#594d5d;font-size:20px}.pet-hero p,.pet-hero small{margin:2px 0 0;color:#847788;font-size:9px}.pet-hero-actions{display:flex;align-items:center;gap:6px}
+.pets-tabs{margin-bottom:14px}
+.pet-overview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.pet-summary-card{padding:11px;border:1px solid #e7e0e9;border-radius:14px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;background:#fff;color:#806a88}.pet-summary-card>span{display:grid;gap:2px}.pet-summary-card small{font-size:7px;font-weight:800;color:#9d90a0}.pet-summary-card strong{font-size:10px;color:#5c5060}.pet-summary-card em{font-size:7px;color:#978b9b;font-style:normal}.pet-summary-card button{border:0;background:#f1edf4;color:#775482;border-radius:8px;padding:6px 8px;font:inherit;font-size:8px;font-weight:700;cursor:pointer}
+.pet-reminders,.pet-care-preview,.pet-notes{grid-column:1/-1;padding:12px;border:1px solid #e7e0e9;border-radius:14px;background:#fbfafc}
+.pet-reminders>div,.pet-care-preview>div{padding:8px 0;border-bottom:1px solid #eee8f0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.pet-reminders>div:last-child,.pet-care-preview>div:last-child{border-bottom:0}.pet-reminders>div>span,.pet-care-preview>div>span{display:grid;gap:2px}.pet-reminders strong,.pet-care-preview strong{font-size:9px;color:#5d5062}.pet-reminders small,.pet-care-preview small{font-size:7px;color:#998d9d}.pet-reminders b,.pet-care-preview b{font-size:9px;color:#7f7084}.pet-reminders b.soon{color:#a07b31}.pet-reminders b.overdue{color:#a45f70}.pet-notes p{margin:6px 0 0;font-size:9px;line-height:1.5;color:#7c7080;white-space:pre-wrap}
+.pet-section{display:grid;gap:10px}.pet-section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}.pet-section-head h2{margin:3px 0 0;color:#594d5d;font-size:17px}.pet-section-head p{margin:3px 0 0;color:#958999;font-size:8px}
+.pet-health-list,.pet-care-list,.pet-document-list{display:grid;gap:7px}
+.pet-health-row{padding:10px;border:1px solid #e6dfe8;border-radius:13px;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:start;gap:9px;background:#fff}.pet-health-icon{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:#7a7192;color:#fff}.pet-health-icon.vaccination{background:#66866f}.pet-health-icon.medication{background:#7e6991}.pet-health-icon.insurance{background:#627f9c}.pet-health-row>div:nth-child(2){display:grid;gap:2px}.pet-health-row small{font-size:7px;color:#9b8e9f;font-weight:800}.pet-health-row strong{font-size:10px;color:#5a4e5e}.pet-health-row span{font-size:8px;color:#8d808f}.pet-health-row em{font-size:8px;color:#7a6183;font-style:normal}.pet-health-row p{margin:3px 0 0;font-size:8px;line-height:1.45;color:#7f7383}.pet-health-row>b{font-size:9px;color:#6c5a72}
+.pet-row-actions{display:flex;gap:4px}.pet-row-actions button{min-height:29px;border:0;border-radius:8px;padding:0 8px;display:grid;place-items:center;background:#f2eef4;color:#796c7d;font:inherit;font-size:8px;cursor:pointer}
+.pet-care-row{padding:10px;border:1px solid #e6dfe8;border-radius:13px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:9px;background:#fff}.pet-care-check{width:34px;height:34px;border:0;border-radius:11px;display:grid;place-items:center;background:#edf4ee;color:#66866b;cursor:pointer}.pet-care-row>div:nth-child(2){display:grid;gap:2px}.pet-care-row strong{font-size:10px;color:#5b4f5f}.pet-care-row small,.pet-care-row em{font-size:7px;color:#978a9b;font-style:normal}.pet-care-row p{margin:3px 0 0;font-size:8px;color:#807483}
+.pet-insurance-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}.pet-insurance-card{padding:11px;border:1px solid #e6dfe8;border-radius:14px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px;background:#fff}.pet-insurance-card>svg{color:#6c8495}.pet-insurance-card>div{display:grid;gap:2px}.pet-insurance-card small{font-size:7px;color:#9c8fa0;font-weight:800}.pet-insurance-card strong{font-size:10px;color:#5d5062}.pet-insurance-card span,.pet-insurance-card em{font-size:8px;color:#8f828f;font-style:normal}.pet-insurance-card p{margin:3px 0 0;font-size:8px;color:#817583}.pet-insurance-card footer{grid-column:1/-1;padding-top:7px;border-top:1px solid #eee8f0;display:flex;justify-content:flex-end;gap:5px}.pet-insurance-card footer button{border:0;border-radius:8px;padding:6px 8px;background:#f2eef4;color:#756879;font:inherit;font-size:8px;cursor:pointer}
+.pet-document-linker{display:grid;grid-template-columns:150px minmax(180px,1fr) minmax(160px,1fr) auto;gap:7px}.pet-document-linker select,.pet-document-linker input{min-height:38px;padding:0 9px;border:1px solid #ddd4e1;border-radius:10px;background:#fff;color:#5b4f5f;font:inherit;font-size:9px}
+.pet-document-row{padding:9px 10px;border:1px solid #e7e0e9;border-radius:12px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px;background:#fff}.pet-document-row>span{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#f3eef5;color:#7d5a87}.pet-document-row>div:nth-child(2){display:grid;gap:1px}.pet-document-row small{font-size:7px;color:#9c8fa0;font-weight:800}.pet-document-row strong{font-size:9px;color:#5c5060}.pet-document-row em{font-size:7px;color:#9a8d9e;font-style:normal}.pet-document-row>div:last-child{display:flex;gap:5px}
+.pets-empty{min-height:190px;padding:22px;border:1px dashed #ddd4e1;border-radius:15px;display:grid;place-items:center;align-content:center;gap:6px;text-align:center;color:#988b9d;background:#fbfafc}.pets-empty.compact{min-height:110px}.pets-empty strong{font-size:11px;color:#625567}.pets-empty span{max-width:450px;font-size:8px;line-height:1.45}
+.pet-editor-backdrop{z-index:2850}.pet-editor{width:min(620px,calc(100vw - 24px));padding:16px}.pet-editor.small{width:min(500px,calc(100vw - 24px))}.pet-editor>header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}.pet-editor h2{margin:3px 0 0;color:#594d5d;font-size:18px}.pet-editor form{display:grid;gap:9px}.pet-editor form>label,.pet-editor-row label{display:grid;gap:5px}.pet-editor form label>span{font-size:8px;color:#786b7c;font-weight:700}.pet-editor input,.pet-editor select,.pet-editor textarea{width:100%;min-height:39px;padding:8px 9px;border:1px solid #ddd4e1;border-radius:10px;background:#fff;color:#574c5b;font:inherit;font-size:10px}.pet-editor-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pet-sync-setting{min-height:42px;padding:8px 9px;border:1px solid #e8e1ea;border-radius:10px;display:flex!important;align-items:center;gap:7px!important;background:#faf8fb}.pet-sync-setting input{width:17px;height:17px;min-height:17px;accent-color:#8c58a0}.pet-sync-setting span{display:flex;align-items:center;gap:5px}.pet-editor form>footer{margin-top:3px;display:flex;justify-content:flex-end;gap:7px}
+
+@media(max-width:760px){
+  .pets-page{padding:12px 12px calc(90px + env(safe-area-inset-bottom))!important}
+  .pets-heading{grid-template-columns:minmax(0,1fr) auto!important;align-items:start}.pets-heading p{display:none}
+  .pets-strip{margin-left:-12px;margin-right:-12px;padding-left:12px;padding-right:12px}
+  .pet-hero{grid-template-columns:auto minmax(0,1fr)}.pet-hero-actions{grid-column:1/-1}
+  .pet-overview-grid{grid-template-columns:1fr 1fr}.pet-reminders,.pet-care-preview,.pet-notes{grid-column:1/-1}
+  .pet-health-row{grid-template-columns:auto minmax(0,1fr) auto}.pet-health-row>b{grid-column:2}.pet-row-actions{grid-column:3;grid-row:1/3}
+  .pet-insurance-grid{grid-template-columns:1fr}
+  .pet-document-linker{grid-template-columns:1fr 1fr}.pet-document-linker input{grid-column:1/-1}.pet-document-linker .primary-button{grid-column:1/-1;justify-content:center}
+  .pet-editor-backdrop{padding:0!important;align-items:stretch!important}.pet-editor,.pet-editor.small{width:100%!important;max-width:none!important;min-height:100dvh;padding:calc(15px + env(safe-area-inset-top)) 12px calc(20px + env(safe-area-inset-bottom))!important;border-radius:0!important}
+  .pet-editor form>footer{position:sticky;bottom:0;margin:8px -12px -20px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #e7e0e9;background:rgba(255,255,255,.97)}
+  .pet-editor form>footer .primary-button,.pet-editor form>footer .secondary-button{flex:1;justify-content:center}
+}
