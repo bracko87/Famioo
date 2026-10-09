@@ -1,4 +1,5 @@
 import {
+  AudioLines,
   BadgeAlert,
   BadgeCheck,
   CalendarDays,
@@ -15,6 +16,7 @@ import {
   MapPinned,
   MessageCircle,
   MessagesSquare,
+  RadioTower,
   Receipt,
   ScanLine,
   ShoppingBag,
@@ -67,6 +69,8 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   memories: Images,
   checkin: CheckCircle2,
   pickup_authorization: BadgeCheck,
+  home_remote: RadioTower,
+  voice_integration: AudioLines,
 }
 
 const routeByModule: Record<ModuleCode, string> = {
@@ -100,6 +104,8 @@ const routeByModule: Record<ModuleCode, string> = {
   memories: '/app/memories',
   checkin: '/app/check-in',
   pickup_authorization: '/app/pickup-authorization',
+  home_remote: '/app/home-remote',
+  voice_integration: '/app/voice',
 }
 
 export function HomePage() {
