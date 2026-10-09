@@ -22951,3 +22951,18 @@ button.notification-item.messenger-notification-item{
   .qr-repository-card-top{grid-template-columns:auto minmax(0,1fr)}
   .qr-analysis-chip{grid-column:2;justify-self:start}
 }
+
+
+.qr-repository-tab-row{
+  margin-bottom:12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px
+}
+.qr-repository-tab-row .qr-repository-tabs{margin-bottom:0;min-width:0}
+.qr-archive-all{flex:0 0 auto}
+@media(max-width:700px){
+  .qr-repository-tab-row{align-items:stretch;flex-direction:column}
+  .qr-archive-all{width:100%;justify-content:center}
+}
