@@ -40,7 +40,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type ComponentType } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
 import type { ModuleCode } from '../lib/types'
@@ -177,6 +177,7 @@ type HeaderNotification = {
 }
 
 export function AppShell() {
+  const location = useLocation()
   const { household, households, modules, profiles, user, switchHousehold } = useHousehold()
   const [mobileMenu, setMobileMenu] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -203,6 +204,12 @@ export function AppShell() {
     ?? 'Profile'
   const profileMark = currentProfile?.avatar_emoji ?? profileName.slice(0, 1).toUpperCase()
   const unreadCount = notifications.filter((item) => item.status === 'sent').length
+
+  useEffect(() => {
+    window.scrollTo({ top:0,left:0,behavior:'auto' })
+    document.documentElement.scrollTop=0
+    document.body.scrollTop=0
+  },[location.pathname])
 
   useEffect(() => {
     const savedTheme=window.localStorage.getItem('famioo.mobile.theme') === 'dark' ? 'dark' : 'light'
