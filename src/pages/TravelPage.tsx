@@ -432,7 +432,7 @@ export function TravelPage(){
 
           {selectedTrip&&<>
             <section className="travel-hero">
-              <div className="travel-hero-icon"><Plane size={27}/></div>
+              <div className="travel-hero-art" aria-hidden="true">{selectedTripCover?<img src={selectedTripCover} alt=""/>:<div className="travel-destination-art"><Plane size={55}/><span>{selectedTrip.destination.split(',').slice(-1)[0]?.trim()}</span></div>}</div>
               <div className="travel-hero-copy">
                 <span className="eyebrow">{statusFor(selectedTrip).toUpperCase()}</span>
                 <h2>{selectedTrip.title}</h2>
@@ -476,8 +476,8 @@ export function TravelPage(){
             {tab==='documents'&&<section className="travel-section">
               <div className="travel-section-head"><div><span className="eyebrow">DOCUMENTS & TICKETS</span><h2>Files for this trip</h2><p>Upload files in Famioo Files, then link them here to the trip.</p></div></div>
               {canWrite&&<form className="travel-document-linker" onSubmit={linkDocument}>
-                <select value={documentType} onChange={e=>setDocumentType(e.target.value as 'document'|'ticket')}><option value="document">Document</option><option value="ticket">Ticket</option></select>
-                <select value={documentFileId} onChange={e=>setDocumentFileId(e.target.value)} required><option value="">Choose file…</option>{files.map(file=><option value={file.id} key={file.id}>{file.title}</option>)}</select>
+                <Select value={documentType} options={[{value:'document',label:'Document'},{value:'ticket',label:'Ticket'}]} onChange={value=>setDocumentType(value as 'document'|'ticket')} ariaLabel="Document type"/>
+                <Select value={documentFileId} options={files.map(file=>({value:file.id,label:file.title}))} onChange={setDocumentFileId} placeholder="Choose file…" ariaLabel="Trip document"/>
                 <input value={documentLabel} onChange={e=>setDocumentLabel(e.target.value)} placeholder="Optional label"/>
                 <button className="primary-button compact"><Plus size={13}/>Link</button>
               </form>}
@@ -502,23 +502,29 @@ export function TravelPage(){
       )}
 
       {tripEditorOpen&&<div className="modal-backdrop travel-editor-backdrop" role="dialog" aria-modal="true"><section className="modal-card travel-editor">
-        <header><div><span className="eyebrow">{tripDraft.id?'EDIT TRIP':'NEW TRIP'}</span><h2>{tripDraft.id?'Update trip':'Plan a family trip'}</h2></div><button className="icon-button" onClick={()=>setTripEditorOpen(false)}><X size={18}/></button></header>
+        <header><div><span className="eyebrow">{tripDraft.id?'EDIT TRIP':'NEW TRIP'}</span><h2>{tripDraft.id?'Update trip':'Plan a family trip'}</h2></div><button className="icon-button" onClick={()=>{clearTripPhotoPreview();setTripEditorOpen(false)}}><X size={18}/></button></header>
         <form onSubmit={saveTrip}>
           <label><span>Trip name *</span><input value={tripDraft.title} onChange={e=>setTripDraft(current=>({...current,title:e.target.value}))} maxLength={160} required placeholder="e.g. Summer holiday"/></label>
           <label><span>Destination *</span><input value={tripDraft.destination} onChange={e=>setTripDraft(current=>({...current,destination:e.target.value}))} maxLength={180} required placeholder="e.g. Salzburg, Austria"/></label>
-          <div className="travel-editor-row"><label><span>Start *</span><input type="date" value={tripDraft.start_date} onChange={e=>setTripDraft(current=>({...current,start_date:e.target.value}))} required/></label><label><span>End *</span><input type="date" min={tripDraft.start_date||undefined} value={tripDraft.end_date} onChange={e=>setTripDraft(current=>({...current,end_date:e.target.value}))} required/></label></div>
-          <label><span>Notes</span><textarea rows={4} value={tripDraft.notes} onChange={e=>setTripDraft(current=>({...current,notes:e.target.value}))} placeholder="Accommodation notes, contacts, reminders…"/></label>
-          <label className="travel-sync-setting"><input type="checkbox" checked={tripDraft.sync_calendar} onChange={e=>setTripDraft(current=>({...current,sync_calendar:e.target.checked}))}/><span><CalendarDays size={14}/>Add or update this trip in Calendar</span></label>
-          <footer><button type="button" className="secondary-button" onClick={()=>setTripEditorOpen(false)}>Cancel</button><button className="primary-button" disabled={saving}>{saving?'Saving…':'Save trip'}</button></footer>
+          <div className="travel-editor-row"><label><span>Start *</span><DatePicker value={tripDraft.start_date} onChange={value=>setTripDraft(current=>({...current,start_date:value,end_date:current.end_date&&current.end_date<value?value:current.end_date}))} ariaLabel="Trip start date"/></label><label><span>End *</span><DatePicker value={tripDraft.end_date} min={tripDraft.start_date||undefined} onChange={value=>setTripDraft(current=>({...current,end_date:value}))} ariaLabel="Trip end date"/></label></div>
+          <div className="trip-photo-field">
+             <div className="trip-photo-preview">{tripPhotoPreview?<img src={tripPhotoPreview} alt="Trip cover preview"/>:<Plane size={26}/>}</div>
+             <div><strong>Trip cover image</strong><small>Optional · JPG, PNG or WebP · up to 5 MB</small><label className="secondary-button compact trip-photo-upload"><ImagePlus size={14}/>{tripPhotoPreview?'Change image':'Upload image'}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={event=>{chooseTripPhoto(event.target.files?.[0]??null);event.target.value=''}}/></label>{tripPhotoPreview&&<button type="button" className="trip-photo-remove" onClick={()=>{if(tripPhotoPreview.startsWith('blob:'))URL.revokeObjectURL(tripPhotoPreview);setTripPhotoFile(null);setTripPhotoPreview('');setRemoveTripPhoto(true)}}>Remove image</button>}</div>
+           </div>
+           <label><span>Notes</span><textarea rows={4} value={tripDraft.notes} onChange={e=>setTripDraft(current=>({...current,notes:e.target.value}))} placeholder="Accommodation notes, contacts, reminders…"/></label>
+           <label><span>Calendar connection</span><Select value={tripDraft.calendar_event_id?'event:'+tripDraft.calendar_event_id:tripDraft.sync_calendar?'sync':'none'} options={[{value:'sync',label:'Create / update trip in Calendar'},{value:'none',label:'No Calendar connection'},...calendarEvents.map(event=>({value:'event:'+event.id,label:'Link existing: '+event.title}))]} onChange={value=>setTripDraft(current=>({...current,sync_calendar:value==='sync',calendar_event_id:value.startsWith('event:')?value.slice(6):''}))} ariaLabel="Connect Calendar event"/></label>
+           <small className="trip-photo-helper">If the linked Calendar event has an attached image, it is used when no trip cover has been uploaded.</small>
+          
+          <footer><button type="button" className="secondary-button" onClick={()=>{clearTripPhotoPreview();setTripEditorOpen(false)}}>Cancel</button><button className="primary-button" disabled={saving}>{saving?'Saving…':'Save trip'}</button></footer>
         </form>
       </section></div>}
 
       {itemEditorOpen&&selectedTrip&&<div className="modal-backdrop travel-editor-backdrop" role="dialog" aria-modal="true"><section className="modal-card travel-editor">
         <header><div><span className="eyebrow">{itemDraft.id?'EDIT ITINERARY':'ADD TO ITINERARY'}</span><h2>{itemDraft.id?'Update plan':'New trip item'}</h2></div><button className="icon-button" onClick={()=>setItemEditorOpen(false)}><X size={18}/></button></header>
         <form onSubmit={saveItem}>
-          <label><span>Type</span><select value={itemDraft.item_type} onChange={e=>setItemDraft(current=>({...current,item_type:e.target.value as ItemDraft['item_type']}))}><option value="transport">Transport</option><option value="accommodation">Accommodation</option><option value="activity">Activity</option><option value="note">Note</option></select></label>
+          <label><span>Type</span><Select value={itemDraft.item_type} options={[{value:'transport',label:'Transport'},{value:'accommodation',label:'Accommodation'},{value:'activity',label:'Activity'},{value:'note',label:'Note'}]} onChange={value=>setItemDraft(current=>({...current,item_type:value as ItemDraft['item_type']}))} ariaLabel="Trip item type"/></label>
           <label><span>Title *</span><input value={itemDraft.title} onChange={e=>setItemDraft(current=>({...current,title:e.target.value}))} required maxLength={180} placeholder="Flight, hotel, museum…"/></label>
-          <div className="travel-editor-row"><label><span>Starts</span><input type="datetime-local" value={itemDraft.start_at} onChange={e=>setItemDraft(current=>({...current,start_at:e.target.value}))}/></label><label><span>Ends</span><input type="datetime-local" value={itemDraft.end_at} onChange={e=>setItemDraft(current=>({...current,end_at:e.target.value}))}/></label></div>
+          <div className="travel-editor-row"><label><span>Starts</span><DatePicker value={itemDraft.start_at.slice(0,10)} onChange={date=>setItemDraft(current=>({...current,start_at:date?date+'T'+(current.start_at.slice(11,16)||'09:00'):''}))} ariaLabel="Itinerary start date"/><TimePicker value={itemDraft.start_at.slice(11,16)||'09:00'} onChange={time=>setItemDraft(current=>({...current,start_at:current.start_at?current.start_at.slice(0,10)+'T'+time:''}))}/></label><label><span>Ends</span><DatePicker value={itemDraft.end_at.slice(0,10)} onChange={date=>setItemDraft(current=>({...current,end_at:date?date+'T'+(current.end_at.slice(11,16)||'10:00'):''}))} ariaLabel="Itinerary end date"/><TimePicker value={itemDraft.end_at.slice(11,16)||'10:00'} onChange={time=>setItemDraft(current=>({...current,end_at:current.end_at?current.end_at.slice(0,10)+'T'+time:''}))}/></label></div>
           <label><span>Location</span><input value={itemDraft.location_text} onChange={e=>setItemDraft(current=>({...current,location_text:e.target.value}))} placeholder="Airport, hotel, address…"/></label>
           <label><span>Booking / reference</span><input value={itemDraft.booking_reference} onChange={e=>setItemDraft(current=>({...current,booking_reference:e.target.value}))} placeholder="Confirmation or booking code"/></label>
           <label><span>Notes</span><textarea rows={3} value={itemDraft.notes} onChange={e=>setItemDraft(current=>({...current,notes:e.target.value}))}/></label>
