@@ -34,7 +34,7 @@ import {
   Sparkles,
   StickyNote,
   Syringe,
-  Ticket,
+  QrCode,
   Utensils,
   X,
 } from 'lucide-react'
@@ -64,7 +64,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   files: FileText,
   assistant: Sparkles,
   vaccinations: Syringe,
-  tickets: Ticket,
+  tickets: QrCode,
   safety: ShieldAlert,
   location: MapPinned,
   messenger: MessageCircle,
