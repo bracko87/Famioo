@@ -278,8 +278,8 @@ export function AppShell() {
                       </>
                     )
 
-                    return item.notification_type.startsWith('safety_')
-                      ? (
+                    if(item.notification_type.startsWith('safety_')){
+                      return (
                         <NavLink
                           className="notification-item safety-notification-item"
                           to="/app/safety"
@@ -289,7 +289,22 @@ export function AppShell() {
                           {content}
                         </NavLink>
                       )
-                      : <div className="notification-item" key={item.id}>{content}</div>
+                    }
+
+                    if(item.notification_type.startsWith('location_')){
+                      return (
+                        <NavLink
+                          className="notification-item location-notification-item"
+                          to="/app/location"
+                          key={item.id}
+                          onClick={()=>setNotificationOpen(false)}
+                        >
+                          {content}
+                        </NavLink>
+                      )
+                    }
+
+                    return <div className="notification-item" key={item.id}>{content}</div>
                   })}
                 </div>
               </div>
