@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AudioLines, BadgeAlert, BadgeCheck, CalendarDays, CarFront, CheckCircle2, CheckSquare, ClipboardList, ContactRound, FileText, Folder, FolderKanban, GraduationCap, Images, MapPinned, MessageCircle, MessagesSquare, PawPrint, Plane, RadioTower, Receipt, ScanLine, ShieldAlert, ShoppingBag, Sparkles, StickyNote, Syringe, Ticket, Utensils, Wrench } from 'lucide-react'
+import { AudioLines, BadgeAlert, BadgeCheck, CalendarDays, CarFront, CheckCircle2, CheckSquare, ClipboardList, ContactRound, FileText, Folder, FolderKanban, GraduationCap, Images, MapPinned, MessageCircle, MessagesSquare, PawPrint, Plane, RadioTower, QrCode, Receipt, ScanLine, ShieldAlert, ShoppingBag, Sparkles, StickyNote, Syringe, Utensils, Wrench } from 'lucide-react'
 import type { Session, User } from '@supabase/supabase-js'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { supabase } from './lib/supabase'
