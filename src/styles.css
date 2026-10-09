@@ -22622,3 +22622,44 @@ b {
   .shopping-receipt-capture-modal>footer>*{width:100%;justify-content:center}
   .shopping-compare-drawer{width:100vw;max-width:430px;height:calc(100dvh - 76px - env(safe-area-inset-top,0px));max-height:none}
 }
+
+
+/* =========================================================
+   Global page/modal opening behavior
+   ========================================================= */
+
+/* Module pages no longer repeat the small uppercase module label above the title. */
+.page-heading-row > div > .eyebrow:first-child,
+.page-heading-row > div > .page-label:first-child,
+.page-heading > div > .eyebrow:first-child,
+.page-heading > div > .page-label:first-child {
+  display: none !important;
+}
+
+/* Every modal starts from the top of the viewport instead of being vertically centered. */
+.modal-backdrop {
+  place-items: start center;
+  align-content: start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.modal-backdrop > .modal-card,
+.modal-backdrop > form.modal-card,
+.modal-backdrop > section.modal-card {
+  margin-top: 0;
+}
+
+@media (min-width: 701px) {
+  .modal-backdrop {
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+}
+
+@media (max-width: 700px) {
+  .modal-backdrop {
+    align-items: start !important;
+    place-items: start stretch !important;
+  }
+}
