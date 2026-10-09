@@ -11,6 +11,7 @@ import {
   MapPinned,
   MessageCircle,
   Receipt,
+  ScanLine,
   ShoppingBag,
   ShieldAlert,
   Sparkles,
@@ -55,6 +56,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   travel: Plane,
   vehicles: CarFront,
   pets: PawPrint,
+  inbox_scan: ScanLine,
 }
 
 const routeByModule: Record<ModuleCode, string> = {
@@ -82,6 +84,7 @@ const routeByModule: Record<ModuleCode, string> = {
   travel: '/app/travel',
   vehicles: '/app/vehicles',
   pets: '/app/pets',
+  inbox_scan: '/app/inbox',
 }
 
 export function HomePage() {
