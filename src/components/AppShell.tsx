@@ -6,6 +6,7 @@ import {
   ContactRound,
   FileText,
   FolderKanban,
+  Gift,
   GraduationCap,
   Home,
   House,
@@ -54,6 +55,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   messenger: MessageCircle,
   contacts: ContactRound,
   memo: StickyNote,
+  rewards: Gift,
 }
 
 const routeByModule: Partial<Record<ModuleCode, string>> = {
@@ -73,6 +75,7 @@ const routeByModule: Partial<Record<ModuleCode, string>> = {
   messenger: '/app/messenger',
   contacts: '/app/contacts',
   memo: '/app/memo',
+  rewards: '/app/rewards',
 }
 
 type HeaderNotification = {
@@ -218,6 +221,7 @@ export function AppShell() {
           <NavLink to="/app/messenger" onClick={() => setMobileMenu(false)} title="Family Messenger"><MessageCircle size={18} /><span className="nav-text">Family Messenger</span></NavLink>
           <NavLink to="/app/contacts" onClick={() => setMobileMenu(false)} title="Family Contacts"><ContactRound size={18} /><span className="nav-text">Family Contacts</span></NavLink>
           <NavLink to="/app/memo" onClick={() => setMobileMenu(false)} title="Memo / Someday"><StickyNote size={18} /><span className="nav-text">Memo / Someday</span></NavLink>
+          <NavLink to="/app/rewards" onClick={() => setMobileMenu(false)} title="Child Rewards"><Gift size={18} /><span className="nav-text">Child Rewards</span></NavLink>
           <NavLink to="/app/files" onClick={() => setMobileMenu(false)} title="Files"><FileText size={18} /><span className="nav-text">Files</span></NavLink>
 
           {enabledPaid.length > 0 && <span className="nav-label nav-label-spaced">HOUSEHOLD</span>}
