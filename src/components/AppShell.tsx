@@ -3,6 +3,7 @@ import {
   Bell,
   CalendarDays,
   CarFront,
+  CheckCircle2,
   CheckSquare,
   ClipboardList,
   ContactRound,
@@ -70,6 +71,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   emergency_info: BadgeAlert,
   calendar_context: MessagesSquare,
   memories: Images,
+  checkin: CheckCircle2,
 }
 
 const routeByModule: Partial<Record<ModuleCode, string>> = {
@@ -97,6 +99,7 @@ const routeByModule: Partial<Record<ModuleCode, string>> = {
   emergency_info: '/app/emergency',
   calendar_context: '/app/calendar',
   memories: '/app/memories',
+  checkin: '/app/check-in',
 }
 
 type HeaderNotification = {
@@ -249,6 +252,7 @@ export function AppShell() {
           <NavLink to="/app/inbox" onClick={() => setMobileMenu(false)} title="Family Inbox / Scan"><ScanLine size={18} /><span className="nav-text">Inbox / Scan</span></NavLink>
           <NavLink to="/app/emergency" onClick={() => setMobileMenu(false)} title="Emergency Information"><BadgeAlert size={18} /><span className="nav-text">Emergency Info</span></NavLink>
           <NavLink to="/app/memories" onClick={() => setMobileMenu(false)} title="Family Photo Albums / Memories"><Images size={18} /><span className="nav-text">Memories</span></NavLink>
+          <NavLink to="/app/check-in" onClick={() => setMobileMenu(false)} title="Family Check-In"><CheckCircle2 size={18} /><span className="nav-text">Check-In</span></NavLink>
           <NavLink to="/app/files" onClick={() => setMobileMenu(false)} title="Files"><FileText size={18} /><span className="nav-text">Files</span></NavLink>
 
           {enabledPaid.length > 0 && <span className="nav-label nav-label-spaced">HOUSEHOLD</span>}
