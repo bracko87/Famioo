@@ -408,7 +408,7 @@ export function InboxScanPage(){
       file={scannerFile}
       busy={busy}
       shareTargets={profiles
-        .filter(profile=>Boolean(profile.linked_user_id)&&profile.linked_user_id!==user.id&&profile.active)
+        .filter(profile=>Boolean(profile.linked_user_id)&&profile.linked_user_id!==user.id)
         .map(profile=>({value:String(profile.linked_user_id),label:profile.display_name}))}
       onClose={()=>{if(!busy)setScannerFile(null)}}
       onSave={async(file)=>{
