@@ -112,7 +112,7 @@ export function MemoriesPage(){
   const [message,setMessage]=useState('')
 
   const visibleAlbums=albums.filter(album=>showArchived?Boolean(album.archived_at):!album.archived_at)
-  const selected=albums.find(album=>album.id===selectedId)??visibleAlbums[0]??null
+  const selected=visibleAlbums.find(album=>album.id===selectedId)??visibleAlbums[0]??null
   const selectedPhotos=photos.filter(photo=>photo.album_id===selected?.id)
   const photoFileIds=new Set(selectedPhotos.map(photo=>photo.file_id))
   const availableExistingPhotos=files.filter(file=>file.mime_type?.startsWith('image/')&&!photoFileIds.has(file.id))
