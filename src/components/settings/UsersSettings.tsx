@@ -41,6 +41,8 @@ export function UsersSettings() {
   const [removingProfileId, setRemovingProfileId] = useState('')
   const [removeConfirm,setRemoveConfirm] = useState<HouseholdUser|null>(null)
   const [message, setMessage] = useState('')
+  const [phoneDrafts,setPhoneDrafts] = useState<Record<string,string>>({})
+  const [savingPhone,setSavingPhone] = useState('')
 
   const isOwner = household.role === 'owner'
   const canManageAvatars = household.role === 'owner' || household.role === 'admin'
@@ -71,6 +73,7 @@ export function UsersSettings() {
 
     const rows = (result.data ?? []) as HouseholdUser[]
     setUsers(rows)
+    setPhoneDrafts(Object.fromEntries(rows.map((member)=>[member.profile_id,member.phone??''])))
     await loadAvatarUrls(rows)
   }
 
@@ -182,6 +185,31 @@ export function UsersSettings() {
     setRole('user')
     setMessage(mode === 'invite' ? 'Invitation email sent.' : 'User created successfully.')
 
+    await loadUsers()
+    await refresh()
+  }
+
+  async function saveSafetyPhone(member:HouseholdUser) {
+    const canEdit = household.role==='owner' || household.role==='admin' || member.user_id===user.id
+    if(!canEdit || member.profile_type!=='adult') return
+
+    setSavingPhone(member.profile_id)
+    setMessage('')
+
+    const result=await supabase.rpc('set_household_profile_phone_v1',{
+      p_household_id:household.id,
+      p_profile_id:member.profile_id,
+      p_phone:(phoneDrafts[member.profile_id]??'').trim(),
+    })
+
+    setSavingPhone('')
+
+    if(result.error){
+      setMessage(result.error.message)
+      return
+    }
+
+    setMessage(member.display_name+' safety phone number updated.')
     await loadUsers()
     await refresh()
   }
@@ -310,6 +338,56 @@ export function UsersSettings() {
           </div>
           <span className="user-count">{users.length}</span>
         </div>
+
+        <section className="safety-phone-settings">
+          <div className="safety-phone-settings-head">
+            <div>
+              <span className="eyebrow">FAMILY SAFETY CONTACTS</span>
+              <h3>Mobile phone numbers</h3>
+              <p>Used for the one-tap Call and Text buttons after an SOS. Internet calling remains available when a mobile number is missing.</p>
+            </div>
+          </div>
+
+          <div className="safety-phone-settings-list">
+            {users
+              .filter((member)=>member.profile_type==='adult'&&member.user_id)
+              .map((member)=>{
+                const canEditPhone=household.role==='owner'||household.role==='admin'||member.user_id===user.id
+                return (
+                  <div className={member.phone?'safety-phone-row':'safety-phone-row missing'} key={'safety-phone-'+member.profile_id}>
+                    <span>
+                      <strong>{member.display_name}</strong>
+                      <small>{member.phone?'Ready for emergency call/SMS':'Phone number missing'}</small>
+                    </span>
+                    {canEditPhone ? (
+                      <>
+                        <input
+                          type="tel"
+                          value={phoneDrafts[member.profile_id]??''}
+                          onChange={(event)=>setPhoneDrafts((current)=>({
+                            ...current,
+                            [member.profile_id]:event.target.value,
+                          }))}
+                          placeholder="+49 170 1234567"
+                          aria-label={'Safety phone number for '+member.display_name}
+                        />
+                        <button
+                          type="button"
+                          className="secondary-button compact"
+                          disabled={savingPhone===member.profile_id}
+                          onClick={()=>void saveSafetyPhone(member)}
+                        >
+                          {savingPhone===member.profile_id?'Saving…':'Save'}
+                        </button>
+                      </>
+                    ) : (
+                      <span className="safety-phone-readonly">{member.phone||'Not set'}</span>
+                    )}
+                  </div>
+                )
+              })}
+          </div>
+        </section>
 
         <div className="users-table">
           <div className="users-table-head">
