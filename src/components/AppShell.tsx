@@ -40,7 +40,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type ComponentType } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
 import type { ModuleCode } from '../lib/types'
@@ -48,6 +48,7 @@ import { Brand } from './Brand'
 import { FooterWeather } from './FooterWeather'
 import { Select } from './ui/Select'
 import { MobileAssistantQuick } from './MobileAssistantQuick'
+import { MobileMessengerQuick } from './MobileMessengerQuick'
 import { LocationSharingAgent } from './LocationSharingAgent'
 
 const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>> = {
@@ -175,6 +176,7 @@ type HeaderNotification = {
 
 export function AppShell() {
   const location = useLocation()
+  const navigate = useNavigate()
   const { household, households, modules, profiles, user, switchHousehold } = useHousehold()
   const [mobileMenu, setMobileMenu] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -439,14 +441,22 @@ export function AppShell() {
 
                     if(item.notification_type==='messenger_message'){
                       return (
-                        <NavLink
+                        <button
+                          type="button"
                           className="notification-item messenger-notification-item"
-                          to="/app/messenger"
                           key={item.id}
-                          onClick={()=>setNotificationOpen(false)}
+                          onClick={()=>{
+                            setNotificationOpen(false)
+                            const threadId=item.entity_type==='messenger_thread'?(item.entity_id??''):''
+                            if(window.matchMedia('(max-width: 700px)').matches){
+                              window.dispatchEvent(new CustomEvent('famioo:open-messenger',{detail:{threadId}}))
+                            }else{
+                              navigate('/app/messenger')
+                            }
+                          }}
                         >
                           {content}
-                        </NavLink>
+                        </button>
                       )
                     }
 
@@ -480,6 +490,7 @@ export function AppShell() {
         </NavLink>
       )}
 
+      <MobileMessengerQuick />
       <MobileAssistantQuick />
 
       <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
