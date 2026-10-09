@@ -1,4 +1,5 @@
 import {
+  Archive,
   CalendarDays,
   Check,
   CheckSquare,
@@ -7,8 +8,10 @@ import {
   GraduationCap,
   Inbox,
   ScanLine,
+  RotateCcw,
   Share2,
   Sparkles,
+  Trash2,
   Upload,
   X,
 } from 'lucide-react'
@@ -94,6 +97,7 @@ export function InboxScanPage(){
   const [message,setMessage]=useState('')
   const [scannerFile,setScannerFile]=useState<File|null>(null)
   const [scannerSource,setScannerSource]=useState<'camera'|'upload'>('upload')
+  const [itemBusy,setItemBusy]=useState('')
 
   const visibleItems=useMemo(
     ()=>items.filter(item=>filter==='all'||item.status===filter),
@@ -271,11 +275,39 @@ export function InboxScanPage(){
   }
 
   async function setItemStatus(item:InboxItem,status:InboxItem['status']){
+    setItemBusy(item.id);setError('')
     const result=await supabase.from('family_inbox_items')
       .update({status,updated_at:new Date().toISOString()})
       .eq('id',item.id).eq('household_id',household.id)
+    setItemBusy('')
     if(result.error)setError(result.error.message)
     else await load(false)
+  }
+
+  async function deleteInboxItem(item:InboxItem){
+    if(!canWrite)return
+    if(!window.confirm('Permanently remove this scanned file from Famioo?'))return
+    const file=files[item.file_id]
+    setItemBusy(item.id);setError('');setMessage('')
+    if(file?.storage_path){
+      const storageDelete=await supabase.storage.from('famioo-files').remove([file.storage_path])
+      if(storageDelete.error){
+        setItemBusy('')
+        setError(storageDelete.error.message)
+        return
+      }
+    }
+    const rowDelete=await supabase.from('household_files')
+      .delete()
+      .eq('id',item.file_id)
+      .eq('household_id',household.id)
+    setItemBusy('')
+    if(rowDelete.error){
+      setError(rowDelete.error.message)
+      return
+    }
+    setMessage('Scanned file removed.')
+    await load(false)
   }
 
   async function storedScanFile(item:InboxItem){
@@ -421,6 +453,12 @@ export function InboxScanPage(){
           <div className="inbox-preview">
             {fileUrls[item.file_id]?<img src={fileUrls[item.file_id]} alt={item.title||file?.title||'Scanned document'}/>:<FileText size={34}/>}
             <span>{item.source_kind==='camera'?'SCANNED':'UPLOADED'}</span>
+            {canWrite&&<div className="inbox-preview-actions">
+              {item.status!=='archived'
+                ?<button type="button" disabled={itemBusy===item.id} onClick={()=>void setItemStatus(item,'archived')} aria-label="Archive scan" title="Archive"><Archive size={14}/></button>
+                :<button type="button" disabled={itemBusy===item.id} onClick={()=>void setItemStatus(item,'new')} aria-label="Restore scan" title="Restore"><RotateCcw size={14}/></button>}
+              <button type="button" className="danger" disabled={itemBusy===item.id} onClick={()=>void deleteInboxItem(item)} aria-label="Delete scan permanently" title="Delete"><Trash2 size={14}/></button>
+            </div>}
           </div>
           <div className="inbox-card-body">
             <div className="inbox-card-title">
@@ -455,7 +493,6 @@ export function InboxScanPage(){
               {fileUrls[item.file_id]&&<button type="button" className="secondary-button compact" onClick={()=>void downloadStoredScan(item)}><Download size={13}/>Download</button>}
               {fileUrls[item.file_id]&&<button type="button" className="secondary-button compact" onClick={()=>void shareStoredScan(item)}><Share2 size={13}/>Share</button>}
               {assistantEnabled&&item.extracted_at&&<button type="button" className="secondary-button compact" disabled={extractingId===item.id} onClick={()=>void extractItem(item.id)}><Sparkles size={13}/>{extractingId===item.id?'Scanning…':'Extract again'}</button>}
-              {item.status!=='archived'?<button type="button" className="secondary-button compact" onClick={()=>void setItemStatus(item,'archived')}>Archive</button>:<button type="button" className="secondary-button compact" onClick={()=>void setItemStatus(item,'new')}>Restore</button>}
             </footer>
           </div>
         </article>
