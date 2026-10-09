@@ -22574,3 +22574,27 @@ b {
     overflow-y: auto;
   }
 }
+
+
+/* Compact progress marks for the full 30-module promo rotation. */
+.famioo-promo-progress {
+  gap: 2px;
+  max-width: calc(100% - 34px);
+}
+
+.famioo-promo-progress span {
+  width: 4px;
+  height: 3px;
+  flex: 0 0 4px;
+}
+
+.famioo-promo-progress span.active {
+  width: 14px;
+  flex-basis: 14px;
+}
+
+@media (max-width: 700px) {
+  .famioo-promo-progress {
+    max-width: calc(100% - 28px);
+  }
+}
