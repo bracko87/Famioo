@@ -101,65 +101,76 @@ function outputText(payload:any){
   return ""
 }
 
-async function loadHouseholdContext(userClient:any,householdId:string){
-  const configs=[
-    ["family_profiles",80],
-    ["calendar_events",160],
-    ["tasks",160],
-    ["checklists",120],
-    ["checklist_items",220],
-    ["shopping_lists",120],
-    ["shopping_items",260],
-    ["shopping_receipts",300],
-    ["shopping_receipt_items",500],
-    ["household_costs",300],
-    ["school_entries",160],
-    ["family_contacts",120],
-    ["family_memos",120],
-    ["family_points_ledger",220],
-    ["family_trips",100],
-    ["family_trip_itinerary",180],
-    ["family_vehicles",80],
-    ["vehicle_events",180],
-    ["family_pets",80],
-    ["pet_health_events",180],
-    ["pet_care_routines",120],
-    ["family_inbox_items",120],
-    ["family_memory_albums",120],
-    ["family_checkins",160],
-    ["family_pickup_authorizations",120],
-    ["home_care_assets",120],
-    ["home_care_activity",180],
-    ["home_care_maintenance",160],
-    ["home_care_repairs",160],
-    ["life_admin_items",160],
-    ["household_projects",120],
-    ["project_work_items",200],
-    ["recipes",120],
-    ["recipe_ingredients",240],
-    ["meal_plan_entries",160],
-    ["household_files",140],
-    ["family_emergency_profiles",80],
-    ["safe_places",100],
-    ["safety_alerts",100],
-    ["ticket_wallet_entries",140],
-    ["notifications",120],
-  ] as Array<[string,number]>
-
-  const rows=await Promise.all(configs.map(async([table,limit])=>{
-    try{
-      const result=await userClient.from(table).select("*").eq("household_id",householdId).limit(limit)
-      if(result.error)return [table,[]]
-      return [table,result.data??[]]
-    }catch{
-      return [table,[]]
+async function loadHouseholdContext(userClient:any,householdId:string,message:string,timezone:string){
+  // Query relevant modules first, rather than truncating arbitrary JSON mid-record.
+  // Every request is performed through the authenticated user's RLS client.
+  const groups:Record<string,string[]>={
+    shopping:["shopping_lists","shopping_items","shopping_receipts","shopping_receipt_items","household_costs"],
+    finance:["household_costs","shopping_receipts","shopping_receipt_items"],
+    calendar:["calendar_events","event_participants","event_recurrence_rules"],
+    tasks:["tasks","checklists","checklist_items"],
+    family:["family_profiles","family_contacts","family_memos","family_points_ledger"],
+    school:["school_entries","family_pickup_authorizations"],
+    travel:["family_trips","family_trip_itinerary","family_vehicles","vehicle_events"],
+    pets:["family_pets","pet_health_events","pet_care_routines"],
+    home:["home_care_assets","home_care_activity","home_care_maintenance","home_care_repairs"],
+    admin:["life_admin_items","household_files","ticket_wallet_entries","qr_scan_items"],
+    other:["household_projects","project_work_items","recipes","recipe_ingredients","meal_plan_entries","family_inbox_items","family_memory_albums","family_checkins","notifications"],
+  }
+  const keywords:Record<string,RegExp>={
+    shopping:/shop|receipt|grocery|grocer|purchas|bought|supermarket|store|product|list|einkauf|kauf|račun|kupovin/i,
+    finance:/cost|spend|spent|expens|payment|price|budget|money|€|eur|ausgab|kosten|troš|potroš|cena/i,
+    calendar:/calendar|event|appoint|meeting|schedule|termin|kalendar|datum/i,
+    tasks:/task|todo|checklist|remind|aufgab|zadat|obavez/i,
+    family:/family|household|member|person|contact|famil|porodic/i,
+    school:/school|kita|pickup|child|teacher|schule|škola|dete/i,
+    travel:/trip|travel|journey|holiday|vacation|vehicle|car|reise|putovan|auto/i,
+    pets:/pet|dog|cat|veterinar|ljubim|hund|katze/i,
+    home:/home|repair|maintenance|house|wohn|haus|kuć/i,
+    admin:/document|file|insurance|contract|subscription|ticket|qr|dokument|ugovor/i,
+    other:/project|meal|recipe|inbox|notification|activity|memory|recept|projekt/i,
+  }
+  const matched=Object.keys(groups).filter(group=>keywords[group].test(message))
+  // For broad requests provide a representative overview, with explicit completeness metadata.
+  const selected=matched.length?matched:["family","calendar","tasks","shopping","finance","school","travel","pets","home","admin","other"]
+  const tables=[...new Set(selected.flatMap(g=>groups[g]))]
+  const data:Record<string,unknown[]>={}
+  const metadata:Record<string,{loaded:number;has_more:boolean;error?:string}>={}
+  await Promise.all(tables.map(async table=>{
+    const rows:unknown[]=[]
+    let failure=""
+    const maxRows=selected.length<=2?2000:350
+    const pageSize=250
+    for(let from=0;from<maxRows;from+=pageSize){
+      try{
+        const result=await userClient.from(table).select("*").eq("household_id",householdId).range(from,Math.min(from+pageSize-1,maxRows-1))
+        if(result.error){failure="Could not access this module";break}
+        const page=result.data??[]
+        rows.push(...page)
+        if(page.length<Math.min(pageSize,maxRows-from))break
+      }catch{failure="Could not access this module";break}
     }
+    data[table]=rows
+    metadata[table]={loaded:rows.length,has_more:rows.length>=maxRows,...(failure?{error:failure}:{})}
   }))
-
-  const data=Object.fromEntries(rows)
-  let encoded=JSON.stringify(data)
-  if(encoded.length>70000) encoded=encoded.slice(0,70000)
-  return encoded
+  // Keep JSON valid. Do not silently truncate it or suggest an empty/error table is complete.
+  const maxChars=105000
+  const result:Record<string,unknown>={}
+  let used=0
+  for(const table of tables){
+    const raw=data[table]??[]
+    const remaining=maxChars-used
+    const slice:unknown[]=[]
+    for(const item of raw){
+      const size=JSON.stringify(item).length+1
+      if(used+size>maxChars||size>remaining)break
+      slice.push(item);used+=size
+    }
+    result[table]=slice
+    if(slice.length<raw.length)metadata[table].has_more=true
+    metadata[table].loaded=slice.length
+  }
+  return JSON.stringify({household_timezone:timezone,records:result,table_status:metadata,note:"If a table is incomplete or inaccessible, never claim the records are exhaustive. Never sum partial rows as if they represented a complete period. Shopping receipt totals and linked household costs can be duplicates; deduplicate by source_receipt_id or linked_cost_id."})
 }
 
 function localDateTimeToIso(date:string,time:string,timeZone:string){
@@ -525,7 +536,7 @@ Deno.serve(async(req)=>{
     hour:"2-digit",minute:"2-digit",hour12:false,
   }).format(new Date())
 
-  const householdContext=await loadHouseholdContext(userClient,householdId)
+  const householdContext=await loadHouseholdContext(userClient,householdId,message,timezone)
 
   const instructions=[
     "You are Famioo Assistant inside a household organization app.",
@@ -540,13 +551,13 @@ Deno.serve(async(req)=>{
     "If the user only asks a question or calculation, action_type must be none.",
     "Use plain text only in reply. Do not use Markdown markers such as **, #, backticks or bullet syntax.",
     "If essential information for a requested creation is missing, action_type must be none and reply with one concise follow-up question.",
-    "You have read-only access to the current household data snapshot provided below. Use it to answer calculations, totals, counts, comparisons, schedules, status questions and cross-module questions directly.",
-    "Never claim that you cannot access household records when the needed records are present in the supplied household snapshot.",
+    "You have read-only access to the current household data records below. Use them for calculations, totals, counts, comparisons, schedules, status and cross-module questions. Read table_status first: if has_more or error is set, NEVER present partial counts or totals as complete.",
+    "Never claim that you cannot access household records when the needed records are present. Shopping list items do not contain prices: use dated receipts or household_costs for spending totals, deduplicate costs linked to receipts.",
     "Respect the signed-in user's existing Famioo permissions: the snapshot only contains rows allowed by current RLS.",
     "Do not expose credentials, tokens, encryption material or secrets. Those are intentionally not included.",
     "Do not invent private household data or participant names. If the snapshot does not contain enough data, say exactly what is missing.",
     "Household timezone: "+timezone+". Current household-local date/time: "+now+".",
-    "CURRENT HOUSEHOLD DATA SNAPSHOT (JSON): "+householdContext,
+    "CURRENT HOUSEHOLD DATA RECORDS (JSON): "+householdContext,
     body.page_path?"Current Famioo page: "+String(body.page_path).slice(0,160)+".":"",
   ].filter(Boolean).join("\n")
 
