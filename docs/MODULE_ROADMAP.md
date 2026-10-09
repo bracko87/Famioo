@@ -167,15 +167,23 @@ Last updated: 2026-10-09
     - current temporary scope remains Scan QR → open website
     - future Wallet flow will be newly defined before implementation
 
-17. [ ] TV Remote / Home Remote
-    - supported TV/streaming-device controls
-    - rooms and permissions
-    - later possible smart-home shortcuts
+17. [x] TV Remote / Home Remote — PWA V1 implemented
+    - room and TV / streaming / audio device setup
+    - secure HTTPS bridge/webhook command relay
+    - power, navigation, volume, mute, home and playback controls
+    - owner/admin device configuration and per-profile control permissions
+    - command audit log
+    - direct local-network discovery/control reserved for later native Android/iOS wrappers
 
-18. [ ] Alexa / Voice Integration
-    - calendar queries
-    - add shopping items/tasks
-    - reminders and selected Famioo voice actions
+18. [x] Alexa / Voice Integration — Famioo-side V1 implemented
+    - owner/admin enable/disable and per-action voice permissions
+    - Calendar household-event queries
+    - add Shopping items
+    - create Tasks
+    - read due-task reminders
+    - rotatable hashed integration token and action log
+    - built-in voice command simulator
+    - Amazon Alexa Skill publication/account-linking remains an external Amazon-side deployment step
 
 ## Existing modules with planned upgrades
 
