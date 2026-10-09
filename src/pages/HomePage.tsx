@@ -1,4 +1,5 @@
 import {
+  BadgeAlert,
   CalendarDays,
   CarFront,
   CheckSquare,
@@ -57,6 +58,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   vehicles: CarFront,
   pets: PawPrint,
   inbox_scan: ScanLine,
+  emergency_info: BadgeAlert,
 }
 
 const routeByModule: Record<ModuleCode, string> = {
@@ -85,6 +87,7 @@ const routeByModule: Record<ModuleCode, string> = {
   vehicles: '/app/vehicles',
   pets: '/app/pets',
   inbox_scan: '/app/inbox',
+  emergency_info: '/app/emergency',
 }
 
 export function HomePage() {
