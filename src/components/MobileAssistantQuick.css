@@ -241,7 +241,7 @@
     padding: 10px 11px;
     color: #312f35;
     font: inherit;
-    font-size: .86rem;
+    font-size: 16px;
     line-height: 1.35;
     outline: none;
   }
@@ -298,4 +298,13 @@
     font-size: .79rem;
     cursor: pointer;
   }
+}
+
+/* iOS keyboard: retain the modal's scale and keep the composer visible. */
+@media (max-width: 700px) {
+  .mobile-assistant-drawer { height: min(760px, calc(100dvh - 96px - env(safe-area-inset-top, 0px))); }
+  .mobile-assistant-form textarea { font-size: 16px !important; -webkit-text-size-adjust: 100%; }
+  .mobile-assistant-drawer.keyboard-open { bottom: 8px; height: min(760px, calc(var(--famioo-viewport-height, 100dvh) - 16px)); }
+  .mobile-assistant-form { min-width: 0; }
+  .mobile-assistant-form textarea { min-width: 0; }
 }
