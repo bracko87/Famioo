@@ -37,6 +37,7 @@ export type ModuleCode =
   | 'rewards'
   | 'travel'
   | 'vehicles'
+  | 'pets'
   | 'shopping'
   | 'costs'
   | 'school'
