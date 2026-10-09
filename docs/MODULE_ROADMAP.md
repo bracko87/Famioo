@@ -152,12 +152,18 @@ Last updated: 2026-10-09
     - owner/admin or sender removal controls
     - responsive desktop/mobile check-in composer and feed
 
-15. [ ] Pickup Authorization — NEXT
-    - approved child pickup person for the day
-    - one-time authorization
-    - guardian confirmation
+15. [x] Pickup Authorization — PWA V1 implemented
+    - one-time authorization for a selected child/profile-only family member
+    - approved pickup person reused from Family Contacts
+    - pickup date with optional valid-from / valid-until window
+    - adult guardian / owner / admin authorization controls
+    - guardian confirmation after pickup
+    - cancellation flow
+    - expired-state handling for unconfirmed past authorizations
+    - one-tap phone access to the approved pickup person
+    - responsive desktop/mobile authorization dashboard
 
-16. [ ] Home Presence Board
+16. [ ] Home Presence Board — NEXT
     - Home / School / Work / Away
     - expected home soon
     - optional Calendar + Location integration
