@@ -198,7 +198,8 @@ export function MessengerPage(){
       setThreads(rows)
       setSelectedThreadId((current)=>{
         if(current&&rows.some((row)=>row.id===current)) return current
-        return rows[0]?.id??''
+        const mobile=window.matchMedia('(max-width: 760px)').matches
+        return mobile?'':rows[0]?.id??''
       })
     }
 
