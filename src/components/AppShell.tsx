@@ -20,6 +20,7 @@ import {
   ShieldAlert,
   ShoppingBag,
   Sparkles,
+  StickyNote,
   Syringe,
   Ticket,
   Utensils,
@@ -52,6 +53,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   location: MapPinned,
   messenger: MessageCircle,
   contacts: ContactRound,
+  memo: StickyNote,
 }
 
 const routeByModule: Partial<Record<ModuleCode, string>> = {
@@ -70,6 +72,7 @@ const routeByModule: Partial<Record<ModuleCode, string>> = {
   location: '/app/location',
   messenger: '/app/messenger',
   contacts: '/app/contacts',
+  memo: '/app/memo',
 }
 
 type HeaderNotification = {
@@ -214,6 +217,7 @@ export function AppShell() {
           <NavLink to="/app/location" onClick={() => setMobileMenu(false)} title="Family Location"><MapPinned size={18} /><span className="nav-text">Family Location</span></NavLink>
           <NavLink to="/app/messenger" onClick={() => setMobileMenu(false)} title="Family Messenger"><MessageCircle size={18} /><span className="nav-text">Family Messenger</span></NavLink>
           <NavLink to="/app/contacts" onClick={() => setMobileMenu(false)} title="Family Contacts"><ContactRound size={18} /><span className="nav-text">Family Contacts</span></NavLink>
+          <NavLink to="/app/memo" onClick={() => setMobileMenu(false)} title="Memo / Someday"><StickyNote size={18} /><span className="nav-text">Memo / Someday</span></NavLink>
           <NavLink to="/app/files" onClick={() => setMobileMenu(false)} title="Files"><FileText size={18} /><span className="nav-text">Files</span></NavLink>
 
           {enabledPaid.length > 0 && <span className="nav-label nav-label-spaced">HOUSEHOLD</span>}
