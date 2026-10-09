@@ -16,6 +16,7 @@ import {
   Sparkles,
   StickyNote,
   Gift,
+  PawPrint,
   Plane,
   Syringe,
   Ticket,
@@ -53,6 +54,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   rewards: Gift,
   travel: Plane,
   vehicles: CarFront,
+  pets: PawPrint,
 }
 
 const routeByModule: Record<ModuleCode, string> = {
@@ -79,6 +81,7 @@ const routeByModule: Record<ModuleCode, string> = {
   rewards: '/app/rewards',
   travel: '/app/travel',
   vehicles: '/app/vehicles',
+  pets: '/app/pets',
 }
 
 export function HomePage() {
