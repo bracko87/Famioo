@@ -75,12 +75,16 @@ Last updated: 2026-10-09
    - reopening a rewarded task automatically removes its task award
    - later: streaks and achievements
 
-7. [ ] Travel & Trips — NEXT
-   - itinerary, accommodation and transport
-   - trip documents, tickets and checklists
-   - Calendar integration
+7. [x] Travel & Trips — PWA V1 implemented
+   - family trip cards with destination and date range
+   - itinerary for transport, accommodation, activities and notes
+   - booking references, times, locations and trip notes
+   - trip documents and tickets linked from Famioo Files
+   - packing / preparation checklist
+   - optional automatic Calendar event creation and updates
+   - mobile-responsive trip planner
 
-8. [ ] Vehicles
+8. [ ] Vehicles — NEXT
    - family vehicles
    - insurance, TÜV, service and maintenance
    - tyres, costs, documents and reminders
