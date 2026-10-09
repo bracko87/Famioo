@@ -9,6 +9,7 @@ import {
   FolderKanban,
   GraduationCap,
   House,
+  Images,
   MapPinned,
   MessageCircle,
   MessagesSquare,
@@ -61,6 +62,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   inbox_scan: ScanLine,
   emergency_info: BadgeAlert,
   calendar_context: MessagesSquare,
+  memories: Images,
 }
 
 const routeByModule: Record<ModuleCode, string> = {
@@ -91,6 +93,7 @@ const routeByModule: Record<ModuleCode, string> = {
   inbox_scan: '/app/inbox',
   emergency_info: '/app/emergency',
   calendar_context: '/app/calendar',
+  memories: '/app/memories',
 }
 
 export function HomePage() {
