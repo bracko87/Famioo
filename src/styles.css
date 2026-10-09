@@ -22753,3 +22753,201 @@ button.notification-item.messenger-notification-item{
     left:auto !important;
   }
 }
+
+
+/* =========================================================
+   QR Scanner repository: Links / Events / Digital Tickets
+   ========================================================= */
+
+.qr-repository-page{max-width:1160px}
+.qr-repository-heading{align-items:center}
+.qr-scan-hero{
+  margin-bottom:12px;
+  padding:13px;
+  border:1px solid #e4dce8;
+  border-radius:16px;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:11px;
+  background:linear-gradient(135deg,#fbf8fc,#fff);
+  box-shadow:0 8px 24px rgba(58,40,65,.04)
+}
+.qr-scan-hero-icon{
+  width:46px;height:46px;border-radius:14px;display:grid;place-items:center;
+  color:#87529a;background:#f1e8f5
+}
+.qr-scan-hero>div{min-width:0;display:grid;gap:3px}
+.qr-scan-hero strong{color:#584c5c;font-size:12px}
+.qr-scan-hero p{margin:0;max-width:720px;color:#8d8191;font-size:9px;line-height:1.45}
+
+.qr-repository-tabs{
+  margin-bottom:12px;
+  display:flex;
+  gap:5px;
+  overflow-x:auto;
+  padding-bottom:2px
+}
+.qr-repository-tabs button{
+  min-height:36px;
+  padding:0 10px;
+  border:0;
+  border-radius:999px;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  flex:0 0 auto;
+  color:#7d7082;
+  background:#f2eef4;
+  font:inherit;
+  font-size:8px;
+  font-weight:750;
+  cursor:pointer
+}
+.qr-repository-tabs button.active{color:#fff;background:#8c58a0}
+.qr-repository-tabs button span{
+  min-width:18px;height:18px;padding:0 4px;border-radius:999px;display:grid;place-items:center;
+  background:rgba(255,255,255,.48);font-size:7px
+}
+.qr-repository-tabs button.active span{background:rgba(255,255,255,.18)}
+
+.qr-repository-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:10px}
+.qr-repository-card{
+  min-width:0;
+  padding:12px;
+  border:1px solid #e6dfe9;
+  border-radius:15px;
+  display:grid;
+  align-content:start;
+  gap:9px;
+  background:#fff;
+  box-shadow:0 7px 20px rgba(57,40,63,.04)
+}
+.qr-repository-card.ticket{border-color:#dfd0ea;background:linear-gradient(145deg,#fff,#fbf6fd)}
+.qr-repository-card.event{border-color:#d9e1ec}
+.qr-repository-card-top{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:start;
+  gap:8px
+}
+.qr-repository-kind{
+  width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;background:#7c7190
+}
+.qr-repository-kind.link{background:#687f9d}
+.qr-repository-kind.event{background:#6f8c78}
+.qr-repository-kind.ticket{background:#8b58a0}
+.qr-repository-card-top>div{min-width:0;display:grid;gap:2px}
+.qr-repository-card-top small{color:#9b8e9f;font-size:7px;font-weight:800;letter-spacing:.035em}
+.qr-repository-card-top h2{margin:0;overflow-wrap:anywhere;color:#584c5d;font-size:13px;line-height:1.25}
+.qr-analysis-chip{
+  padding:4px 6px;border-radius:999px;white-space:nowrap;color:#776a7b;background:#f2eef4;font-size:7px;font-weight:750
+}
+.qr-analysis-chip.analyzed{color:#5d7b62;background:#edf5ee}
+.qr-analysis-chip.metadata{color:#667b91;background:#edf2f7}
+.qr-analysis-chip.unreadable{color:#956b56;background:#f8efe9}
+
+.qr-repository-image{
+  aspect-ratio:16/8;
+  overflow:hidden;
+  border-radius:11px;
+  background:#f1edf3
+}
+.qr-repository-image img{width:100%;height:100%;display:block;object-fit:cover}
+.qr-repository-summary{margin:0;color:#756878;font-size:9px;line-height:1.48}
+.qr-event-facts{display:grid;gap:5px}
+.qr-event-facts span{
+  min-height:31px;
+  padding:6px 8px;
+  border-radius:9px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:#746779;
+  background:#f8f5f9
+}
+.qr-event-facts svg{color:#866094;flex:0 0 auto}
+.qr-event-facts b{min-width:0;color:#5f5363;font-size:8px;font-weight:750}
+.qr-event-facts em{margin-left:auto;color:#95889a;font-size:8px;font-style:normal}
+.qr-repository-source{
+  min-height:34px;
+  padding:7px 8px;
+  border:1px solid #ede7ef;
+  border-radius:9px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:#998c9d;
+  background:#fcfbfd
+}
+.qr-repository-source svg{flex:0 0 auto}
+.qr-repository-source span{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:8px
+}
+.qr-repository-card footer{
+  padding-top:2px;
+  display:flex;
+  justify-content:flex-end;
+  gap:5px;
+  flex-wrap:wrap
+}
+.qr-repository-empty{
+  min-height:200px;
+  padding:24px;
+  border:1px dashed #ddd4e1;
+  border-radius:15px;
+  display:grid;
+  place-items:center;
+  align-content:center;
+  gap:6px;
+  color:#988b9d;
+  background:#fbfafc;
+  text-align:center
+}
+.qr-repository-empty svg{color:#9d72aa}
+.qr-repository-empty strong{color:#625567;font-size:11px}
+.qr-repository-empty span{max-width:430px;font-size:8px;line-height:1.45}
+
+.qr-repository-scanner{width:min(620px,calc(100vw - 24px))}
+.qr-analyzing-overlay{
+  position:absolute;
+  inset:0;
+  z-index:3;
+  display:grid;
+  place-items:center;
+  align-content:center;
+  gap:6px;
+  padding:22px;
+  color:#fff;
+  background:rgba(61,37,73,.78);
+  backdrop-filter:blur(6px);
+  text-align:center
+}
+.qr-analyzing-overlay svg{color:#e8c9ef}
+.qr-analyzing-overlay strong{font-size:13px}
+.qr-analyzing-overlay span{max-width:300px;color:rgba(255,255,255,.78);font-size:9px;line-height:1.45}
+
+@media(max-width:700px){
+  .qr-repository-page{padding:12px 12px calc(90px + env(safe-area-inset-bottom))!important}
+  .qr-repository-heading{grid-template-columns:minmax(0,1fr) auto!important}
+  .qr-repository-heading p{display:none}
+  .qr-scan-hero{grid-template-columns:42px minmax(0,1fr)}
+  .qr-scan-hero-icon{width:42px;height:42px}
+  .qr-scan-hero>button{grid-column:1/-1;width:100%;justify-content:center}
+  .qr-repository-grid{grid-template-columns:1fr}
+  .qr-repository-scanner{
+    width:100%!important;
+    max-width:none!important;
+    min-height:100dvh;
+    max-height:100dvh!important;
+    padding:calc(14px + env(safe-area-inset-top)) 12px calc(20px + env(safe-area-inset-bottom))!important;
+    border-radius:0!important;
+    overflow-y:auto
+  }
+  .qr-repository-card-top{grid-template-columns:auto minmax(0,1fr)}
+  .qr-analysis-chip{grid-column:2;justify-self:start}
+}
