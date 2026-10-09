@@ -9,7 +9,7 @@
     position: fixed;
     z-index: 76;
     right: 0;
-    bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(170px + env(safe-area-inset-bottom, 0px));
     width: 50px;
     min-height: 52px;
     padding: 7px 6px 7px 8px;
