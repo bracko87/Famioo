@@ -41,6 +41,7 @@ export type ModuleCode =
   | 'inbox_scan'
   | 'emergency_info'
   | 'calendar_context'
+  | 'memories'
   | 'shopping'
   | 'costs'
   | 'school'
