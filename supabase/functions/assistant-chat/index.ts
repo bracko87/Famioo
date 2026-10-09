@@ -101,6 +101,96 @@ function outputText(payload:any){
   return ""
 }
 
+
+function localIsoDate(date:Date,timeZone:string){
+  return new Intl.DateTimeFormat("en-CA",{timeZone,year:"numeric",month:"2-digit",day:"2-digit"}).format(date)
+}
+function localPeriod(message:string,timeZone:string){
+  const today=localIsoDate(new Date(),timeZone)
+  const [year,month,day]=today.split("-").map(Number)
+  const utcDay=new Date(Date.UTC(year,month-1,day,12))
+  const iso=(d:Date)=>d.toISOString().slice(0,10)
+  if(/last month|previous month|letzten monat|prošlog meseca|proslog meseca/i.test(message)){
+    return {start:iso(new Date(Date.UTC(year,month-2,1,12))),end:iso(new Date(Date.UTC(year,month-1,1,12))),label:"previous calendar month"}
+  }
+  if(/past (?:two|2) weeks|last (?:two|2) weeks|past 14 days|last 14 days|letzten zwei wochen|poslednje dve nedelje/i.test(message)){
+    const start=new Date(utcDay);start.setUTCDate(start.getUTCDate()-13)
+    const end=new Date(utcDay);end.setUTCDate(end.getUTCDate()+1)
+    return {start:iso(start),end:iso(end),label:"past 14 calendar days"}
+  }
+  if(/last week|past week|past 7 days|letzte woche|prošle nedelje/i.test(message)){
+    const start=new Date(utcDay);start.setUTCDate(start.getUTCDate()-6)
+    const end=new Date(utcDay);end.setUTCDate(end.getUTCDate()+1)
+    return {start:iso(start),end:iso(end),label:"past 7 calendar days"}
+  }
+  return {start:iso(new Date(Date.UTC(year,month-1,1,12))),end:iso(new Date(Date.UTC(year,month,1,12))),label:"current calendar month"}
+}
+
+// Deterministic shopping/expense totals are calculated before rows are sent to the model.
+// This eliminates double-counting receipts mirrored into household_costs.
+async function calculateShoppingSummary(client:any,householdId:string,message:string,timeZone:string){
+  const period=localPeriod(message,timeZone)
+  const fetchRows=async(table:string,dateColumn:string)=>{
+    const values:any[]=[]
+    let error:string|null=null
+    let capped=false
+    for(let from=0;from<10000;from+=500){
+      try{
+        const res=await client.from(table).select("*").eq("household_id",householdId)
+          .gte(dateColumn,period.start).lt(dateColumn,period.end).order(dateColumn,{ascending:true}).range(from,from+499)
+        if(res.error){error="This data could not be accessed";break}
+        const page=res.data??[]
+        values.push(...page)
+        if(page.length<500)break
+        if(from===9500)capped=true
+      }catch{error="This data could not be accessed";break}
+    }
+    return {values,error,capped}
+  }
+  const [receipts,costs,items]=await Promise.all([
+    fetchRows("shopping_receipts","purchase_date"),
+    fetchRows("household_costs","cost_date"),
+    fetchRows("shopping_items","created_at"),
+  ])
+  const linkedCostIds=new Set(receipts.values.map(r=>r.linked_cost_id).filter(Boolean))
+  const receiptIds=new Set(receipts.values.map(r=>r.id))
+  const otherShoppingCosts=costs.values.filter(c=>
+    (c.source_type==="shopping" || c.source_shopping_list_id || c.source_receipt_id)
+    && c.flow_type!=="income"
+    && !linkedCostIds.has(c.id)
+    && !receiptIds.has(c.source_receipt_id)
+  )
+  const totals:Record<string,{receipt_cents:number;other_shopping_cents:number;total_cents:number}>={}
+  const ensure=(currency:any)=>{
+    const key=typeof currency==="string" && currency?currency:"EUR"
+    return totals[key]??(totals[key]={receipt_cents:0,other_shopping_cents:0,total_cents:0})
+  }
+  for(const r of receipts.values){
+    const value=Math.round(Number(r.total_amount||0)*100)
+    if(!Number.isFinite(value))continue
+    const total=ensure(r.currency);total.receipt_cents+=value;total.total_cents+=value
+  }
+  for(const c of otherShoppingCosts){
+    const value=Math.round(Number(c.amount||0)*100)
+    if(!Number.isFinite(value))continue
+    const total=ensure(c.currency);total.other_shopping_cents+=value;total.total_cents+=value
+  }
+  return {
+    period:{...period,end_exclusive:true,time_zone:timeZone},
+    shopping_list_entries_created:items.values.length,
+    shopping_list_entries_checked_from_these:items.values.filter(x=>x.checked).length,
+    receipts_count:receipts.values.length,
+    separately_recorded_shopping_costs_count:otherShoppingCosts.length,
+    shopping_spend_by_currency_minor_units:totals,
+    explanation:"Receipt totals plus shopping-specific costs not already linked to those receipts. Shopping-list entries are not assumed to have a price. Amounts are in cents (minor currency units).",
+    completeness:{
+      receipts:receipts.error?{error:receipts.error}:{complete:!receipts.capped},
+      costs:costs.error?{error:costs.error}:{complete:!costs.capped},
+      shopping_items:items.error?{error:items.error}:{complete:!items.capped},
+    },
+  }
+}
+
 async function loadHouseholdContext(userClient:any,householdId:string,message:string,timezone:string){
   // Query relevant modules first, rather than truncating arbitrary JSON mid-record.
   // Every request is performed through the authenticated user's RLS client.
@@ -170,7 +260,9 @@ async function loadHouseholdContext(userClient:any,householdId:string,message:st
     if(slice.length<raw.length)metadata[table].has_more=true
     metadata[table].loaded=slice.length
   }
-  return JSON.stringify({household_timezone:timezone,records:result,table_status:metadata,note:"If a table is incomplete or inaccessible, never claim the records are exhaustive. Never sum partial rows as if they represented a complete period. Shopping receipt totals and linked household costs can be duplicates; deduplicate by source_receipt_id or linked_cost_id."})
+  const financeSummary=/(shop|receipt|purchas|grocer|cost|spend|spent|expens|einkauf|kosten|kupovin|troš)/i.test(message)
+    ?await calculateShoppingSummary(userClient,householdId,message,timezone):null
+  return JSON.stringify({household_timezone:timezone,records:result,table_status:metadata,calculated_shopping_summary:financeSummary,note:"For shopping-spend questions use calculated_shopping_summary, its explicit date period and completeness first; do not recompute or double count linked receipts. Table status has_more indicates partial records, not empty data."})
 }
 
 function localDateTimeToIso(date:string,time:string,timeZone:string){
@@ -553,6 +645,7 @@ Deno.serve(async(req)=>{
     "If essential information for a requested creation is missing, action_type must be none and reply with one concise follow-up question.",
     "You have read-only access to the current household data records below. Use them for calculations, totals, counts, comparisons, schedules, status and cross-module questions. Read table_status first: if has_more or error is set, NEVER present partial counts or totals as complete.",
     "Never claim that you cannot access household records when the needed records are present. Shopping list items do not contain prices: use dated receipts or household_costs for spending totals, deduplicate costs linked to receipts.",
+    "For shopping spending/count questions, calculated_shopping_summary supplies verified period-scoped counts and currency totals in minor units. Divide cents by 100 when displaying money. If completeness reports an error or incomplete data, explicitly say the result is partial. Do not confuse shopping-list entries with purchases.",
     "Respect the signed-in user's existing Famioo permissions: the snapshot only contains rows allowed by current RLS.",
     "Do not expose credentials, tokens, encryption material or secrets. Those are intentionally not included.",
     "Do not invent private household data or participant names. If the snapshot does not contain enough data, say exactly what is missing.",
