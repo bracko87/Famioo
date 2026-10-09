@@ -12,6 +12,7 @@ import {
   GraduationCap,
   Home,
   House,
+  Images,
   LogOut,
   MapPinned,
   Menu,
