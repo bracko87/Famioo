@@ -103,12 +103,17 @@ Last updated: 2026-10-09
    - vaccination, insurance, vet, prescription and registration documents linked from Famioo Files
    - responsive desktop/mobile pet dashboard
 
-10. [ ] Family Inbox / Scan — NEXT
-    - photograph/upload letters, flyers, invitations and school notices
-    - extract useful information
-    - suggest Calendar / Task / File / School actions
+10. [x] Family Inbox / Scan — PWA V1 implemented
+    - camera capture or image upload for letters, flyers, invitations and school notices
+    - original scan retained securely in Famioo Files
+    - AI extraction of title, summary, sender, event date, deadline and location
+    - suggested Calendar, Task, File and School & Kita actions
+    - one-click Apply / Dismiss review flow
+    - optional child selection for School & Kita suggestions
+    - AI Assistant allowance/accounting reused for extraction
+    - responsive desktop/mobile inbox
 
-11. [ ] Emergency Information
+11. [ ] Emergency Information — NEXT
     - emergency contacts
     - doctors and insurance
     - important family medical/safety notes
