@@ -308,3 +308,13 @@
   .mobile-assistant-form { min-width: 0; }
   .mobile-assistant-form textarea { min-width: 0; }
 }
+
+@media(max-width:700px){
+ .mobile-assistant-record-actions {display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:7px 10px 0;background:#fff;border-top:1px solid rgba(85,72,119,.08)}
+ .mobile-assistant-record-actions span {flex:1 1 100%;font-size:12px;color:#7059a8}
+ .mobile-assistant-record-actions button {min-height:34px;padding:6px 10px;border:1px solid #d9cfe8;border-radius:10px;color:#7055aa;background:#fff;font-size:12px;font-weight:650;cursor:pointer}
+ .mobile-assistant-record-actions button.send-now {background:#6750b9;color:#fff;border-color:#6750b9}
+ .mobile-assistant-record-actions button:disabled {opacity:.5;cursor:default}
+ .mobile-assistant-form textarea {font-size:16px!important}
+ .mobile-assistant-drawer.keyboard-open {bottom:8px!important;height:min(760px,calc(var(--famioo-viewport-height,100dvh) - 16px))!important}
+}
