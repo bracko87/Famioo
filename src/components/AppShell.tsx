@@ -11,6 +11,7 @@ import {
   LogOut,
   MapPinned,
   Menu,
+  MessageCircle,
   ChevronLeft,
   ChevronRight,
   Receipt,
@@ -48,6 +49,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   tickets: Ticket,
   safety: ShieldAlert,
   location: MapPinned,
+  messenger: MessageCircle,
 }
 
 const routeByModule: Partial<Record<ModuleCode, string>> = {
@@ -64,6 +66,7 @@ const routeByModule: Partial<Record<ModuleCode, string>> = {
   tickets: '/app/tickets',
   safety: '/app/safety',
   location: '/app/location',
+  messenger: '/app/messenger',
 }
 
 type HeaderNotification = {
@@ -206,6 +209,7 @@ export function AppShell() {
           <NavLink to="/app/checklists" onClick={() => setMobileMenu(false)} title="Checklists"><CheckSquare size={18} /><span className="nav-text">Checklists</span></NavLink>
           <NavLink to="/app/safety" onClick={() => setMobileMenu(false)} title="Family Safety"><ShieldAlert size={18} /><span className="nav-text">Family Safety</span></NavLink>
           <NavLink to="/app/location" onClick={() => setMobileMenu(false)} title="Family Location"><MapPinned size={18} /><span className="nav-text">Family Location</span></NavLink>
+          <NavLink to="/app/messenger" onClick={() => setMobileMenu(false)} title="Family Messenger"><MessageCircle size={18} /><span className="nav-text">Family Messenger</span></NavLink>
           <NavLink to="/app/files" onClick={() => setMobileMenu(false)} title="Files"><FileText size={18} /><span className="nav-text">Files</span></NavLink>
 
           {enabledPaid.length > 0 && <span className="nav-label nav-label-spaced">HOUSEHOLD</span>}
