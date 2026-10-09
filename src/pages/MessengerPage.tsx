@@ -122,7 +122,7 @@ function cleanMime(value:string,type:'photo'|'voice'){
     : 'audio/webm'
 }
 
-export function MessengerPage(){
+export function MessengerPage({embedded=false,initialThreadId=''}:{embedded?:boolean;initialThreadId?:string}={}){
   const {household,user}=useHousehold()
 
   const [threads,setThreads]=useState<ThreadRow[]>([])
@@ -197,7 +197,11 @@ export function MessengerPage(){
       }))
       setThreads(rows)
       setSelectedThreadId((current)=>{
+        if(initialThreadId&&rows.some((row)=>row.id===initialThreadId)) return initialThreadId
         if(current&&rows.some((row)=>row.id===current)) return current
+        if(embedded){
+          return rows.find((row)=>row.thread_type==='household')?.id??rows[0]?.id??''
+        }
         const mobile=window.matchMedia('(max-width: 760px)').matches
         return mobile?'':rows[0]?.id??''
       })
@@ -208,7 +212,7 @@ export function MessengerPage(){
     }
 
     if(foreground) setLoading(false)
-  },[household.id])
+  },[household.id,embedded,initialThreadId])
 
   const loadMessages=useCallback(async (threadId:string,scroll=false)=>{
     if(!threadId){
@@ -469,8 +473,8 @@ export function MessengerPage(){
   }
 
   return (
-    <div className="page messenger-page">
-      <div className="page-heading-row messenger-page-heading">
+    <div className={embedded?'messenger-page messenger-page-embedded':'page messenger-page'}>
+      {!embedded&&<div className="page-heading-row messenger-page-heading">
         <div>
           <span className="eyebrow">FAMILY MESSENGER</span>
           <h1>Family Messenger</h1>
@@ -479,7 +483,7 @@ export function MessengerPage(){
         <button type="button" className="primary-button compact" onClick={()=>setNewChatOpen(true)}>
           <Plus size={15}/>New chat
         </button>
-      </div>
+      </div>}
 
       {error&&<div className="notice error messenger-notice">{error}</div>}
 
