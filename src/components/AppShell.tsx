@@ -1,6 +1,7 @@
 import {
   Bell,
   CalendarDays,
+  CarFront,
   CheckSquare,
   ClipboardList,
   ContactRound,
@@ -58,6 +59,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   memo: StickyNote,
   rewards: Gift,
   travel: Plane,
+  vehicles: CarFront,
 }
 
 const routeByModule: Partial<Record<ModuleCode, string>> = {
@@ -79,6 +81,7 @@ const routeByModule: Partial<Record<ModuleCode, string>> = {
   memo: '/app/memo',
   rewards: '/app/rewards',
   travel: '/app/travel',
+  vehicles: '/app/vehicles',
 }
 
 type HeaderNotification = {
@@ -226,6 +229,7 @@ export function AppShell() {
           <NavLink to="/app/memo" onClick={() => setMobileMenu(false)} title="Memo / Someday"><StickyNote size={18} /><span className="nav-text">Memo / Someday</span></NavLink>
           <NavLink to="/app/rewards" onClick={() => setMobileMenu(false)} title="Child Rewards"><Gift size={18} /><span className="nav-text">Child Rewards</span></NavLink>
           <NavLink to="/app/travel" onClick={() => setMobileMenu(false)} title="Travel & Trips"><Plane size={18} /><span className="nav-text">Travel & Trips</span></NavLink>
+          <NavLink to="/app/vehicles" onClick={() => setMobileMenu(false)} title="Vehicles"><CarFront size={18} /><span className="nav-text">Vehicles</span></NavLink>
           <NavLink to="/app/files" onClick={() => setMobileMenu(false)} title="Files"><FileText size={18} /><span className="nav-text">Files</span></NavLink>
 
           {enabledPaid.length > 0 && <span className="nav-label nav-label-spaced">HOUSEHOLD</span>}
