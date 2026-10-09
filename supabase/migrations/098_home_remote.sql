@@ -88,30 +88,51 @@ alter table public.home_remote_device_bridges enable row level security;
 
 create policy home_remote_rooms_read on public.home_remote_rooms for select to authenticated
 using(private.has_module_access(household_id,'home_remote','read'));
-create policy home_remote_rooms_write on public.home_remote_rooms for all to authenticated
+create policy home_remote_rooms_insert on public.home_remote_rooms for insert to authenticated
+with check(private.has_module_access(household_id,'home_remote','full') and created_by_user_id=(select auth.uid()));
+create policy home_remote_rooms_update on public.home_remote_rooms for update to authenticated
 using(private.has_module_access(household_id,'home_remote','full'))
 with check(private.has_module_access(household_id,'home_remote','full'));
+create policy home_remote_rooms_delete on public.home_remote_rooms for delete to authenticated
+using(private.has_module_access(household_id,'home_remote','full'));
 
 create policy home_remote_devices_read on public.home_remote_devices for select to authenticated
 using(private.has_module_access(household_id,'home_remote','read'));
-create policy home_remote_devices_write on public.home_remote_devices for all to authenticated
+create policy home_remote_devices_insert on public.home_remote_devices for insert to authenticated
+with check(
+  private.has_module_access(household_id,'home_remote','full')
+  and created_by_user_id=(select auth.uid())
+  and (room_id is null or exists(select 1 from public.home_remote_rooms r where r.id=room_id and r.household_id=household_id))
+);
+create policy home_remote_devices_update on public.home_remote_devices for update to authenticated
 using(private.has_module_access(household_id,'home_remote','full'))
 with check(
   private.has_module_access(household_id,'home_remote','full')
   and (room_id is null or exists(select 1 from public.home_remote_rooms r where r.id=room_id and r.household_id=household_id))
 );
+create policy home_remote_devices_delete on public.home_remote_devices for delete to authenticated
+using(private.has_module_access(household_id,'home_remote','full'));
 
 create policy home_remote_permissions_read on public.home_remote_device_permissions for select to authenticated
 using(private.has_module_access(household_id,'home_remote','read'));
-create policy home_remote_permissions_write on public.home_remote_device_permissions for all to authenticated
-using(
-  private.has_module_access(household_id,'home_remote','full')
-  and exists(select 1 from public.household_members hm where hm.household_id=home_remote_device_permissions.household_id and hm.user_id=(select auth.uid()) and hm.status='active' and hm.role in ('owner','admin'))
-)
+create policy home_remote_permissions_insert on public.home_remote_device_permissions for insert to authenticated
 with check(
-  private.has_module_access(household_id,'home_remote','full')
+  exists(select 1 from public.household_members hm where hm.household_id=home_remote_device_permissions.household_id and hm.user_id=(select auth.uid()) and hm.status='active' and hm.role in ('owner','admin'))
   and exists(select 1 from public.home_remote_devices d where d.id=device_id and d.household_id=household_id)
   and exists(select 1 from public.family_profiles fp where fp.id=profile_id and fp.household_id=household_id and fp.active)
+);
+create policy home_remote_permissions_update on public.home_remote_device_permissions for update to authenticated
+using(
+  exists(select 1 from public.household_members hm where hm.household_id=home_remote_device_permissions.household_id and hm.user_id=(select auth.uid()) and hm.status='active' and hm.role in ('owner','admin'))
+)
+with check(
+  exists(select 1 from public.household_members hm where hm.household_id=home_remote_device_permissions.household_id and hm.user_id=(select auth.uid()) and hm.status='active' and hm.role in ('owner','admin'))
+  and exists(select 1 from public.home_remote_devices d where d.id=device_id and d.household_id=household_id)
+  and exists(select 1 from public.family_profiles fp where fp.id=profile_id and fp.household_id=household_id and fp.active)
+);
+create policy home_remote_permissions_delete on public.home_remote_device_permissions for delete to authenticated
+using(
+  exists(select 1 from public.household_members hm where hm.household_id=home_remote_device_permissions.household_id and hm.user_id=(select auth.uid()) and hm.status='active' and hm.role in ('owner','admin'))
 );
 
 create policy home_remote_command_log_read on public.home_remote_command_log for select to authenticated
