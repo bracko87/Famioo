@@ -17,7 +17,7 @@ Possible scope:
 - Optional shortcuts from the Famioo Home dashboard
 
 ### Family Safety / SOS
-Status: Idea — high priority candidate
+Status: PWA V1 implemented — native Android/iOS Safety extensions and real-device testing remain mandatory before native release
 
 A child-friendly emergency feature that alerts trusted members of the same Famioo household/group if the child feels unsafe or is in danger.
 
@@ -48,6 +48,8 @@ Possible later extensions:
 - emergency contacts outside the Famioo household
 - critical/high-priority notification support where the mobile OS permits it
 - hardware-button / locked-phone SOS trigger where the mobile operating system permits it
+
+Native implementation and test requirements are permanently documented in `docs/NATIVE_RELEASE_SAFETY_PLAN.md`.
 
 Hardware-trigger feasibility:
 - Current web/PWA version cannot listen for side/volume-button combinations while the phone is locked or the app is in the background.
