@@ -23,7 +23,6 @@ import {
   ShieldAlert,
   Sparkles,
   StickyNote,
-  Gift,
   PawPrint,
   Plane,
   Syringe,
@@ -59,7 +58,6 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   messenger: MessageCircle,
   contacts: ContactRound,
   memo: StickyNote,
-  rewards: Gift,
   travel: Plane,
   vehicles: CarFront,
   pets: PawPrint,
@@ -94,7 +92,7 @@ const routeByModule: Record<ModuleCode, string> = {
   messenger: '/app/messenger',
   contacts: '/app/contacts',
   memo: '/app/memo',
-  rewards: '/app/rewards',
+  rewards: '/app/projects?tab=rewards',
   travel: '/app/travel',
   vehicles: '/app/vehicles',
   pets: '/app/pets',
@@ -373,7 +371,7 @@ export function HomePage() {
                   ))}
               </div>
 
-              <footer>Open Projects & Chores →</footer>
+              <footer>Open Projects, Chores & Rewards →</footer>
             </Link>
           )}
         </div>
