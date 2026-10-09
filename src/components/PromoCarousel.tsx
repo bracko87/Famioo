@@ -38,7 +38,7 @@ const promoSlides: PromoSlide[] = [
   { code: 'files', title: 'Important family documents, where you expect them.', description: 'Keep useful household files and attachments connected to the rest of Famioo.', image: 'https://images.unsplash.com/photo-1568667256549-094345857637?auto=format&fit=crop&w=1200&q=80', tone: 'promo-tone-slate' },
   { code: 'assistant', title: 'A household assistant that sees the bigger picture.', description: 'Famioo intelligence can help across your calendar, tasks, lists and household modules.', image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1200&q=80', tone: 'promo-tone-violet' },
   { code: 'vaccinations', title: 'Keep prevention and health reminders visible.', description: 'Organize vaccination and prevention records alongside the rest of family planning.', image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80', tone: 'promo-tone-blue' },
-  { code: 'tickets', title: 'Keep every family ticket ready when you need it.', description: 'Store travel and event tickets, scan QR codes and connect useful dates to Calendar.', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=80', tone: 'promo-tone-purple' },
+  { code: 'tickets', title: 'Scan and organize useful QR codes.', description: 'Famioo sorts scanned QR codes into links, events and digital tickets.', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=80', tone: 'promo-tone-purple' },
 ]
 
 const routeByModule: Record<ModuleCode, string> = {
