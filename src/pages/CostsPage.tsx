@@ -18,7 +18,7 @@ type HouseholdCost = {
   currency: string
   cost_date: string
   cost_kind: 'regular' | 'additional'
-  source_type: 'manual' | 'shopping' | 'task' | 'home_care' | 'life_admin' | 'projects' | 'vehicle'
+  source_type: 'manual' | 'shopping' | 'task' | 'home_care' | 'life_admin' | 'projects' | 'vehicle' | 'pet'
   source_shopping_list_id: string | null
   source_task_id: string | null
   source_home_care_activity_id: string | null
@@ -338,6 +338,7 @@ export function CostsPage() {
       ['life_admin', 0],
       ['projects', 0],
       ['vehicle', 0],
+      ['pet', 0],
     ])
 
     for (const occurrence of occurrences) {
@@ -358,7 +359,9 @@ export function CostsPage() {
                 ? 'Projects & Chores'
                 : key === 'vehicle'
                   ? 'Vehicles'
-                  : 'Other costs',
+                  : key === 'pet'
+                    ? 'Pets'
+                    : 'Other costs',
       value,
     }))
   }, [occurrences])
@@ -437,6 +440,7 @@ export function CostsPage() {
     if (source === 'life_admin') return 'Life Admin'
     if (source === 'projects') return 'Projects & Chores'
     if (source === 'vehicle') return 'Vehicles'
+    if (source === 'pet') return 'Pets'
     return 'Manual'
   }
 
