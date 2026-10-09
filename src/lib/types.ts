@@ -39,6 +39,7 @@ export type ModuleCode =
   | 'vehicles'
   | 'pets'
   | 'inbox_scan'
+  | 'emergency_info'
   | 'shopping'
   | 'costs'
   | 'school'
