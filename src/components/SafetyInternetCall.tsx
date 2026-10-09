@@ -163,11 +163,12 @@ export function SafetyInternetCall({householdId,userId,contacts,onReady}:Props){
   useEffect(()=>{
     void loadCalls()
     const timer=window.setInterval(()=>{ void loadCalls() },2000)
-    return ()=>{
-      window.clearInterval(timer)
-      stopMedia()
-    }
-  },[loadCalls,stopMedia])
+    return ()=>window.clearInterval(timer)
+  },[loadCalls])
+
+  useEffect(()=>{
+    return ()=>stopMedia()
+  },[stopMedia])
 
   const start=useCallback(async (alertId:string,recipientUserId:string)=>{
     setError('')
