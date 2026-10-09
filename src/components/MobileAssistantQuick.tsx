@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Mic, MicOff, Send, Sparkles, X } from 'lucide-react'
+import { ArrowRight, Mic, Send, Sparkles, X } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
@@ -30,6 +30,11 @@ export function MobileAssistantQuick() {
   const [sending, setSending] = useState(false)
   const [listening, setListening] = useState(false)
   const [transcribing, setTranscribing] = useState(false)
+  const [keyboardOpen,setKeyboardOpen]=useState(false)
+  const [autoSendVoice,setAutoSendVoice]=useState(false)
+  const speechRef=useRef<any>(null)
+  const speechFinalRef=useRef('')
+  const voiceModeRef=useRef<'live'|'recording'|null>(null)
   const [error, setError] = useState('')
   const listRef = useRef<HTMLDivElement | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -88,6 +93,18 @@ export function MobileAssistantQuick() {
       document.body.style.overscrollBehavior = previousOverscroll
     }
   }, [open])
+
+  useEffect(() => {
+    if(!open || !window.visualViewport)return
+    const viewport=window.visualViewport
+    const update=()=>{
+      document.documentElement.style.setProperty('--famioo-viewport-height',viewport.height+'px')
+      setKeyboardOpen(viewport.height < window.innerHeight-110)
+    }
+    update()
+    viewport.addEventListener('resize',update)
+    return ()=>{viewport.removeEventListener('resize',update);document.documentElement.style.removeProperty('--famioo-viewport-height')}
+  },[open])
 
   useEffect(() => {
     setOpen(false)
@@ -196,8 +213,15 @@ export function MobileAssistantQuick() {
     setTranscribing(false)
   }
 
+  function stopLiveVoice(){
+    if(speechRef.current){speechRef.current.stop();speechRef.current=null}
+    setListening(false)
+    voiceModeRef.current=null
+  }
+
   async function toggleVoiceInput() {
     if (listening) {
+      if(voiceModeRef.current==='live'){stopLiveVoice();return}
       const recorder = mediaRecorderRef.current
       if (recorder && recorder.state === 'recording') {
         recorder.stop()
@@ -205,6 +229,39 @@ export function MobileAssistantQuick() {
       return
     }
 
+    const SpeechRecognitionCtor=(window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition
+    if(SpeechRecognitionCtor){
+      try{
+        const recognition=new SpeechRecognitionCtor()
+        speechFinalRef.current=''
+        voiceBaseMessageRef.current=message.trim()
+        recognition.continuous=true
+        recognition.interimResults=true
+        recognition.lang=navigator.language||'en-US'
+        recognition.onresult=(event:any)=>{
+          let interim=''
+          for(let i=event.resultIndex;i<event.results.length;i++){
+            const phrase=event.results[i][0]?.transcript||''
+            if(event.results[i].isFinal)speechFinalRef.current+=(speechFinalRef.current?' ':'')+phrase.trim()
+            else interim+=phrase
+          }
+          setMessage([voiceBaseMessageRef.current,speechFinalRef.current,interim].filter(Boolean).join(' ').trim())
+        }
+        recognition.onerror=(event:any)=>{
+          setError(event.error==='not-allowed'?'Microphone permission is required.':'Live transcription interrupted. Please try again.')
+          setListening(false);speechRef.current=null;voiceModeRef.current=null
+        }
+        recognition.onend=()=>{
+          setListening(false);speechRef.current=null;voiceModeRef.current=null
+        }
+        speechRef.current=recognition
+        voiceModeRef.current='live'
+        recognition.start()
+        setListening(true)
+        playMicStartSound()
+        return
+      }catch{speechRef.current=null;voiceModeRef.current=null}
+    }
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
       setError('Voice recording is not supported by this browser.')
       return
@@ -229,6 +286,7 @@ export function MobileAssistantQuick() {
         ? new MediaRecorder(stream, { mimeType })
         : new MediaRecorder(stream)
 
+      voiceModeRef.current='recording'
       mediaRecorderRef.current = recorder
 
       recorder.ondataavailable = (event) => {
@@ -248,6 +306,7 @@ export function MobileAssistantQuick() {
         mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
         mediaStreamRef.current = null
         mediaRecorderRef.current = null
+        voiceModeRef.current=null
         void transcribeRecording(blob, finalType)
       }
 
@@ -351,7 +410,7 @@ export function MobileAssistantQuick() {
             onClick={() => setOpen(false)}
           />
 
-          <aside className="mobile-assistant-drawer" aria-label="AI Assistant">
+          <aside className={keyboardOpen?"mobile-assistant-drawer keyboard-open":"mobile-assistant-drawer"} aria-label="AI Assistant">
             <div className="mobile-assistant-head">
               <div>
                 <span className="mobile-assistant-avatar"><Sparkles size={18} /></span>
@@ -361,7 +420,7 @@ export function MobileAssistantQuick() {
                     {transcribing
                       ? 'Transcribing voice…'
                       : listening
-                        ? 'Recording · tap mic to stop'
+                        ? 'Listening · words appear as you speak'
                         : summary
                           ? `${summary.total_remaining} actions left${cycleLabel ? ` · reloads ${cycleLabel}` : ''}`
                           : 'Household Assistant'}
@@ -420,7 +479,7 @@ export function MobileAssistantQuick() {
                 aria-label={listening ? 'Stop recording' : transcribing ? 'Transcribing voice' : 'Use microphone'}
                 title={listening ? 'Stop recording' : transcribing ? 'Transcribing…' : 'Use microphone'}
               >
-                {listening ? <MicOff size={17} /> : <Mic size={17} />}
+                {listening ? <span aria-hidden="true" style={{width:12,height:12,background:'currentColor',borderRadius:2}} /> : <Mic size={17} />}
               </button>
               <button
                 className="mobile-assistant-send"
