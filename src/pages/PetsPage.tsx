@@ -3,6 +3,7 @@ import {
   Check,
   FileText,
   HeartPulse,
+  ImagePlus,
   PawPrint,
   Pill,
   Plus,
@@ -27,6 +28,7 @@ type Pet={
   weight_kg:number|null
   color_markings:string|null
   notes:string|null
+  photo_path:string|null
   active:boolean
 }
 type HealthEvent={
@@ -154,6 +156,9 @@ export function PetsPage(){
   const [saving,setSaving]=useState(false)
   const [error,setError]=useState('')
   const [message,setMessage]=useState('')
+  const [petPhotoFile,setPetPhotoFile]=useState<File|null>(null)
+  const [petPhotoPreview,setPetPhotoPreview]=useState('')
+  const [petPhotoUrls,setPetPhotoUrls]=useState<Record<string,string>>({})
 
   const selected=pets.find(pet=>pet.id===selectedId)??pets[0]??null
   const selectedHealth=health.filter(item=>item.pet_id===selected?.id)
@@ -171,7 +176,7 @@ export function PetsPage(){
     if(foreground)setLoading(true)
     setError('')
     const [petResult,healthResult,careResult,insuranceResult,fileResult,docResult]=await Promise.all([
-      supabase.from('family_pets').select('id,name,species,breed,sex,birth_date,chip_number,weight_kg,color_markings,notes,active').eq('household_id',household.id).eq('active',true).order('name'),
+      supabase.from('family_pets').select('id,name,species,breed,sex,birth_date,chip_number,weight_kg,color_markings,notes,photo_path,active').eq('household_id',household.id).eq('active',true).order('name'),
       supabase.from('pet_health_events').select('id,pet_id,event_type,title,due_date,completed_date,provider,medication_name,dosage,recurring_every_days,cost_amount,currency,notes,calendar_event_id').eq('household_id',household.id).order('due_date',{ascending:true}),
       supabase.from('pet_care_routines').select('id,pet_id,title,frequency_days,next_due_date,last_completed_date,notes,active').eq('household_id',household.id).eq('active',true).order('next_due_date'),
       supabase.from('pet_insurance_policies').select('id,pet_id,provider,policy_number,valid_from,valid_until,notes,active').eq('household_id',household.id).eq('active',true).order('valid_until',{ascending:true}),
@@ -194,17 +199,41 @@ export function PetsPage(){
       return [file.id,result.data?.signedUrl??''] as const
     }))
     setFileUrls(Object.fromEntries(signed))
+    const petPhotos=await Promise.all(petRows.filter(pet=>pet.photo_path).map(async pet=>{
+      const result=await supabase.storage.from('pet-media').createSignedUrl(String(pet.photo_path),3600)
+      return [pet.id,result.data?.signedUrl??''] as const
+    }))
+    setPetPhotoUrls(Object.fromEntries(petPhotos))
     if(foreground)setLoading(false)
   }
   useEffect(()=>{void load(true)},[household.id])
 
   function openPet(pet?:Pet){
+    if(petPhotoPreview.startsWith('blob:'))URL.revokeObjectURL(petPhotoPreview)
+    setPetPhotoFile(null)
+    setPetPhotoPreview(pet?petPhotoUrls[pet.id]??'':'')
     setPetDraft(pet?{
       id:pet.id,name:pet.name,species:pet.species,breed:pet.breed??'',sex:pet.sex??'unknown',
       birth_date:pet.birth_date??'',chip_number:pet.chip_number??'',weight_kg:pet.weight_kg==null?'':String(pet.weight_kg),
       color_markings:pet.color_markings??'',notes:pet.notes??'',
     }:{...emptyPet})
     setPetEditor(true);setError('');setMessage('')
+  }
+
+  function choosePetPhoto(file:File|null){
+    if(!file)return
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type)){
+      setError('Pet photo must be JPG, PNG or WebP.')
+      return
+    }
+    if(file.size>5*1024*1024){
+      setError('Pet photo can be up to 5 MB.')
+      return
+    }
+    if(petPhotoPreview.startsWith('blob:'))URL.revokeObjectURL(petPhotoPreview)
+    setPetPhotoFile(file)
+    setPetPhotoPreview(URL.createObjectURL(file))
+    setError('')
   }
   async function savePet(event:FormEvent){
     event.preventDefault()
@@ -215,9 +244,33 @@ export function PetsPage(){
       p_chip_number:petDraft.chip_number.trim()||null,p_weight_kg:petDraft.weight_kg?Number(petDraft.weight_kg):null,
       p_color_markings:petDraft.color_markings.trim()||null,p_notes:petDraft.notes.trim()||null,
     })
+    if(result.error){setSaving(false);setError(result.error.message);return}
+
+    const petId=String(result.data)
+    if(petPhotoFile){
+      const previousPath=pets.find(pet=>pet.id===petDraft.id)?.photo_path??null
+      const extension=petPhotoFile.type==='image/png'?'png':petPhotoFile.type==='image/webp'?'webp':'jpg'
+      const path=`${household.id}/${petId}/${crypto.randomUUID()}.${extension}`
+      const upload=await supabase.storage.from('pet-media').upload(path,petPhotoFile,{
+        contentType:petPhotoFile.type,
+        upsert:false,
+      })
+      if(upload.error){setSaving(false);setError(upload.error.message);return}
+
+      const update=await supabase.from('family_pets')
+        .update({photo_path:path,updated_at:new Date().toISOString()})
+        .eq('id',petId).eq('household_id',household.id)
+      if(update.error){
+        await supabase.storage.from('pet-media').remove([path])
+        setSaving(false);setError(update.error.message);return
+      }
+      if(previousPath&&previousPath!==path)await supabase.storage.from('pet-media').remove([previousPath])
+    }
+
     setSaving(false)
-    if(result.error){setError(result.error.message);return}
-    setSelectedId(String(result.data));setPetEditor(false);setMessage(petDraft.id?'Pet updated.':'Pet added.')
+    if(petPhotoPreview.startsWith('blob:'))URL.revokeObjectURL(petPhotoPreview)
+    setPetPhotoFile(null);setPetPhotoPreview('')
+    setSelectedId(petId);setPetEditor(false);setMessage(petDraft.id?'Pet updated.':'Pet added.')
     await load(false)
   }
   async function archivePet(pet:Pet){
@@ -343,10 +396,10 @@ export function PetsPage(){
     {message&&<div className="notice">{message}</div>}
 
     {pets.length===0?<div className="pets-empty"><PawPrint size={34}/><strong>No pets yet.</strong><span>Add a pet profile to start tracking care and health information.</span>{canWrite&&<button className="primary-button compact" onClick={()=>openPet()}><Plus size={14}/>Add first pet</button>}</div>:<>
-      <section className="pets-strip">{pets.map(pet=><button className={selected?.id===pet.id?'pet-chip active':'pet-chip'} onClick={()=>setSelectedId(pet.id)} key={pet.id}><PawPrint size={17}/><span><strong>{pet.name}</strong><small>{[pet.species,pet.breed].filter(Boolean).join(' · ')}</small></span></button>)}</section>
+      <section className="pets-strip">{pets.map(pet=><button className={selected?.id===pet.id?'pet-chip active':'pet-chip'} onClick={()=>setSelectedId(pet.id)} key={pet.id}>{petPhotoUrls[pet.id]?<img className="pet-chip-photo" src={petPhotoUrls[pet.id]} alt=""/>:<PawPrint size={17}/>}<span><strong>{pet.name}</strong><small>{[pet.species,pet.breed].filter(Boolean).join(' · ')}</small></span></button>)}</section>
       {selected&&<>
         <section className="pet-hero">
-          <div className="pet-hero-icon"><PawPrint size={28}/></div>
+          <div className={petPhotoUrls[selected.id]?'pet-hero-icon has-photo':'pet-hero-icon'}>{petPhotoUrls[selected.id]?<img src={petPhotoUrls[selected.id]} alt={selected.name}/>:<PawPrint size={28}/>}</div>
           <div><span className="eyebrow">{selected.species.toUpperCase()}</span><h2>{selected.name}</h2><p>{[selected.breed,selected.sex&&selected.sex!=='unknown'?selected.sex:null].filter(Boolean).join(' · ')||'Family pet'}</p><small>{selected.birth_date?'Born '+fmtDate(selected.birth_date):'Birth date not set'}{selected.weight_kg!=null?' · '+selected.weight_kg+' kg':''}</small></div>
           <div className="pet-hero-actions">{canWrite&&<button className="secondary-button compact" onClick={()=>openPet(selected)}>Edit</button>}{canWrite&&<button className="icon-button" title="Archive pet" onClick={()=>void archivePet(selected)}><Trash2 size={15}/></button>}</div>
         </section>
@@ -397,6 +450,10 @@ export function PetsPage(){
     </>}
 
     {petEditor&&<div className="modal-backdrop pet-editor-backdrop" role="dialog" aria-modal="true"><section className="modal-card pet-editor"><header><div><span className="eyebrow">{petDraft.id?'EDIT PET':'NEW PET'}</span><h2>{petDraft.id?'Update pet':'Add family pet'}</h2></div><button className="icon-button" onClick={()=>setPetEditor(false)}><X size={18}/></button></header><form onSubmit={savePet}>
+      <div className="pet-photo-field">
+        <div className="pet-photo-preview">{petPhotoPreview?<img src={petPhotoPreview} alt="Pet preview"/>:<PawPrint size={26}/>}</div>
+        <div><strong>Pet photo</strong><small>JPG, PNG or WebP · up to 5 MB</small><label className="secondary-button compact pet-photo-button"><ImagePlus size={14}/>{petPhotoPreview?'Change photo':'Upload photo'}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={event=>{const file=event.target.files?.[0]??null;event.target.value='';choosePetPhoto(file)}}/></label></div>
+      </div>
       <label><span>Name *</span><input required maxLength={120} value={petDraft.name} onChange={e=>setPetDraft(v=>({...v,name:e.target.value}))}/></label>
       <div className="pet-editor-row"><label><span>Species *</span><input required value={petDraft.species} onChange={e=>setPetDraft(v=>({...v,species:e.target.value}))} placeholder="Dog, cat…"/></label><label><span>Breed</span><input value={petDraft.breed} onChange={e=>setPetDraft(v=>({...v,breed:e.target.value}))}/></label></div>
       <div className="pet-editor-row"><label><span>Sex</span><select value={petDraft.sex} onChange={e=>setPetDraft(v=>({...v,sex:e.target.value as PetDraft['sex']}))}><option value="unknown">Unknown</option><option value="female">Female</option><option value="male">Male</option></select></label><label><span>Birth date</span><input type="date" value={petDraft.birth_date} onChange={e=>setPetDraft(v=>({...v,birth_date:e.target.value}))}/></label></div>
