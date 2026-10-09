@@ -1,6 +1,6 @@
 import {
   ArrowDown, ArrowLeft, ArrowRight, ArrowUp, CirclePower, Home as HomeIcon, Minus,
-  MoreHorizontal, Pause, Plus, RadioTower, Settings2, Square, Volume2, VolumeX, X
+  MoreHorizontal, Pause, Plus, RadioTower, Settings2, Square, VolumeX, X
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
