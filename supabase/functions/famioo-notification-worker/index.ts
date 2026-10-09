@@ -37,7 +37,7 @@ async function sendPushes() {
 
   const claimed=await sql.begin(async (tx)=> {
     const rows=await tx<Array<{
-      id:string; household_id:string; recipient_user_id:string; title:string; body:string;
+      id:string; household_id:string; recipient_user_id:string; notification_type:string; title:string; body:string;
       entity_id:string|null
     }>>`
       with candidates as (
@@ -54,7 +54,7 @@ async function sendPushes() {
       from candidates c
       where n.id=c.id
       returning n.id::text,n.household_id::text,n.recipient_user_id::text,
-                n.title,n.body,n.entity_id::text
+                n.notification_type,n.title,n.body,n.entity_id::text
     `
     return rows
   })
@@ -91,10 +91,13 @@ async function sendPushes() {
             body:item.body,
             icon:'/famioo-icon-192.png',
             badge:'/famioo-icon-192.png',
-            tag:'famioo-'+item.id,
-            url:'/app/calendar',
+            tag:item.notification_type==='safety_sos' ? 'famioo-safety-'+item.entity_id : 'famioo-'+item.id,
+            url:item.notification_type==='safety_sos' ? '/app/safety' : '/app/calendar',
           }),
-          { TTL:3600,urgency:'normal' },
+          {
+            TTL:item.notification_type==='safety_sos' ? 300 : 3600,
+            urgency:item.notification_type==='safety_sos' ? 'high' : 'normal',
+          },
         )
         pushed+=1
         await sql`update public.push_subscriptions set last_seen_at=now(),updated_at=now() where id=${subscription.id}::uuid`
