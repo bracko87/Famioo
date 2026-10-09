@@ -84,12 +84,16 @@ Last updated: 2026-10-09
    - optional automatic Calendar event creation and updates
    - mobile-responsive trip planner
 
-8. [ ] Vehicles — NEXT
-   - family vehicles
-   - insurance, TÜV, service and maintenance
-   - tyres, costs, documents and reminders
+8. [x] Vehicles — PWA V1 implemented
+   - family vehicle profiles with make/model/plate/VIN/odometer
+   - insurance, TÜV/inspection, service and maintenance records
+   - due-date reminders with optional Calendar sync
+   - tyre sets with season, size, tread depth and storage location
+   - vehicle costs automatically mirrored into Household Costs
+   - registration, insurance, inspection, service and invoice documents linked from Famioo Files
+   - responsive desktop/mobile vehicle dashboard
 
-9. [ ] Pets
+9. [ ] Pets — NEXT
    - pet profiles
    - vet appointments, vaccinations and medication
    - insurance, documents and recurring care
