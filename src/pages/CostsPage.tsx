@@ -18,7 +18,7 @@ type HouseholdCost = {
   currency: string
   cost_date: string
   cost_kind: 'regular' | 'additional'
-  source_type: 'manual' | 'shopping' | 'task' | 'home_care' | 'life_admin' | 'projects' | 'vehicle' | 'pet'
+  source_type: 'manual' | 'shopping' | 'shopping_receipt' | 'task' | 'home_care' | 'life_admin' | 'projects' | 'vehicle' | 'pet'
   source_shopping_list_id: string | null
   source_task_id: string | null
   source_home_care_activity_id: string | null
@@ -436,6 +436,7 @@ export function CostsPage() {
 
   function sourceLabel(source: HouseholdCost['source_type']) {
     if (source === 'shopping') return 'Shopping'
+    if (source === 'shopping_receipt') return 'Shopping receipt'
     if (source === 'task') return 'Task'
     if (source === 'home_care') return 'Home Care'
     if (source === 'life_admin') return 'Life Admin'
@@ -814,7 +815,7 @@ export function CostsPage() {
         ) : visibleCosts.map((cost) => (
           <div className="cost-row" key={cost.id}>
             <span className="cost-source-icon">
-              {cost.source_type === 'shopping'
+              {(cost.source_type === 'shopping' || cost.source_type === 'shopping_receipt')
                 ? <ShoppingBag size={15} />
                 : cost.schedule_type === 'scheduled'
                   ? <CalendarClock size={15} />
