@@ -156,7 +156,7 @@ function LoadingScreen() {
         <span className="launch-orbit launch-orbit-10" title="Meals & Recipes"><Utensils size={19} /></span>
         <span className="launch-orbit launch-orbit-11" title="Files"><Folder size={19} /></span>
         <span className="launch-orbit launch-orbit-12" title="Vaccinations"><Syringe size={19} /></span>
-        <span className="launch-orbit launch-orbit-13" title="Tickets"><Ticket size={19} /></span>
+        <span className="launch-orbit launch-orbit-13" title="QR Scanner"><Ticket size={19} /></span>
         <span className="launch-orbit launch-orbit-14" title="AI Assistant"><Sparkles size={19} /></span>
         <span className="launch-orbit launch-orbit-15" title="Family Safety"><ShieldAlert size={19} /></span>
         <span className="launch-orbit launch-orbit-16" title="Family Location"><MapPinned size={19} /></span>
