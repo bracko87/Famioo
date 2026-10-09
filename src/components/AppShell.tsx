@@ -64,8 +64,11 @@ const routeByModule: Partial<Record<ModuleCode, string>> = {
 
 type HeaderNotification = {
   id: string
+  notification_type: string
   title: string
   body: string
+  entity_type: string | null
+  entity_id: string | null
   status: 'pending' | 'sent' | 'read' | 'failed' | 'cancelled'
   created_at: string
 }
@@ -113,7 +116,7 @@ export function AppShell() {
   async function loadNotifications() {
     const result = await supabase
       .from('notifications')
-      .select('id,title,body,status,created_at')
+      .select('id,notification_type,title,body,entity_type,entity_id,status,created_at')
       .eq('household_id', household.id)
       .eq('recipient_user_id', user.id)
       .in('status', ['sent', 'read'])
@@ -125,6 +128,8 @@ export function AppShell() {
 
   useEffect(() => {
     void loadNotifications()
+    const timer=window.setInterval(()=>{ void loadNotifications() },5000)
+    return ()=>window.clearInterval(timer)
   }, [household.id, user.id])
 
   useEffect(() => {
@@ -255,16 +260,31 @@ export function AppShell() {
                 <div className="notification-popover-list">
                   {notifications.length === 0 ? (
                     <div className="notification-empty">No notifications yet.</div>
-                  ) : notifications.map((item) => (
-                    <div className="notification-item" key={item.id}>
-                      <span className={item.status === 'read' ? 'read' : ''} />
-                      <div>
-                        <strong>{item.title}</strong>
-                        <p>{item.body}</p>
-                        <small>{new Date(item.created_at).toLocaleString()}</small>
-                      </div>
-                    </div>
-                  ))}
+                  ) : notifications.map((item) => {
+                    const content=(
+                      <>
+                        <span className={item.status === 'read' ? 'read' : ''} />
+                        <div>
+                          <strong>{item.title}</strong>
+                          <p>{item.body}</p>
+                          <small>{new Date(item.created_at).toLocaleString()}</small>
+                        </div>
+                      </>
+                    )
+
+                    return item.notification_type==='safety_sos'
+                      ? (
+                        <NavLink
+                          className="notification-item safety-notification-item"
+                          to="/app/safety"
+                          key={item.id}
+                          onClick={()=>setNotificationOpen(false)}
+                        >
+                          {content}
+                        </NavLink>
+                      )
+                      : <div className="notification-item" key={item.id}>{content}</div>
+                  })}
                 </div>
               </div>
             )}
