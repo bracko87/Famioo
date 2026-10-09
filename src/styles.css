@@ -21960,14 +21960,6 @@ b {
    Child Rewards Economy
    ========================================================= */
 
-@media (max-width: 900px) {
-  .launch-orbit-20 {
-    top: 78% !important;
-    left: 84% !important;
-    transform: translate(-50%,-50%) rotate(5deg) !important;
-  }
-}
-
 .rewards-page{max-width:1160px}
 .rewards-heading{align-items:center}
 .rewards-child-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-bottom:14px}
@@ -22698,3 +22690,42 @@ b {
   .document-scanner-actions{grid-template-columns:1fr 1fr}.document-scanner-actions>.primary-button{grid-column:1/-1}
   .document-scanner-internal-share{grid-template-columns:1fr}.document-scanner-internal-share>button{width:100%}
 }
+
+
+/* Messenger quick notification + Inbox scan preview actions */
+button.notification-item.messenger-notification-item{
+  width:100%;
+  border-top:0;
+  border-left:0;
+  border-right:0;
+  text-align:left;
+  font:inherit;
+  cursor:pointer;
+}
+
+.inbox-preview-actions{
+  position:absolute;
+  right:8px;
+  bottom:8px;
+  display:flex;
+  gap:5px;
+  z-index:2;
+}
+.inbox-preview-actions button{
+  width:31px;
+  height:31px;
+  padding:0;
+  border:1px solid rgba(255,255,255,.58);
+  border-radius:9px;
+  display:grid;
+  place-items:center;
+  color:#625669;
+  background:rgba(255,255,255,.92);
+  box-shadow:0 5px 15px rgba(46,32,51,.15);
+  backdrop-filter:blur(7px);
+  cursor:pointer;
+}
+.inbox-preview-actions button:hover{background:#fff;color:#75488b}
+.inbox-preview-actions button.danger{color:#a24458}
+.inbox-preview-actions button.danger:hover{background:#fff4f6;color:#b43350}
+.inbox-preview-actions button:disabled{opacity:.5;cursor:default}
