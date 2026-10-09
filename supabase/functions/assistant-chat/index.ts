@@ -101,65 +101,168 @@ function outputText(payload:any){
   return ""
 }
 
-async function loadHouseholdContext(userClient:any,householdId:string){
-  const configs=[
-    ["family_profiles",80],
-    ["calendar_events",160],
-    ["tasks",160],
-    ["checklists",120],
-    ["checklist_items",220],
-    ["shopping_lists",120],
-    ["shopping_items",260],
-    ["shopping_receipts",300],
-    ["shopping_receipt_items",500],
-    ["household_costs",300],
-    ["school_entries",160],
-    ["family_contacts",120],
-    ["family_memos",120],
-    ["family_points_ledger",220],
-    ["family_trips",100],
-    ["family_trip_itinerary",180],
-    ["family_vehicles",80],
-    ["vehicle_events",180],
-    ["family_pets",80],
-    ["pet_health_events",180],
-    ["pet_care_routines",120],
-    ["family_inbox_items",120],
-    ["family_memory_albums",120],
-    ["family_checkins",160],
-    ["family_pickup_authorizations",120],
-    ["home_care_assets",120],
-    ["home_care_activity",180],
-    ["home_care_maintenance",160],
-    ["home_care_repairs",160],
-    ["life_admin_items",160],
-    ["household_projects",120],
-    ["project_work_items",200],
-    ["recipes",120],
-    ["recipe_ingredients",240],
-    ["meal_plan_entries",160],
-    ["household_files",140],
-    ["family_emergency_profiles",80],
-    ["safe_places",100],
-    ["safety_alerts",100],
-    ["ticket_wallet_entries",140],
-    ["notifications",120],
-  ] as Array<[string,number]>
 
-  const rows=await Promise.all(configs.map(async([table,limit])=>{
-    try{
-      const result=await userClient.from(table).select("*").eq("household_id",householdId).limit(limit)
-      if(result.error)return [table,[]]
-      return [table,result.data??[]]
-    }catch{
-      return [table,[]]
+function localIsoDate(date:Date,timeZone:string){
+  return new Intl.DateTimeFormat("en-CA",{timeZone,year:"numeric",month:"2-digit",day:"2-digit"}).format(date)
+}
+function localPeriod(message:string,timeZone:string){
+  const today=localIsoDate(new Date(),timeZone)
+  const [year,month,day]=today.split("-").map(Number)
+  const utcDay=new Date(Date.UTC(year,month-1,day,12))
+  const iso=(d:Date)=>d.toISOString().slice(0,10)
+  if(/last month|previous month|letzten monat|prošlog meseca|proslog meseca/i.test(message)){
+    return {start:iso(new Date(Date.UTC(year,month-2,1,12))),end:iso(new Date(Date.UTC(year,month-1,1,12))),label:"previous calendar month"}
+  }
+  if(/past (?:two|2) weeks|last (?:two|2) weeks|past 14 days|last 14 days|letzten zwei wochen|poslednje dve nedelje/i.test(message)){
+    const start=new Date(utcDay);start.setUTCDate(start.getUTCDate()-13)
+    const end=new Date(utcDay);end.setUTCDate(end.getUTCDate()+1)
+    return {start:iso(start),end:iso(end),label:"past 14 calendar days"}
+  }
+  if(/last week|past week|past 7 days|letzte woche|prošle nedelje/i.test(message)){
+    const start=new Date(utcDay);start.setUTCDate(start.getUTCDate()-6)
+    const end=new Date(utcDay);end.setUTCDate(end.getUTCDate()+1)
+    return {start:iso(start),end:iso(end),label:"past 7 calendar days"}
+  }
+  return {start:iso(new Date(Date.UTC(year,month-1,1,12))),end:iso(new Date(Date.UTC(year,month,1,12))),label:"current calendar month"}
+}
+
+// Deterministic shopping/expense totals are calculated before rows are sent to the model.
+// This eliminates double-counting receipts mirrored into household_costs.
+async function calculateShoppingSummary(client:any,householdId:string,message:string,timeZone:string){
+  const period=localPeriod(message,timeZone)
+  const fetchRows=async(table:string,dateColumn:string)=>{
+    const values:any[]=[]
+    let error:string|null=null
+    let capped=false
+    for(let from=0;from<10000;from+=500){
+      try{
+        const res=await client.from(table).select("*").eq("household_id",householdId)
+          .gte(dateColumn,period.start).lt(dateColumn,period.end).order(dateColumn,{ascending:true}).range(from,from+499)
+        if(res.error){error="This data could not be accessed";break}
+        const page=res.data??[]
+        values.push(...page)
+        if(page.length<500)break
+        if(from===9500)capped=true
+      }catch{error="This data could not be accessed";break}
     }
-  }))
+    return {values,error,capped}
+  }
+  const [receipts,costs,items]=await Promise.all([
+    fetchRows("shopping_receipts","purchase_date"),
+    fetchRows("household_costs","cost_date"),
+    fetchRows("shopping_items","created_at"),
+  ])
+  const linkedCostIds=new Set(receipts.values.map(r=>r.linked_cost_id).filter(Boolean))
+  const receiptIds=new Set(receipts.values.map(r=>r.id))
+  const otherShoppingCosts=costs.values.filter(c=>
+    (c.source_type==="shopping" || c.source_shopping_list_id || c.source_receipt_id)
+    && c.flow_type!=="income"
+    && !linkedCostIds.has(c.id)
+    && !receiptIds.has(c.source_receipt_id)
+  )
+  const totals:Record<string,{receipt_cents:number;other_shopping_cents:number;total_cents:number}>={}
+  const ensure=(currency:any)=>{
+    const key=typeof currency==="string" && currency?currency:"EUR"
+    return totals[key]??(totals[key]={receipt_cents:0,other_shopping_cents:0,total_cents:0})
+  }
+  for(const r of receipts.values){
+    const value=Math.round(Number(r.total_amount||0)*100)
+    if(!Number.isFinite(value))continue
+    const total=ensure(r.currency);total.receipt_cents+=value;total.total_cents+=value
+  }
+  for(const c of otherShoppingCosts){
+    const value=Math.round(Number(c.amount||0)*100)
+    if(!Number.isFinite(value))continue
+    const total=ensure(c.currency);total.other_shopping_cents+=value;total.total_cents+=value
+  }
+  return {
+    period:{...period,end_exclusive:true,time_zone:timeZone},
+    shopping_list_entries_created:items.values.length,
+    shopping_list_entries_checked_from_these:items.values.filter(x=>x.checked).length,
+    receipts_count:receipts.values.length,
+    separately_recorded_shopping_costs_count:otherShoppingCosts.length,
+    shopping_spend_by_currency_minor_units:totals,
+    explanation:"Receipt totals plus shopping-specific costs not already linked to those receipts. Shopping-list entries are not assumed to have a price. Amounts are in cents (minor currency units).",
+    completeness:{
+      receipts:receipts.error?{error:receipts.error}:{complete:!receipts.capped},
+      costs:costs.error?{error:costs.error}:{complete:!costs.capped},
+      shopping_items:items.error?{error:items.error}:{complete:!items.capped},
+    },
+  }
+}
 
-  const data=Object.fromEntries(rows)
-  let encoded=JSON.stringify(data)
-  if(encoded.length>70000) encoded=encoded.slice(0,70000)
-  return encoded
+async function loadHouseholdContext(userClient:any,householdId:string,message:string,timezone:string){
+  // Query relevant modules first, rather than truncating arbitrary JSON mid-record.
+  // Every request is performed through the authenticated user's RLS client.
+  const groups:Record<string,string[]>={
+    shopping:["shopping_lists","shopping_items","shopping_receipts","shopping_receipt_items","household_costs"],
+    finance:["household_costs","shopping_receipts","shopping_receipt_items"],
+    calendar:["calendar_events","event_participants","event_recurrence_rules"],
+    tasks:["tasks","checklists","checklist_items"],
+    family:["family_profiles","family_contacts","family_memos","family_points_ledger"],
+    school:["school_entries","family_pickup_authorizations"],
+    travel:["family_trips","family_trip_itinerary","family_vehicles","vehicle_events"],
+    pets:["family_pets","pet_health_events","pet_care_routines"],
+    home:["home_care_assets","home_care_activity","home_care_maintenance","home_care_repairs"],
+    admin:["life_admin_items","household_files","ticket_wallet_entries","qr_scan_items"],
+    other:["household_projects","project_work_items","recipes","recipe_ingredients","meal_plan_entries","family_inbox_items","family_memory_albums","family_checkins","notifications"],
+  }
+  const keywords:Record<string,RegExp>={
+    shopping:/shop|receipt|grocery|grocer|purchas|bought|supermarket|store|product|list|einkauf|kauf|račun|kupovin/i,
+    finance:/cost|spend|spent|expens|payment|price|budget|money|€|eur|ausgab|kosten|troš|potroš|cena/i,
+    calendar:/calendar|event|appoint|meeting|schedule|termin|kalendar|datum/i,
+    tasks:/task|todo|checklist|remind|aufgab|zadat|obavez/i,
+    family:/family|household|member|person|contact|famil|porodic/i,
+    school:/school|kita|pickup|child|teacher|schule|škola|dete/i,
+    travel:/trip|travel|journey|holiday|vacation|vehicle|car|reise|putovan|auto/i,
+    pets:/pet|dog|cat|veterinar|ljubim|hund|katze/i,
+    home:/home|repair|maintenance|house|wohn|haus|kuć/i,
+    admin:/document|file|insurance|contract|subscription|ticket|qr|dokument|ugovor/i,
+    other:/project|meal|recipe|inbox|notification|activity|memory|recept|projekt/i,
+  }
+  const matched=Object.keys(groups).filter(group=>keywords[group].test(message))
+  // For broad requests provide a representative overview, with explicit completeness metadata.
+  const selected=matched.length?matched:["family","calendar","tasks","shopping","finance","school","travel","pets","home","admin","other"]
+  const tables=[...new Set(selected.flatMap(g=>groups[g]))]
+  const data:Record<string,unknown[]>={}
+  const metadata:Record<string,{loaded:number;has_more:boolean;error?:string}>={}
+  await Promise.all(tables.map(async table=>{
+    const rows:unknown[]=[]
+    let failure=""
+    const maxRows=selected.length<=2?2000:350
+    const pageSize=250
+    for(let from=0;from<maxRows;from+=pageSize){
+      try{
+        const result=await userClient.from(table).select("*").eq("household_id",householdId).range(from,Math.min(from+pageSize-1,maxRows-1))
+        if(result.error){failure="Could not access this module";break}
+        const page=result.data??[]
+        rows.push(...page)
+        if(page.length<Math.min(pageSize,maxRows-from))break
+      }catch{failure="Could not access this module";break}
+    }
+    data[table]=rows
+    metadata[table]={loaded:rows.length,has_more:rows.length>=maxRows,...(failure?{error:failure}:{})}
+  }))
+  // Keep JSON valid. Do not silently truncate it or suggest an empty/error table is complete.
+  const maxChars=105000
+  const result:Record<string,unknown>={}
+  let used=0
+  for(const table of tables){
+    const raw=data[table]??[]
+    const remaining=maxChars-used
+    const slice:unknown[]=[]
+    for(const item of raw){
+      const size=JSON.stringify(item).length+1
+      if(used+size>maxChars||size>remaining)break
+      slice.push(item);used+=size
+    }
+    result[table]=slice
+    if(slice.length<raw.length)metadata[table].has_more=true
+    metadata[table].loaded=slice.length
+  }
+  const financeSummary=/(shop|receipt|purchas|grocer|cost|spend|spent|expens|einkauf|kosten|kupovin|troš)/i.test(message)
+    ?await calculateShoppingSummary(userClient,householdId,message,timezone):null
+  return JSON.stringify({household_timezone:timezone,records:result,table_status:metadata,calculated_shopping_summary:financeSummary,note:"For shopping-spend questions use calculated_shopping_summary, its explicit date period and completeness first; do not recompute or double count linked receipts. Table status has_more indicates partial records, not empty data."})
 }
 
 function localDateTimeToIso(date:string,time:string,timeZone:string){
@@ -525,7 +628,7 @@ Deno.serve(async(req)=>{
     hour:"2-digit",minute:"2-digit",hour12:false,
   }).format(new Date())
 
-  const householdContext=await loadHouseholdContext(userClient,householdId)
+  const householdContext=await loadHouseholdContext(userClient,householdId,message,timezone)
 
   const instructions=[
     "You are Famioo Assistant inside a household organization app.",
@@ -540,13 +643,14 @@ Deno.serve(async(req)=>{
     "If the user only asks a question or calculation, action_type must be none.",
     "Use plain text only in reply. Do not use Markdown markers such as **, #, backticks or bullet syntax.",
     "If essential information for a requested creation is missing, action_type must be none and reply with one concise follow-up question.",
-    "You have read-only access to the current household data snapshot provided below. Use it to answer calculations, totals, counts, comparisons, schedules, status questions and cross-module questions directly.",
-    "Never claim that you cannot access household records when the needed records are present in the supplied household snapshot.",
+    "You have read-only access to the current household data records below. Use them for calculations, totals, counts, comparisons, schedules, status and cross-module questions. Read table_status first: if has_more or error is set, NEVER present partial counts or totals as complete.",
+    "Never claim that you cannot access household records when the needed records are present. Shopping list items do not contain prices: use dated receipts or household_costs for spending totals, deduplicate costs linked to receipts.",
+    "For shopping spending/count questions, calculated_shopping_summary supplies verified period-scoped counts and currency totals in minor units. Divide cents by 100 when displaying money. If completeness reports an error or incomplete data, explicitly say the result is partial. Do not confuse shopping-list entries with purchases.",
     "Respect the signed-in user's existing Famioo permissions: the snapshot only contains rows allowed by current RLS.",
     "Do not expose credentials, tokens, encryption material or secrets. Those are intentionally not included.",
     "Do not invent private household data or participant names. If the snapshot does not contain enough data, say exactly what is missing.",
     "Household timezone: "+timezone+". Current household-local date/time: "+now+".",
-    "CURRENT HOUSEHOLD DATA SNAPSHOT (JSON): "+householdContext,
+    "CURRENT HOUSEHOLD DATA RECORDS (JSON): "+householdContext,
     body.page_path?"Current Famioo page: "+String(body.page_path).slice(0,160)+".":"",
   ].filter(Boolean).join("\n")
 

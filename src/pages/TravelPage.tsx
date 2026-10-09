@@ -4,6 +4,7 @@ import {
   CalendarDays,
   Check,
   FileText,
+  ImagePlus,
   MapPin,
   PackageCheck,
   Pencil,
@@ -17,6 +18,9 @@ import {
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
+import { DatePicker } from '../components/ui/DatePicker'
+import { Select } from '../components/ui/Select'
+import { TimePicker } from '../components/ui/TimePicker'
 
 type Trip={
   id:string
@@ -27,6 +31,7 @@ type Trip={
   notes:string|null
   status:'planned'|'active'|'completed'|'archived'
   calendar_event_id:string|null
+  photo_path:string|null
   created_at:string
 }
 
@@ -59,6 +64,7 @@ type HouseholdFile={
   file_name:string
   storage_path:string
   category:string
+  mime_type:string|null
 }
 
 type TripDocument={
@@ -78,6 +84,7 @@ type TripDraft={
   end_date:string
   notes:string
   sync_calendar:boolean
+  calendar_event_id:string
 }
 
 type ItemDraft={
@@ -99,6 +106,7 @@ const emptyTrip:TripDraft={
   end_date:'',
   notes:'',
   sync_calendar:true,
+  calendar_event_id:'',
 }
 
 const emptyItem:ItemDraft={
@@ -146,6 +154,12 @@ export function TravelPage(){
   const [files,setFiles]=useState<HouseholdFile[]>([])
   const [documents,setDocuments]=useState<TripDocument[]>([])
   const [fileUrls,setFileUrls]=useState<Record<string,string>>({})
+  const [tripPhotoUrls,setTripPhotoUrls]=useState<Record<string,string>>({})
+  const [eventPhotoFileIds,setEventPhotoFileIds]=useState<Record<string,string>>({})
+  const [calendarEvents,setCalendarEvents]=useState<Array<{id:string;title:string;start_date:string|null;start_at:string|null}>>([])
+  const [tripPhotoFile,setTripPhotoFile]=useState<File|null>(null)
+  const [tripPhotoPreview,setTripPhotoPreview]=useState('')
+  const [removeTripPhoto,setRemoveTripPhoto]=useState(false)
   const [tab,setTab]=useState<'overview'|'itinerary'|'documents'|'checklist'>('overview')
   const [tripEditorOpen,setTripEditorOpen]=useState(false)
   const [tripDraft,setTripDraft]=useState<TripDraft>(emptyTrip)
@@ -161,6 +175,7 @@ export function TravelPage(){
   const [message,setMessage]=useState('')
 
   const selectedTrip=trips.find(trip=>trip.id===selectedTripId)??trips[0]??null
+  const selectedTripCover=selectedTrip?(tripPhotoUrls[selectedTrip.id] || (selectedTrip.calendar_event_id?fileUrls[eventPhotoFileIds[selectedTrip.calendar_event_id]]:'') || ''):''
   const selectedItinerary=useMemo(
     ()=>itinerary.filter(item=>item.trip_id===selectedTrip?.id).sort((a,b)=>(a.start_at??'').localeCompare(b.start_at??'')||a.sort_order-b.sort_order),
     [itinerary,selectedTrip?.id],
@@ -175,12 +190,14 @@ export function TravelPage(){
   async function load(foreground=false){
     if(foreground)setLoading(true)
     setError('')
-    const [tripResult,itemResult,checkResult,fileResult,docResult]=await Promise.all([
-      supabase.from('family_trips').select('id,title,destination,start_date,end_date,notes,status,calendar_event_id,created_at').eq('household_id',household.id).neq('status','archived').order('start_date',{ascending:true}),
+    const [tripResult,itemResult,checkResult,fileResult,docResult,eventResult,eventPhotoResult]=await Promise.all([
+      supabase.from('family_trips').select('id,title,destination,start_date,end_date,notes,status,calendar_event_id,photo_path,created_at').eq('household_id',household.id).neq('status','archived').order('start_date',{ascending:true}),
       supabase.from('family_trip_itinerary').select('id,trip_id,item_type,title,start_at,end_at,location_text,booking_reference,notes,sort_order,created_at').eq('household_id',household.id).order('sort_order'),
       supabase.from('family_trip_checklist_items').select('id,trip_id,title,checked,sort_order,created_at').eq('household_id',household.id).order('sort_order'),
-      supabase.from('household_files').select('id,title,file_name,storage_path,category').eq('household_id',household.id).eq('status','active').is('archived_at',null).order('created_at',{ascending:false}),
+      supabase.from('household_files').select('id,title,file_name,storage_path,category,mime_type').eq('household_id',household.id).eq('status','active').is('archived_at',null).order('created_at',{ascending:false}),
       supabase.from('family_trip_documents').select('id,trip_id,file_id,document_type,label,created_at').eq('household_id',household.id).order('created_at',{ascending:false}),
+      supabase.from('calendar_events').select('id,title,start_date,start_at').eq('household_id',household.id).is('deleted_at',null).order('created_at',{ascending:false}).limit(250),
+      supabase.from('calendar_event_attachments').select('event_id,file_id').eq('household_id',household.id).limit(300),
     ])
     const failure=tripResult.error||itemResult.error||checkResult.error||fileResult.error||docResult.error
     if(failure)setError(failure.message)
@@ -192,6 +209,9 @@ export function TravelPage(){
     setChecklist((checkResult.data??[]) as ChecklistItem[])
     setFiles(fileRows)
     setDocuments((docResult.data??[]) as TripDocument[])
+    setCalendarEvents((eventResult.data??[]) as Array<{id:string;title:string;start_date:string|null;start_at:string|null}>)
+    const imageFileIds=new Set(fileRows.filter(file=>file.mime_type?.startsWith('image/')).map(file=>file.id))
+    setEventPhotoFileIds(Object.fromEntries(((eventPhotoResult.data??[]) as Array<{event_id:string;file_id:string}>).filter(row=>imageFileIds.has(row.file_id)).map(row=>[row.event_id,row.file_id])))
     setSelectedTripId(current=>tripRows.some(row=>row.id===current)?current:(tripRows[0]?.id??''))
 
     const signed=await Promise.all(fileRows.map(async file=>{
@@ -199,21 +219,40 @@ export function TravelPage(){
       return [file.id,result.data?.signedUrl??''] as const
     }))
     setFileUrls(Object.fromEntries(signed))
+    const photos=await Promise.all(tripRows.filter(trip=>trip.photo_path).map(async trip=>{
+      const result=await supabase.storage.from('trip-media').createSignedUrl(String(trip.photo_path),3600)
+      return [trip.id,result.data?.signedUrl??''] as const
+    }))
+    setTripPhotoUrls(Object.fromEntries(photos))
     if(foreground)setLoading(false)
   }
 
   useEffect(()=>{void load(true)},[household.id])
 
+  function clearTripPhotoPreview(){
+    if(tripPhotoPreview.startsWith('blob:'))URL.revokeObjectURL(tripPhotoPreview)
+    setTripPhotoPreview('');setTripPhotoFile(null);setRemoveTripPhoto(false)
+  }
+  function chooseTripPhoto(file:File|null){
+    if(!file)return
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type)){setError('Trip image must be JPG, PNG or WebP.');return}
+    if(file.size>5*1024*1024){setError('Trip image can be up to 5 MB.');return}
+    if(tripPhotoPreview.startsWith('blob:'))URL.revokeObjectURL(tripPhotoPreview)
+    setTripPhotoFile(file);setTripPhotoPreview(URL.createObjectURL(file));setRemoveTripPhoto(false);setError('')
+  }
   function openNewTrip(){
+    clearTripPhotoPreview()
     setTripDraft({...emptyTrip})
     setTripEditorOpen(true)
     setError('');setMessage('')
   }
 
   function openEditTrip(trip:Trip){
+    clearTripPhotoPreview()
+    setTripPhotoPreview(tripPhotoUrls[trip.id] || (trip.calendar_event_id?fileUrls[eventPhotoFileIds[trip.calendar_event_id]]:'') || '')
     setTripDraft({
       id:trip.id,title:trip.title,destination:trip.destination,start_date:trip.start_date,end_date:trip.end_date,
-      notes:trip.notes??'',sync_calendar:Boolean(trip.calendar_event_id),
+      notes:trip.notes??'',sync_calendar:false,calendar_event_id:trip.calendar_event_id??'',
     })
     setTripEditorOpen(true)
     setError('');setMessage('')
@@ -221,7 +260,8 @@ export function TravelPage(){
 
   async function saveTrip(event:FormEvent){
     event.preventDefault()
-    if(!tripDraft.title.trim()||!tripDraft.destination.trim()||!tripDraft.start_date||!tripDraft.end_date)return
+    if(!tripDraft.title.trim()||!tripDraft.destination.trim()||!tripDraft.start_date||!tripDraft.end_date){setError('Trip name, destination and dates are required.');return}
+    if(tripDraft.end_date<tripDraft.start_date){setError('The end date cannot be before the start date.');return}
     setSaving(true);setError('');setMessage('')
     const result=await supabase.rpc('save_family_trip_v1',{
       p_id:tripDraft.id||null,
@@ -231,11 +271,32 @@ export function TravelPage(){
       p_start_date:tripDraft.start_date,
       p_end_date:tripDraft.end_date,
       p_notes:tripDraft.notes.trim()||null,
-      p_sync_calendar:tripDraft.sync_calendar,
+      p_sync_calendar:tripDraft.sync_calendar && !tripDraft.calendar_event_id,
     })
-    setSaving(false)
-    if(result.error){setError(result.error.message);return}
+    if(result.error){setSaving(false);setError(result.error.message);return}
     const id=String(result.data)
+    if(tripDraft.calendar_event_id || (!tripDraft.sync_calendar && tripDraft.id)){
+      // A manually linked event is never rewritten by the trip's automatic Calendar sync.
+      const linked=await supabase.from('family_trips').update({calendar_event_id:tripDraft.calendar_event_id||null}).eq('household_id',household.id).eq('id',id)
+      if(linked.error){setSaving(false);setError('Trip saved, but event linking failed: '+linked.error.message);return}
+    }
+    if(tripPhotoFile){
+      const oldPath=trips.find(trip=>trip.id===id)?.photo_path
+      const extension=tripPhotoFile.type==='image/png'?'png':tripPhotoFile.type==='image/webp'?'webp':'jpg'
+      const storagePath=`${household.id}/${id}/${crypto.randomUUID()}.${extension}`
+      const uploaded=await supabase.storage.from('trip-media').upload(storagePath,tripPhotoFile,{contentType:tripPhotoFile.type})
+      if(uploaded.error){setSaving(false);setError('Trip saved, but image upload failed: '+uploaded.error.message);return}
+      const linked=await supabase.from('family_trips').update({photo_path:storagePath}).eq('household_id',household.id).eq('id',id)
+      if(linked.error){await supabase.storage.from('trip-media').remove([storagePath]);setSaving(false);setError('Trip saved, but image linking failed: '+linked.error.message);return}
+      if(oldPath)await supabase.storage.from('trip-media').remove([oldPath])
+    }else if(removeTripPhoto){
+      const oldPath=trips.find(trip=>trip.id===id)?.photo_path
+      const cleared=await supabase.from('family_trips').update({photo_path:null}).eq('household_id',household.id).eq('id',id)
+      if(cleared.error){setSaving(false);setError('Could not remove trip cover: '+cleared.error.message);return}
+      if(oldPath)await supabase.storage.from('trip-media').remove([oldPath])
+    }
+    setSaving(false)
+    clearTripPhotoPreview()
     setTripEditorOpen(false)
     setSelectedTripId(id)
     setMessage(tripDraft.id?'Trip updated.':'Trip created.')
@@ -372,7 +433,7 @@ export function TravelPage(){
 
           {selectedTrip&&<>
             <section className="travel-hero">
-              <div className="travel-hero-icon"><Plane size={27}/></div>
+              <div className="travel-hero-art" aria-hidden="true">{selectedTripCover?<img src={selectedTripCover} alt=""/>:<div className="travel-destination-art"><Plane size={55}/><span>{selectedTrip.destination.split(',').slice(-1)[0]?.trim()}</span></div>}</div>
               <div className="travel-hero-copy">
                 <span className="eyebrow">{statusFor(selectedTrip).toUpperCase()}</span>
                 <h2>{selectedTrip.title}</h2>
@@ -416,8 +477,8 @@ export function TravelPage(){
             {tab==='documents'&&<section className="travel-section">
               <div className="travel-section-head"><div><span className="eyebrow">DOCUMENTS & TICKETS</span><h2>Files for this trip</h2><p>Upload files in Famioo Files, then link them here to the trip.</p></div></div>
               {canWrite&&<form className="travel-document-linker" onSubmit={linkDocument}>
-                <select value={documentType} onChange={e=>setDocumentType(e.target.value as 'document'|'ticket')}><option value="document">Document</option><option value="ticket">Ticket</option></select>
-                <select value={documentFileId} onChange={e=>setDocumentFileId(e.target.value)} required><option value="">Choose file…</option>{files.map(file=><option value={file.id} key={file.id}>{file.title}</option>)}</select>
+                <Select value={documentType} options={[{value:'document',label:'Document'},{value:'ticket',label:'Ticket'}]} onChange={value=>setDocumentType(value as 'document'|'ticket')} ariaLabel="Document type"/>
+                <Select value={documentFileId} options={files.map(file=>({value:file.id,label:file.title}))} onChange={setDocumentFileId} placeholder="Choose file…" ariaLabel="Trip document"/>
                 <input value={documentLabel} onChange={e=>setDocumentLabel(e.target.value)} placeholder="Optional label"/>
                 <button className="primary-button compact"><Plus size={13}/>Link</button>
               </form>}
@@ -442,23 +503,29 @@ export function TravelPage(){
       )}
 
       {tripEditorOpen&&<div className="modal-backdrop travel-editor-backdrop" role="dialog" aria-modal="true"><section className="modal-card travel-editor">
-        <header><div><span className="eyebrow">{tripDraft.id?'EDIT TRIP':'NEW TRIP'}</span><h2>{tripDraft.id?'Update trip':'Plan a family trip'}</h2></div><button className="icon-button" onClick={()=>setTripEditorOpen(false)}><X size={18}/></button></header>
+        <header><div><span className="eyebrow">{tripDraft.id?'EDIT TRIP':'NEW TRIP'}</span><h2>{tripDraft.id?'Update trip':'Plan a family trip'}</h2></div><button className="icon-button" onClick={()=>{clearTripPhotoPreview();setTripEditorOpen(false)}}><X size={18}/></button></header>
         <form onSubmit={saveTrip}>
           <label><span>Trip name *</span><input value={tripDraft.title} onChange={e=>setTripDraft(current=>({...current,title:e.target.value}))} maxLength={160} required placeholder="e.g. Summer holiday"/></label>
           <label><span>Destination *</span><input value={tripDraft.destination} onChange={e=>setTripDraft(current=>({...current,destination:e.target.value}))} maxLength={180} required placeholder="e.g. Salzburg, Austria"/></label>
-          <div className="travel-editor-row"><label><span>Start *</span><input type="date" value={tripDraft.start_date} onChange={e=>setTripDraft(current=>({...current,start_date:e.target.value}))} required/></label><label><span>End *</span><input type="date" min={tripDraft.start_date||undefined} value={tripDraft.end_date} onChange={e=>setTripDraft(current=>({...current,end_date:e.target.value}))} required/></label></div>
-          <label><span>Notes</span><textarea rows={4} value={tripDraft.notes} onChange={e=>setTripDraft(current=>({...current,notes:e.target.value}))} placeholder="Accommodation notes, contacts, reminders…"/></label>
-          <label className="travel-sync-setting"><input type="checkbox" checked={tripDraft.sync_calendar} onChange={e=>setTripDraft(current=>({...current,sync_calendar:e.target.checked}))}/><span><CalendarDays size={14}/>Add or update this trip in Calendar</span></label>
-          <footer><button type="button" className="secondary-button" onClick={()=>setTripEditorOpen(false)}>Cancel</button><button className="primary-button" disabled={saving}>{saving?'Saving…':'Save trip'}</button></footer>
+          <div className="travel-editor-row"><label><span>Start *</span><DatePicker value={tripDraft.start_date} onChange={value=>setTripDraft(current=>({...current,start_date:value,end_date:current.end_date&&current.end_date<value?value:current.end_date}))} ariaLabel="Trip start date"/></label><label><span>End *</span><DatePicker value={tripDraft.end_date} min={tripDraft.start_date||undefined} onChange={value=>setTripDraft(current=>({...current,end_date:value}))} ariaLabel="Trip end date"/></label></div>
+          <div className="trip-photo-field">
+             <div className="trip-photo-preview">{tripPhotoPreview?<img src={tripPhotoPreview} alt="Trip cover preview"/>:<Plane size={26}/>}</div>
+             <div><strong>Trip cover image</strong><small>Optional · JPG, PNG or WebP · up to 5 MB</small><label className="secondary-button compact trip-photo-upload"><ImagePlus size={14}/>{tripPhotoPreview?'Change image':'Upload image'}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={event=>{chooseTripPhoto(event.target.files?.[0]??null);event.target.value=''}}/></label>{tripPhotoPreview&&<button type="button" className="trip-photo-remove" onClick={()=>{if(tripPhotoPreview.startsWith('blob:'))URL.revokeObjectURL(tripPhotoPreview);setTripPhotoFile(null);setTripPhotoPreview('');setRemoveTripPhoto(true)}}>Remove image</button>}</div>
+           </div>
+           <label><span>Notes</span><textarea rows={4} value={tripDraft.notes} onChange={e=>setTripDraft(current=>({...current,notes:e.target.value}))} placeholder="Accommodation notes, contacts, reminders…"/></label>
+           <label><span>Calendar connection</span><Select value={tripDraft.calendar_event_id?'event:'+tripDraft.calendar_event_id:tripDraft.sync_calendar?'sync':'none'} options={[{value:'sync',label:'Create / update trip in Calendar'},{value:'none',label:'No Calendar connection'},...calendarEvents.map(event=>({value:'event:'+event.id,label:'Link existing: '+event.title}))]} onChange={value=>setTripDraft(current=>({...current,sync_calendar:value==='sync',calendar_event_id:value.startsWith('event:')?value.slice(6):''}))} ariaLabel="Connect Calendar event"/></label>
+           <small className="trip-photo-helper">If the linked Calendar event has an attached image, it is used when no trip cover has been uploaded.</small>
+          
+          <footer><button type="button" className="secondary-button" onClick={()=>{clearTripPhotoPreview();setTripEditorOpen(false)}}>Cancel</button><button className="primary-button" disabled={saving}>{saving?'Saving…':'Save trip'}</button></footer>
         </form>
       </section></div>}
 
       {itemEditorOpen&&selectedTrip&&<div className="modal-backdrop travel-editor-backdrop" role="dialog" aria-modal="true"><section className="modal-card travel-editor">
         <header><div><span className="eyebrow">{itemDraft.id?'EDIT ITINERARY':'ADD TO ITINERARY'}</span><h2>{itemDraft.id?'Update plan':'New trip item'}</h2></div><button className="icon-button" onClick={()=>setItemEditorOpen(false)}><X size={18}/></button></header>
         <form onSubmit={saveItem}>
-          <label><span>Type</span><select value={itemDraft.item_type} onChange={e=>setItemDraft(current=>({...current,item_type:e.target.value as ItemDraft['item_type']}))}><option value="transport">Transport</option><option value="accommodation">Accommodation</option><option value="activity">Activity</option><option value="note">Note</option></select></label>
+          <label><span>Type</span><Select value={itemDraft.item_type} options={[{value:'transport',label:'Transport'},{value:'accommodation',label:'Accommodation'},{value:'activity',label:'Activity'},{value:'note',label:'Note'}]} onChange={value=>setItemDraft(current=>({...current,item_type:value as ItemDraft['item_type']}))} ariaLabel="Trip item type"/></label>
           <label><span>Title *</span><input value={itemDraft.title} onChange={e=>setItemDraft(current=>({...current,title:e.target.value}))} required maxLength={180} placeholder="Flight, hotel, museum…"/></label>
-          <div className="travel-editor-row"><label><span>Starts</span><input type="datetime-local" value={itemDraft.start_at} onChange={e=>setItemDraft(current=>({...current,start_at:e.target.value}))}/></label><label><span>Ends</span><input type="datetime-local" value={itemDraft.end_at} onChange={e=>setItemDraft(current=>({...current,end_at:e.target.value}))}/></label></div>
+          <div className="travel-editor-row"><label><span>Starts</span><DatePicker value={itemDraft.start_at.slice(0,10)} onChange={date=>setItemDraft(current=>({...current,start_at:date?date+'T'+(current.start_at.slice(11,16)||'09:00'):''}))} ariaLabel="Itinerary start date"/><TimePicker value={itemDraft.start_at.slice(11,16)||'09:00'} onChange={time=>setItemDraft(current=>({...current,start_at:current.start_at?current.start_at.slice(0,10)+'T'+time:''}))}/></label><label><span>Ends</span><DatePicker value={itemDraft.end_at.slice(0,10)} onChange={date=>setItemDraft(current=>({...current,end_at:date?date+'T'+(current.end_at.slice(11,16)||'10:00'):''}))} ariaLabel="Itinerary end date"/><TimePicker value={itemDraft.end_at.slice(11,16)||'10:00'} onChange={time=>setItemDraft(current=>({...current,end_at:current.end_at?current.end_at.slice(0,10)+'T'+time:''}))}/></label></div>
           <label><span>Location</span><input value={itemDraft.location_text} onChange={e=>setItemDraft(current=>({...current,location_text:e.target.value}))} placeholder="Airport, hotel, address…"/></label>
           <label><span>Booking / reference</span><input value={itemDraft.booking_reference} onChange={e=>setItemDraft(current=>({...current,booking_reference:e.target.value}))} placeholder="Confirmation or booking code"/></label>
           <label><span>Notes</span><textarea rows={3} value={itemDraft.notes} onChange={e=>setItemDraft(current=>({...current,notes:e.target.value}))}/></label>

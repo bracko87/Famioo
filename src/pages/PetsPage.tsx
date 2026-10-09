@@ -16,6 +16,8 @@ import {
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
+import { DatePicker } from '../components/ui/DatePicker'
+import { Select } from '../components/ui/Select'
 
 type Pet={
   id:string
@@ -404,8 +406,8 @@ export function PetsPage(){
       <section className="pets-strip">{pets.map(pet=><button className={selected?.id===pet.id?'pet-chip active':'pet-chip'} onClick={()=>setSelectedId(pet.id)} key={pet.id}>{petPhotoUrls[pet.id]?<img className="pet-chip-photo" src={petPhotoUrls[pet.id]} alt=""/>:<PawPrint size={17}/>}<span><strong>{pet.name}</strong><small>{[pet.species,pet.breed].filter(Boolean).join(' · ')}</small></span></button>)}</section>
       {selected&&<>
         <section className="pet-hero">
-          <div className={petPhotoUrls[selected.id]?'pet-hero-icon has-photo':'pet-hero-icon'}>{petPhotoUrls[selected.id]?<img src={petPhotoUrls[selected.id]} alt={selected.name}/>:<PawPrint size={28}/>}</div>
-          <div><span className="eyebrow">{selected.species.toUpperCase()}</span><h2>{selected.name}</h2><p>{[selected.breed,selected.sex&&selected.sex!=='unknown'?selected.sex:null].filter(Boolean).join(' · ')||'Family pet'}</p><small>{selected.birth_date?'Born '+fmtDate(selected.birth_date):'Birth date not set'}{selected.weight_kg!=null?' · '+selected.weight_kg+' kg':''}</small></div>
+          {petPhotoUrls[selected.id]&&<div className="pet-hero-art" aria-hidden="true"><img src={petPhotoUrls[selected.id]} alt=""/></div>}
+          <div className="pet-hero-details"><span className="eyebrow">{selected.species.toUpperCase()}</span><h2>{selected.name}</h2><p>{[selected.breed,selected.sex&&selected.sex!=='unknown'?selected.sex:null].filter(Boolean).join(' · ')||'Family pet'}</p><small>{selected.birth_date?'Born '+fmtDate(selected.birth_date):'Birth date not set'}{selected.weight_kg!=null?' · '+selected.weight_kg+' kg':''}</small></div>
           <div className="pet-hero-actions">{canWrite&&<button className="secondary-button compact" onClick={()=>openPet(selected)}>Edit</button>}{canWrite&&<button className="icon-button" title="Archive pet" onClick={()=>void archivePet(selected)}><Trash2 size={15}/></button>}</div>
         </section>
         <nav className="projects-tabs pets-tabs">
@@ -461,7 +463,7 @@ export function PetsPage(){
       </div>
       <label><span>Name *</span><input required maxLength={120} value={petDraft.name} onChange={e=>setPetDraft(v=>({...v,name:e.target.value}))}/></label>
       <div className="pet-editor-row"><label><span>Species *</span><input required value={petDraft.species} onChange={e=>setPetDraft(v=>({...v,species:e.target.value}))} placeholder="Dog, cat…"/></label><label><span>Breed</span><input value={petDraft.breed} onChange={e=>setPetDraft(v=>({...v,breed:e.target.value}))}/></label></div>
-      <div className="pet-editor-row"><label><span>Sex</span><select value={petDraft.sex} onChange={e=>setPetDraft(v=>({...v,sex:e.target.value as PetDraft['sex']}))}><option value="unknown">Unknown</option><option value="female">Female</option><option value="male">Male</option></select></label><label><span>Birth date</span><input type="date" value={petDraft.birth_date} onChange={e=>setPetDraft(v=>({...v,birth_date:e.target.value}))}/></label></div>
+      <div className="pet-editor-row"><label><span>Sex</span><Select value={petDraft.sex} options={[{value:'unknown',label:'Unknown'},{value:'female',label:'Female'},{value:'male',label:'Male'}]} onChange={value=>setPetDraft(v=>({...v,sex:value as PetDraft['sex']}))} ariaLabel="Pet sex"/></label><label><span>Birth date</span><DatePicker value={petDraft.birth_date} onChange={value=>setPetDraft(v=>({...v,birth_date:value}))} ariaLabel="Pet birth date"/></label></div>
       <div className="pet-editor-row"><label><span>Weight kg</span><input type="number" min="0" step="0.01" value={petDraft.weight_kg} onChange={e=>setPetDraft(v=>({...v,weight_kg:e.target.value}))}/></label><label><span>Chip number</span><input value={petDraft.chip_number} onChange={e=>setPetDraft(v=>({...v,chip_number:e.target.value}))}/></label></div>
       <label><span>Color / markings</span><input value={petDraft.color_markings} onChange={e=>setPetDraft(v=>({...v,color_markings:e.target.value}))}/></label>
       <label><span>Notes</span><textarea rows={3} value={petDraft.notes} onChange={e=>setPetDraft(v=>({...v,notes:e.target.value}))}/></label>
