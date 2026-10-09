@@ -64,13 +64,18 @@ Last updated: 2026-10-09
    - author / last-updated information
    - later: direct conversion into Calendar events, Tasks or Projects
 
-6. [ ] Child Rewards Economy — NEXT
-   - points/stars for tasks and chores
+6. [x] Child Rewards Economy — PWA V1 implemented
+   - points from Projects & Chores count automatically
+   - parent-defined point values for child-assigned Tasks
+   - child balance cards
    - parent-managed reward catalogue
+   - reward redemption with balance validation
    - earn/spend history
+   - parent bonus/correction adjustments
+   - reopening a rewarded task automatically removes its task award
    - later: streaks and achievements
 
-7. [ ] Travel & Trips
+7. [ ] Travel & Trips — NEXT
    - itinerary, accommodation and transport
    - trip documents, tickets and checklists
    - Calendar integration
