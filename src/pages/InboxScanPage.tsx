@@ -2,10 +2,12 @@ import {
   CalendarDays,
   Check,
   CheckSquare,
+  Download,
   FileText,
   GraduationCap,
   Inbox,
   ScanLine,
+  Share2,
   Sparkles,
   Upload,
   X,
@@ -276,6 +278,60 @@ export function InboxScanPage(){
     else await load(false)
   }
 
+  async function storedScanFile(item:InboxItem){
+    const url=fileUrls[item.file_id]
+    const file=files[item.file_id]
+    if(!url)throw new Error('Scanned file is not available.')
+    const response=await fetch(url)
+    if(!response.ok)throw new Error('Could not download the scanned file.')
+    const blob=await response.blob()
+    return new File([blob],file?.file_name||'famioo-scan.jpg',{
+      type:file?.mime_type||blob.type||'image/jpeg',
+      lastModified:Date.now(),
+    })
+  }
+
+  async function downloadStoredScan(item:InboxItem){
+    setError('');setMessage('')
+    try{
+      const file=await storedScanFile(item)
+      const url=URL.createObjectURL(file)
+      const link=document.createElement('a')
+      link.href=url
+      link.download=file.name
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.setTimeout(()=>URL.revokeObjectURL(url),1000)
+    }catch(reason){
+      setError(reason instanceof Error?reason.message:'Could not download scan.')
+    }
+  }
+
+  async function shareStoredScan(item:InboxItem){
+    setError('');setMessage('')
+    try{
+      const file=await storedScanFile(item)
+      if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){
+        await navigator.share({title:item.title||'Famioo scan',text:'Shared from Famioo',files:[file]})
+      }else{
+        const url=URL.createObjectURL(file)
+        const link=document.createElement('a')
+        link.href=url
+        link.download=file.name
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        window.setTimeout(()=>URL.revokeObjectURL(url),1000)
+        setMessage('This browser cannot share files directly, so the scan was downloaded instead.')
+      }
+    }catch(reason){
+      if((reason as DOMException)?.name!=='AbortError'){
+        setError(reason instanceof Error?reason.message:'Could not share scan.')
+      }
+    }
+  }
+
   async function sendScanInMessenger(file:File,target:string):Promise<boolean>{
     setError('');setMessage('')
     try{
@@ -395,8 +451,10 @@ export function InboxScanPage(){
             {applied.length>0&&<div className="inbox-applied"><Check size={14}/>{applied.length} action{applied.length===1?'':'s'} applied</div>}
 
             <footer>
-              {fileUrls[item.file_id]&&<a className="secondary-button compact" href={fileUrls[item.file_id]} target="_blank" rel="noreferrer">Open original</a>}
-              {assistantEnabled&&item.extracted_at&&<button type="button" className="secondary-button compact" disabled={extractingId===item.id} onClick={()=>void extractItem(item.id)}><Sparkles size={13}/>{extractingId===item.id?'Scanning…':'Scan again'}</button>}
+              {fileUrls[item.file_id]&&<a className="secondary-button compact" href={fileUrls[item.file_id]} target="_blank" rel="noreferrer">Open scan</a>}
+              {fileUrls[item.file_id]&&<button type="button" className="secondary-button compact" onClick={()=>void downloadStoredScan(item)}><Download size={13}/>Download</button>}
+              {fileUrls[item.file_id]&&<button type="button" className="secondary-button compact" onClick={()=>void shareStoredScan(item)}><Share2 size={13}/>Share</button>}
+              {assistantEnabled&&item.extracted_at&&<button type="button" className="secondary-button compact" disabled={extractingId===item.id} onClick={()=>void extractItem(item.id)}><Sparkles size={13}/>{extractingId===item.id?'Scanning…':'Extract again'}</button>}
               {item.status!=='archived'?<button type="button" className="secondary-button compact" onClick={()=>void setItemStatus(item,'archived')}>Archive</button>:<button type="button" className="secondary-button compact" onClick={()=>void setItemStatus(item,'new')}>Restore</button>}
             </footer>
           </div>
