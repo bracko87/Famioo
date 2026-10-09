@@ -148,7 +148,7 @@ const sidebarModuleItems: SidebarModuleItem[] = [
   { code: 'pets', label: 'Pets', category: 'life' },
   { code: 'files', label: 'Files', category: 'life' },
   { code: 'vaccinations', label: 'Prevention', category: 'life' },
-  { code: 'tickets', label: 'Tickets / QR Wallet', category: 'life' },
+  { code: 'tickets', label: 'QR Scanner', category: 'life' },
 
   { code: 'assistant', label: 'AI Assistant', category: 'connected' },
   { code: 'home_remote', label: 'Home Remote', category: 'connected' },
