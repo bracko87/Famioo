@@ -13,6 +13,7 @@ import {
   ShoppingBag,
   ShieldAlert,
   Sparkles,
+  StickyNote,
   Syringe,
   Ticket,
   Utensils,
@@ -45,6 +46,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   location: MapPinned,
   messenger: MessageCircle,
   contacts: ContactRound,
+  memo: StickyNote,
 }
 
 const routeByModule: Record<ModuleCode, string> = {
@@ -67,6 +69,7 @@ const routeByModule: Record<ModuleCode, string> = {
   location: '/app/location',
   messenger: '/app/messenger',
   contacts: '/app/contacts',
+  memo: '/app/memo',
 }
 
 export function HomePage() {
@@ -220,6 +223,7 @@ export function HomePage() {
     location: 'Family map & safe places',
     messenger: 'Private family chat',
     contacts: 'People & important services',
+    memo: 'Ideas, places & someday notes',
     shopping: `${shoppingCount} active lists`,
     costs: new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR' }).format(costMonthTotal) + ' this month',
   }
