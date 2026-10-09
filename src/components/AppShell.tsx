@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Receipt,
   Settings,
+  ShieldAlert,
   ShoppingBag,
   Sparkles,
   Syringe,
@@ -43,6 +44,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   assistant: Sparkles,
   vaccinations: Syringe,
   tickets: Ticket,
+  safety: ShieldAlert,
 }
 
 const routeByModule: Partial<Record<ModuleCode, string>> = {
@@ -57,6 +59,7 @@ const routeByModule: Partial<Record<ModuleCode, string>> = {
   assistant: '/app/assistant',
   vaccinations: '/app/vaccinations',
   tickets: '/app/tickets',
+  safety: '/app/safety',
 }
 
 type HeaderNotification = {
@@ -191,6 +194,7 @@ export function AppShell() {
           <NavLink to="/app/calendar" onClick={() => setMobileMenu(false)} title="Calendar"><CalendarDays size={18} /><span className="nav-text">Calendar</span></NavLink>
           <NavLink to="/app/tasks" onClick={() => setMobileMenu(false)} title="Tasks"><ClipboardList size={18} /><span className="nav-text">Tasks</span></NavLink>
           <NavLink to="/app/checklists" onClick={() => setMobileMenu(false)} title="Checklists"><CheckSquare size={18} /><span className="nav-text">Checklists</span></NavLink>
+          <NavLink to="/app/safety" onClick={() => setMobileMenu(false)} title="Family Safety"><ShieldAlert size={18} /><span className="nav-text">Family Safety</span></NavLink>
           <NavLink to="/app/files" onClick={() => setMobileMenu(false)} title="Files"><FileText size={18} /><span className="nav-text">Files</span></NavLink>
 
           {enabledPaid.length > 0 && <span className="nav-label nav-label-spaced">HOUSEHOLD</span>}
@@ -281,6 +285,13 @@ export function AppShell() {
         <FooterWeather />
         <span>One household space. Everything organized.</span>
       </footer>
+
+      {modules.find((module) => module.code === 'safety')?.enabled && (
+        <NavLink className="mobile-safety-shortcut" to="/app/safety" aria-label="Open Family Safety SOS">
+          <ShieldAlert size={21}/>
+          <span>SOS</span>
+        </NavLink>
+      )}
 
       <MobileAssistantQuick />
 
