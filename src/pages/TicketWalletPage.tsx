@@ -432,6 +432,19 @@ export function TicketWalletPage(){
     else await load(false)
   }
 
+  async function archiveCurrentTab(){
+    if(tab==='archived'||!canWrite)return
+    setBusyId('bulk');setError('')
+    const result=await supabase.from('qr_scan_items')
+      .update({status:'archived',updated_at:new Date().toISOString()})
+      .eq('household_id',household.id)
+      .eq('item_type',tab)
+      .eq('status','active')
+    setBusyId('')
+    if(result.error)setError(result.error.message)
+    else await load(false)
+  }
+
   return <div className="page qr-repository-page">
     <div className="page-heading-row qr-repository-heading">
       <div>
@@ -455,12 +468,15 @@ export function TicketWalletPage(){
     {scanMessage&&<div className="notice">{scanMessage}</div>}
     {error&&<div className="notice error">{error}</div>}
 
-    <nav className="qr-repository-tabs" aria-label="QR repository sections">
-      <button type="button" className={tab==='link'?'active':''} onClick={()=>setTab('link')}><Link2 size={14}/>Links <span>{counts.link}</span></button>
-      <button type="button" className={tab==='event'?'active':''} onClick={()=>setTab('event')}><CalendarDays size={14}/>Events <span>{counts.event}</span></button>
-      <button type="button" className={tab==='ticket'?'active':''} onClick={()=>setTab('ticket')}><Ticket size={14}/>Digital tickets <span>{counts.ticket}</span></button>
-      <button type="button" className={tab==='archived'?'active':''} onClick={()=>setTab('archived')}><Archive size={14}/>Archive <span>{counts.archived}</span></button>
-    </nav>
+    <div className="qr-repository-tab-row">
+      <nav className="qr-repository-tabs" aria-label="QR repository sections">
+        <button type="button" className={tab==='link'?'active':''} onClick={()=>setTab('link')}><Link2 size={14}/>Links <span>{counts.link}</span></button>
+        <button type="button" className={tab==='event'?'active':''} onClick={()=>setTab('event')}><CalendarDays size={14}/>Events <span>{counts.event}</span></button>
+        <button type="button" className={tab==='ticket'?'active':''} onClick={()=>setTab('ticket')}><Ticket size={14}/>Digital tickets <span>{counts.ticket}</span></button>
+        <button type="button" className={tab==='archived'?'active':''} onClick={()=>setTab('archived')}><Archive size={14}/>Archive <span>{counts.archived}</span></button>
+      </nav>
+      {canWrite&&tab!=='archived'&&visible.length>0&&<button type="button" className="secondary-button compact qr-archive-all" disabled={busyId==='bulk'} onClick={()=>void archiveCurrentTab()}><Archive size={13}/>{busyId==='bulk'?'Archiving…':'Archive all'}</button>}
+    </div>
 
     {loading?<div className="qr-repository-empty">Loading scanned QR items…</div>
       :visible.length===0?<div className="qr-repository-empty">
