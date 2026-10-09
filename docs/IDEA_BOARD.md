@@ -64,7 +64,7 @@ Status: Approved idea
 Private household/group chat with text, photo and voice messages, with video messages as a possible later extension.
 
 ### Family Contacts Directory
-Status: Approved idea — partial technical foundation already exists
+Status: PWA V1 implemented
 
 A shared household directory for important people and services beyond Famioo account members.
 
