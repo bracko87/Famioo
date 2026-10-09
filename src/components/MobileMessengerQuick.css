@@ -1,0 +1,98 @@
+.mobile-messenger-tab,
+.mobile-messenger-backdrop,
+.mobile-messenger-drawer{display:none}
+
+@media(max-width:700px){
+  .mobile-messenger-tab{
+    position:fixed;
+    z-index:76;
+    right:0;
+    bottom:calc(228px + env(safe-area-inset-bottom,0px));
+    width:50px;
+    min-height:52px;
+    padding:7px 6px 7px 8px;
+    border:1px solid rgba(255,255,255,.46);
+    border-right:0;
+    border-radius:16px 0 0 16px;
+    display:grid;
+    place-items:center;
+    align-content:center;
+    gap:1px;
+    color:#fff;
+    background:linear-gradient(145deg,#6f4f9f,#a65fa7);
+    box-shadow:0 12px 30px rgba(76,48,103,.25);
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .mobile-messenger-tab span{font-size:.62rem;line-height:1;font-weight:750;letter-spacing:.02em}
+  .mobile-messenger-tab>b{
+    position:absolute;
+    right:4px;
+    top:3px;
+    min-width:18px;
+    height:18px;
+    padding:0 4px;
+    border:2px solid #fff;
+    border-radius:999px;
+    display:grid;
+    place-items:center;
+    color:#fff;
+    background:#d74461;
+    font-size:.55rem;
+    line-height:1;
+    box-shadow:0 3px 8px rgba(112,30,52,.22)
+  }
+  .mobile-messenger-tab.active{transform:translateX(4px)}
+  .mobile-messenger-backdrop{
+    position:fixed;
+    z-index:79;
+    inset:0;
+    display:block;
+    border:0;
+    background:rgba(28,25,37,.4);
+    backdrop-filter:blur(2px)
+  }
+  .mobile-messenger-drawer{
+    position:fixed;
+    z-index:80;
+    inset:calc(12px + env(safe-area-inset-top,0px)) 0 calc(72px + env(safe-area-inset-bottom,0px)) auto;
+    width:min(96vw,440px);
+    display:grid;
+    grid-template-rows:auto minmax(0,1fr);
+    overflow:hidden;
+    border-radius:22px 0 0 22px;
+    background:#fff;
+    box-shadow:-18px 0 52px rgba(31,24,52,.25);
+    animation:mobile-messenger-in .2s ease-out
+  }
+  @keyframes mobile-messenger-in{from{transform:translateX(100%)}to{transform:translateX(0)}}
+  .mobile-messenger-head{
+    min-height:66px;
+    padding:11px 12px 11px 14px;
+    border-bottom:1px solid #ebe5ed;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    background:#fff
+  }
+  .mobile-messenger-head>span{min-width:0;display:flex;align-items:center;gap:9px}
+  .mobile-messenger-head>span>i{
+    width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+    color:#76518b;background:#f2eaf6;font-style:normal
+  }
+  .mobile-messenger-head>span>span{min-width:0;display:grid;gap:2px}
+  .mobile-messenger-head strong{font-size:.94rem;color:#4f4653}
+  .mobile-messenger-head small{font-size:.7rem;color:#8f8592}
+  .mobile-messenger-head>button{
+    width:36px;height:36px;border:0;border-radius:10px;display:grid;place-items:center;
+    color:#504a53;background:#f4f1f5;cursor:pointer
+  }
+  .mobile-messenger-body{min-height:0;overflow:hidden}
+  .mobile-messenger-body .messenger-page-embedded{width:100%;height:100%;max-width:none;padding:0!important}
+  .mobile-messenger-body .messenger-notice{margin:8px 10px}
+  .mobile-messenger-body .messenger-shell{height:100%;min-height:0;border:0;border-radius:0;box-shadow:none}
+  .mobile-messenger-body .messenger-chat{height:100%;min-height:0}
+  .mobile-messenger-body .messenger-conversations{height:100%}
+  .mobile-messenger-body .messenger-thread-list{flex:1}
+}
