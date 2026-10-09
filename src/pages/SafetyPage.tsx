@@ -435,7 +435,7 @@ export function SafetyPage(){
               Internet call remains available, but adding mobile numbers enables one-tap call and SMS.
             </small>
           </span>
-          <Link to="/app/settings">Update contacts →</Link>
+          <Link to="/app/settings?tab=users">Update contacts →</Link>
         </div>
       )}
 
