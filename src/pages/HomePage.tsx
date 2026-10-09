@@ -262,7 +262,7 @@ export function HomePage() {
     costs: new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR' }).format(costMonthTotal) + ' this month',
   }
 
-  const enabledModules = modules.filter((module) => module.enabled)
+  const enabledModules = modules.filter((module) => module.enabled && module.code !== 'messenger')
 
   return (
     <div className="page home-page">
