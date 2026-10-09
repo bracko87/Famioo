@@ -30,6 +30,7 @@ import { FilesPage } from './pages/FilesPage'
 import { VaccinationPage } from './pages/VaccinationPage'
 import { TicketWalletPage } from './pages/TicketWalletPage'
 import { AssistantPage } from './pages/AssistantPage'
+import { SafetyPage } from './pages/SafetyPage'
 import { BrandMark } from './components/Brand'
 
 function LoadingScreen() {
@@ -222,6 +223,7 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Route path="tasks/archive" element={<TaskArchivePage />} />
           <Route path="checklists" element={<ChecklistsPage />} />
           <Route path="checklists/archive" element={<ChecklistArchivePage />} />
+          <Route path="safety" element={<SafetyPage />} />
           <Route path="settings" element={<SettingsPage />} />
 
           <Route path="shopping" element={<ShoppingPage />} />
