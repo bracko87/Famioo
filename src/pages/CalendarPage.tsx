@@ -11,6 +11,7 @@ import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { DatePicker } from '../components/ui/DatePicker'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
+import { EventContextPanel } from '../components/calendar/EventContextPanel'
 import { firstName } from '../lib/personName'
 
 type CalendarView = 'day' | 'week' | 'month' | 'upcoming'
@@ -1932,6 +1933,10 @@ export function CalendarPage() {
                   ))}
                 </div>
               </fieldset>
+            )}
+
+            {editingEventId && (
+              <EventContextPanel eventId={editingEventId} />
             )}
 
             {!editingEventId && (
