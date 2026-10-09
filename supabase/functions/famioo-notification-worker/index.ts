@@ -91,8 +91,16 @@ async function sendPushes() {
             body:item.body,
             icon:'/famioo-icon-192.png',
             badge:'/famioo-icon-192.png',
-            tag:item.notification_type.startsWith('safety_') ? 'famioo-safety-'+item.entity_id : 'famioo-'+item.id,
-            url:item.notification_type.startsWith('safety_') ? '/app/safety' : '/app/calendar',
+            tag:item.notification_type.startsWith('safety_')
+              ? 'famioo-safety-'+item.entity_id
+              : item.notification_type.startsWith('location_')
+                ? 'famioo-location-'+item.entity_id
+                : 'famioo-'+item.id,
+            url:item.notification_type.startsWith('safety_')
+              ? '/app/safety'
+              : item.notification_type.startsWith('location_')
+                ? '/app/location'
+                : '/app/calendar',
           }),
           {
             TTL:item.notification_type.startsWith('safety_') ? 300 : 3600,
