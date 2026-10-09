@@ -163,34 +163,19 @@ Last updated: 2026-10-09
     - one-tap phone access to the approved pickup person
     - responsive desktop/mobile authorization dashboard
 
-16. [ ] Home Presence Board — NEXT
-    - Home / School / Work / Away
-    - expected home soon
-    - optional Calendar + Location integration
-
-17. [ ] QR / Ticket Wallet — redesign from scratch
+16. [ ] QR / Ticket Wallet — redesign from scratch — NEXT
     - current temporary scope remains Scan QR → open website
     - future Wallet flow will be newly defined before implementation
 
-18. [ ] TV Remote / Home Remote
+17. [ ] TV Remote / Home Remote
     - supported TV/streaming-device controls
     - rooms and permissions
     - later possible smart-home shortcuts
 
-19. [ ] Alexa / Voice Integration
+18. [ ] Alexa / Voice Integration
     - calendar queries
     - add shopping items/tasks
     - reminders and selected Famioo voice actions
-
-20. [ ] Multiple Circles / Groups
-    - household
-    - extended family / grandparents
-    - optional friend or other private circles
-
-21. [ ] Crash / Journey Safety
-    - journey monitoring
-    - missed-arrival alerts
-    - later device-assisted crash detection where APIs allow it
 
 ## Existing modules with planned upgrades
 
