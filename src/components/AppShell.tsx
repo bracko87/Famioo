@@ -51,6 +51,9 @@ import { MobileAssistantQuick } from './MobileAssistantQuick'
 import { LocationSharingAgent } from './LocationSharingAgent'
 
 const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>> = {
+  calendar: CalendarDays,
+  tasks: ClipboardList,
+  checklists: CheckSquare,
   shopping: ShoppingBag,
   costs: Receipt,
   school: GraduationCap,
@@ -300,7 +303,7 @@ export function AppShell() {
         </button>
 
         <nav className={'side-nav '+(useCategorizedSidebar?'side-nav-categorized':'side-nav-flat')} aria-label="Main navigation">
-          <span className="nav-label">PLAN</span>
+          <span className="nav-label">{useCategorizedSidebar ? 'MODULES' : 'PLAN'}</span>
           <NavLink to="/app" end onClick={() => setMobileMenu(false)} title="Home"><Home size={18} /><span className="nav-text">Home</span></NavLink>
 
           <div className="sidebar-flat-modules">
