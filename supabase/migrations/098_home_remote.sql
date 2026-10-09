@@ -54,6 +54,7 @@ create table if not exists public.home_remote_device_permissions(
   unique(device_id,profile_id)
 );
 create index if not exists home_remote_permissions_profile_idx on public.home_remote_device_permissions(profile_id,can_control);
+create index if not exists home_remote_permissions_household_idx on public.home_remote_device_permissions(household_id);
 
 create table if not exists public.home_remote_command_log(
   id uuid primary key default gen_random_uuid(),
@@ -79,6 +80,8 @@ create table if not exists public.home_remote_device_bridges(
   check(webhook_url ~ '^https://')
 );
 create index if not exists home_remote_device_bridges_household_idx on public.home_remote_device_bridges(household_id);
+create index if not exists home_remote_device_bridges_updated_by_idx on public.home_remote_device_bridges(updated_by_user_id);
+create index if not exists home_remote_rooms_created_by_idx on public.home_remote_rooms(created_by_user_id);
 
 alter table public.home_remote_rooms enable row level security;
 alter table public.home_remote_devices enable row level security;
