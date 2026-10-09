@@ -132,12 +132,17 @@ Last updated: 2026-10-09
     - works with synced read-only external events while leaving source event data untouched
     - responsive desktop/mobile event context panel
 
-13. [ ] Family Photo Albums / Memories — NEXT
-    - shared albums
-    - connect photos to Calendar events and dates
-    - birthdays, trips, holidays and school events
+13. [x] Family Photo Albums / Memories — PWA V1 implemented
+    - shared albums for birthdays, trips, holidays, school, family and other memories
+    - optional memory date and direct Calendar event linkage
+    - upload new photos through private Famioo Files storage
+    - add existing photos from Famioo Files without duplicating storage
+    - import photos already attached to the linked Calendar event
+    - new album photos also attach back to the linked Calendar event
+    - automatic first-photo cover and album archive/restore
+    - responsive desktop/mobile album gallery
 
-14. [ ] Family Check-In
+14. [ ] Family Check-In — NEXT
     - I'm home
     - I'm safe
     - Pick me up
