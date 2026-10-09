@@ -206,11 +206,11 @@ export function LocationPage(){
     window.dispatchEvent(new CustomEvent('famioo-location-setting-changed'))
     await load(false)
 
-    if(nextEnabled) updateMyLocationNow()
+    if(nextEnabled) updateMyLocationNow(true)
   }
 
-  function updateMyLocationNow(){
-    if(!sharingEnabled&&!savingSettings){
+  function updateMyLocationNow(force=false){
+    if(!sharingEnabled&&!force&&!savingSettings){
       setError('Turn on location sharing first.')
       return
     }
@@ -482,7 +482,7 @@ export function LocationPage(){
                 type="button"
                 className="primary-button"
                 disabled={!sharingEnabled||updatingNow}
-                onClick={updateMyLocationNow}
+                onClick={()=>updateMyLocationNow(false)}
               >
                 <LocateFixed size={15}/>{updatingNow?'Locating…':'Update my location now'}
               </button>
