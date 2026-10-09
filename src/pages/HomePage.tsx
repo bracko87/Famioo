@@ -14,6 +14,7 @@ import {
   ShieldAlert,
   Sparkles,
   StickyNote,
+  Gift,
   Syringe,
   Ticket,
   Utensils,
@@ -47,6 +48,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   messenger: MessageCircle,
   contacts: ContactRound,
   memo: StickyNote,
+  rewards: Gift,
 }
 
 const routeByModule: Record<ModuleCode, string> = {
@@ -70,6 +72,7 @@ const routeByModule: Record<ModuleCode, string> = {
   messenger: '/app/messenger',
   contacts: '/app/contacts',
   memo: '/app/memo',
+  rewards: '/app/rewards',
 }
 
 export function HomePage() {
