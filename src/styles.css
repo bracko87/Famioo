@@ -23171,3 +23171,86 @@ button.notification-item.messenger-notification-item{
   left:auto!important;
   transform:none!important;
 }
+
+
+/* Responsive dialogs: consistent centered position with comfortable top/bottom space.
+   Modal cards scroll their own content; native browser window must not become a second scroller. */
+.modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) {
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  place-items:center!important;
+  align-content:center!important;
+  padding:clamp(16px,4dvh,45px) 12px!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+}
+.modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) > .modal-card {
+  box-sizing:border-box!important;
+  margin:auto!important;
+  width:min(620px,calc(100vw - 24px))!important;
+  max-width:calc(100vw - 24px)!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:min(78dvh,740px)!important;
+  display:flex!important;
+  flex-direction:column!important;
+  padding:14px!important;
+  overflow:hidden!important;
+  border-radius:17px!important;
+}
+.modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) > .modal-card > header {
+  flex:0 0 auto;
+  margin-bottom:9px!important;
+  padding-bottom:9px!important;
+  border-bottom:1px solid #eee8f1;
+}
+.modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) > .modal-card > form {
+  flex:0 1 auto;
+  min-height:0;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+  padding:1px 2px 0;
+}
+.modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) > .modal-card > form > footer {
+  position:sticky!important;
+  bottom:0!important;
+  z-index:5;
+  margin:8px -2px 0!important;
+  padding:10px 2px 0!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.94),#fff 30%)!important;
+}
+@media(max-width:700px) {
+ .modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) {
+    align-items:center!important;
+    justify-content:center!important;
+    place-items:center!important;
+    padding:16px 12px!important;
+ }
+ .modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) > .modal-card {
+    width:calc(100vw - 24px)!important;
+    max-height:min(80dvh,700px)!important;
+    min-height:0!important;
+    border-radius:17px!important;
+    padding:13px!important;
+ }
+ .modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) > .modal-card > form > footer {
+    padding-bottom:5px!important;
+ }
+}
+/* Hero photography: the animal photo is decorative on the right and fades to the readable left copy. */
+.pet-hero {position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:flex-start;flex-wrap:wrap;gap:12px;min-height:156px;padding:20px!important}
+.pet-hero-art {position:absolute;z-index:-1;inset:0 0 0 auto;width:75%;pointer-events:none;overflow:hidden}
+.pet-hero-art img {display:block;width:100%;height:100%;object-fit:cover;object-position:center 40%;-webkit-mask-image:linear-gradient(to right,transparent 0%,rgba(0,0,0,.18) 30%,#000 85%);mask-image:linear-gradient(to right,transparent 0%,rgba(0,0,0,.18) 30%,#000 85%)}
+.pet-hero::after {content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(90deg,rgba(255,255,255,.97) 0%,rgba(255,255,255,.9) 39%,rgba(255,255,255,.12) 100%)}
+.pet-hero-details {position:relative;z-index:1;min-width:0;flex:1 1 65%;max-width:70%;text-shadow:0 1px 8px rgba(255,255,255,.8)}
+.pet-hero-actions {position:relative;z-index:2;display:flex;align-self:flex-end;flex:0 0 auto;margin-top:auto}
+@media(max-width:700px) {
+ .pet-hero {display:flex!important;flex-direction:column!important;align-items:flex-start!important;min-height:168px!important;padding:15px!important}
+ .pet-hero-details {max-width:75%;flex:0 0 auto}
+ .pet-hero-actions {grid-column:auto!important;align-self:flex-start;display:flex;flex-direction:row;margin-top:4px}
+ .pet-hero-art {width:80%}
+}
