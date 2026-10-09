@@ -64,15 +64,15 @@ Last updated: 2026-10-09
    - author / last-updated information
    - later: direct conversion into Calendar events, Tasks or Projects
 
-6. [x] Child Rewards Economy — PWA V1 implemented
+6. [x] Projects, Chores & Rewards — Child Rewards merged into existing module
+   - Projects, Chores, Family standing and Child rewards now share one module with four tabs
    - points from Projects & Chores count automatically
    - parent-defined point values for child-assigned Tasks
-   - child balance cards
-   - parent-managed reward catalogue
+   - child balance cards and parent-managed reward catalogue
    - reward redemption with balance validation
-   - earn/spend history
-   - parent bonus/correction adjustments
+   - earn/spend history and parent bonus/correction adjustments
    - reopening a rewarded task automatically removes its task award
+   - standalone Child Rewards module/navigation removed without deleting reward data
    - later: streaks and achievements
 
 7. [x] Travel & Trips — PWA V1 implemented
@@ -103,15 +103,17 @@ Last updated: 2026-10-09
    - vaccination, insurance, vet, prescription and registration documents linked from Famioo Files
    - responsive desktop/mobile pet dashboard
 
-10. [x] Family Inbox / Scan — PWA V1 implemented
+10. [x] Family Inbox / Scan — PWA scanner + inbox implemented
     - camera capture or image upload for letters, flyers, invitations and school notices
-    - original scan retained securely in Famioo Files
+    - real scan editor before saving with 10 presets: Original, Auto, Document, B&W, Grayscale, High contrast, Bright paper, Warm paper, Cool paper and Soft clean
+    - processed scan can be saved securely in Famioo Files, downloaded, or shared through the device share sheet
+    - native Web Share enables WhatsApp and other installed share targets where supported
+    - scan can be sent directly to Family Messenger or a specific linked household member
+    - saved scans keep Open, Download and Share actions in the Inbox
     - AI extraction of title, summary, sender, event date, deadline and location
     - suggested Calendar, Task, File and School & Kita actions
-    - one-click Apply / Dismiss review flow
-    - optional child selection for School & Kita suggestions
-    - AI Assistant allowance/accounting reused for extraction
-    - responsive desktop/mobile inbox
+    - one-click Apply / Dismiss review flow with optional child selection for School & Kita suggestions
+    - responsive desktop/mobile scanner and inbox
 
 11. [x] Emergency Information — PWA V1 implemented
     - per-family-member emergency profile
