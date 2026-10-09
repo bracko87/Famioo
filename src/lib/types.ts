@@ -42,6 +42,7 @@ export type ModuleCode =
   | 'emergency_info'
   | 'calendar_context'
   | 'memories'
+  | 'checkin'
   | 'shopping'
   | 'costs'
   | 'school'
