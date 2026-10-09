@@ -8,6 +8,7 @@ import {
   House,
   Receipt,
   ShoppingBag,
+  ShieldAlert,
   Sparkles,
   Syringe,
   Ticket,
@@ -37,6 +38,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   assistant: Sparkles,
   vaccinations: Syringe,
   tickets: Ticket,
+  safety: ShieldAlert,
 }
 
 const routeByModule: Record<ModuleCode, string> = {
@@ -55,6 +57,7 @@ const routeByModule: Record<ModuleCode, string> = {
   assistant: '/app/assistant',
   vaccinations: '/app/vaccinations',
   tickets: '/app/tickets',
+  safety: '/app/safety',
 }
 
 export function HomePage() {
@@ -204,6 +207,7 @@ export function HomePage() {
     calendar: `${eventCount} today`,
     tasks: `${taskCount} open`,
     checklists: `${checklistCount} active`,
+    safety: 'SOS ready · household safety',
     shopping: `${shoppingCount} active lists`,
     costs: new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR' }).format(costMonthTotal) + ' this month',
   }
