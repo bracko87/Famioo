@@ -4,6 +4,12 @@ Canonical ordered list of the Famioo modules and major family features planned f
 
 Last updated: 2026-10-09
 
+## Permanent module lifecycle rule
+
+- Every new standalone module gets its own mobile loading-screen icon in the same implementation cycle.
+- If a module is later merged into another module or removed, its standalone navigation/home entry **and its loading-screen icon/style must be removed in the same change**.
+- Merged functionality keeps its data and moves under the surviving module; it must not remain represented as a second standalone module.
+
 ## Implementation order
 
 1. [x] Family Safety / SOS — PWA V1 implemented
@@ -32,13 +38,13 @@ Last updated: 2026-10-09
    - native Android/iOS background/locked-screen location remains a later native enhancement
 
 3. [x] Family Messenger — PWA V1 implemented
-   - private household Family Chat
-   - one-to-one direct family conversations
-   - text messages
-   - private photo sharing
-   - browser/PWA voice notes
-   - unread conversation counters
-   - message push/in-app notifications
+   - private household Family Chat and one-to-one direct family conversations
+   - text messages, private photo sharing and browser/PWA voice notes
+   - mobile floating Chat shortcut beside AI/SOS instead of a Home module card
+   - unread-message bubble on the floating Chat shortcut
+   - message push/in-app notifications explicitly identify Family Messenger
+   - tapping a mobile Messenger notification opens the exact conversation in the quick-chat modal
+   - full Messenger page retained as desktop/fallback view
    - private Messenger media storage
    - later: video messages, reactions, editing/deleting and native call/message enhancements
 
@@ -110,6 +116,7 @@ Last updated: 2026-10-09
     - native Web Share enables WhatsApp and other installed share targets where supported
     - scan can be sent directly to Family Messenger or a specific linked household member
     - saved scans keep Open, Download and Share actions in the Inbox
+    - preview-overlay Archive/Restore and permanent Delete controls; permanent Delete also removes the private stored scan
     - AI extraction of title, summary, sender, event date, deadline and location
     - suggested Calendar, Task, File and School & Kita actions
     - one-click Apply / Dismiss review flow with optional child selection for School & Kita suggestions
