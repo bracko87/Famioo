@@ -32,6 +32,7 @@ export type ModuleCode =
   | 'safety'
   | 'location'
   | 'messenger'
+  | 'contacts'
   | 'shopping'
   | 'costs'
   | 'school'
