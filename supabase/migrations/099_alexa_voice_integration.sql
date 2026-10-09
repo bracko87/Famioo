@@ -187,7 +187,7 @@ returns table(
   location_text text
 )
 language plpgsql
-security definer
+security invoker
 set search_path=public,private,pg_temp
 as $$
 begin
