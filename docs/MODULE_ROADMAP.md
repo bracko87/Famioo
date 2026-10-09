@@ -31,12 +31,18 @@ Last updated: 2026-10-09
    - each linked member controls their own location sharing
    - native Android/iOS background/locked-screen location remains a later native enhancement
 
-3. [ ] Family Messenger — NEXT
-   - household chat
-   - text, photos and voice messages
-   - later: video messages
+3. [x] Family Messenger — PWA V1 implemented
+   - private household Family Chat
+   - one-to-one direct family conversations
+   - text messages
+   - private photo sharing
+   - browser/PWA voice notes
+   - unread conversation counters
+   - message push/in-app notifications
+   - private Messenger media storage
+   - later: video messages, reactions, editing/deleting and native call/message enhancements
 
-4. [ ] Family Contacts Directory
+4. [ ] Family Contacts Directory — NEXT
    - grandparents, relatives, babysitters
    - doctors, pharmacies, School/Kita contacts
    - neighbours and emergency contacts
