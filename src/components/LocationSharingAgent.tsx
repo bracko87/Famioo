@@ -64,11 +64,14 @@ export function LocationSharingAgent(){
     const onVisibility=()=>{
       if(document.visibilityState==='visible') void loadSetting()
     }
+    const onSettingChanged=()=>{ void loadSetting() }
     document.addEventListener('visibilitychange',onVisibility)
+    window.addEventListener('famioo-location-setting-changed',onSettingChanged)
 
     return ()=>{
       window.clearInterval(timer)
       document.removeEventListener('visibilitychange',onVisibility)
+      window.removeEventListener('famioo-location-setting-changed',onSettingChanged)
     }
   },[loadSetting])
 
