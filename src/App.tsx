@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarDays, CheckSquare, ClipboardList, FileText, Folder, FolderKanban, GraduationCap, MapPinned, Receipt, ShieldAlert, ShoppingBag, Sparkles, Syringe, Ticket, Utensils, Wrench } from 'lucide-react'
+import { CalendarDays, CheckSquare, ClipboardList, FileText, Folder, FolderKanban, GraduationCap, MapPinned, MessageCircle, Receipt, ShieldAlert, ShoppingBag, Sparkles, Syringe, Ticket, Utensils, Wrench } from 'lucide-react'
 import type { Session, User } from '@supabase/supabase-js'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { supabase } from './lib/supabase'
@@ -32,6 +32,7 @@ import { TicketWalletPage } from './pages/TicketWalletPage'
 import { AssistantPage } from './pages/AssistantPage'
 import { SafetyPage } from './pages/SafetyPage'
 import { LocationPage } from './pages/LocationPage'
+import { MessengerPage } from './pages/MessengerPage'
 import { BrandMark } from './components/Brand'
 
 function LoadingScreen() {
@@ -61,6 +62,7 @@ function LoadingScreen() {
             <line x1="50" y1="49" x2="30" y2="17" />
             <line x1="50" y1="49" x2="31" y2="38" />
             <line x1="50" y1="49" x2="70" y2="44" />
+            <line x1="50" y1="49" x2="48" y2="72" />
           </g>
 
           <g className="launch-network-links">
@@ -94,6 +96,9 @@ function LoadingScreen() {
             <line x1="31" y1="38" x2="70" y2="44" />
             <line x1="70" y1="44" x2="82" y2="55" />
             <line x1="70" y1="44" x2="84" y2="27" />
+            <line x1="48" y1="72" x2="35" y2="87" />
+            <line x1="48" y1="72" x2="68" y2="80" />
+            <line x1="48" y1="72" x2="21" y2="50" />
           </g>
 
           <g className="launch-network-nodes">
@@ -113,6 +118,7 @@ function LoadingScreen() {
             <circle cx="30" cy="17" r=".65" />
             <circle cx="31" cy="38" r=".65" />
             <circle cx="70" cy="44" r=".65" />
+            <circle cx="48" cy="72" r=".65" />
           </g>
         </svg>
 
@@ -132,6 +138,7 @@ function LoadingScreen() {
         <span className="launch-orbit launch-orbit-14" title="AI Assistant"><Sparkles size={19} /></span>
         <span className="launch-orbit launch-orbit-15" title="Family Safety"><ShieldAlert size={19} /></span>
         <span className="launch-orbit launch-orbit-16" title="Family Location"><MapPinned size={19} /></span>
+        <span className="launch-orbit launch-orbit-17" title="Family Messenger"><MessageCircle size={19} /></span>
 
         <div className="launch-brand">
           <BrandMark className="launch-brand-logo" />
@@ -237,6 +244,7 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Route path="checklists/archive" element={<ChecklistArchivePage />} />
           <Route path="safety" element={<SafetyPage />} />
           <Route path="location" element={<LocationPage />} />
+          <Route path="messenger" element={<MessengerPage />} />
           <Route path="settings" element={<SettingsPage />} />
 
           <Route path="shopping" element={<ShoppingPage />} />
