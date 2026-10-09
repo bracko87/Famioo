@@ -172,9 +172,17 @@ Last updated: 2026-10-09
     - one-tap phone access to the approved pickup person
     - responsive desktop/mobile authorization dashboard
 
-16. [ ] QR / Ticket Wallet — redesign from scratch — NEXT
-    - current temporary scope remains Scan QR → open website
-    - future Wallet flow will be newly defined before implementation
+16. [x] QR Scanner / Ticket Wallet — AI-sorted repository implemented
+    - camera QR scan and QR-from-image scanning
+    - scanned values are stored persistently per household
+    - public QR destination pages are safely inspected by the existing QR AI reader when AI Assistant is available
+    - automatic classification into Links, Events or Digital Tickets
+    - Links tab stores ordinary scanned URLs and unreadable/fallback destinations
+    - Events tab stores detected title, date/time, location and summary
+    - Digital Tickets tab stores ticket/pass/booking-like QR destinations
+    - Archive tab with individual restore and per-section Archive all
+    - public-page fetch protection blocks private/local-network destinations and unsafe redirects
+    - mobile responsive QR scanner with processing state instead of automatically navigating away
 
 17. [x] TV Remote / Home Remote — PWA V1 implemented
     - room and TV / streaming / audio device setup
@@ -216,7 +224,7 @@ These already exist and are not counted as new modules above:
 
 ## Rule
 
-When a planned module is implemented, mark it complete here and move the next unfinished item to **NEXT**. This file is the canonical source for “what comes next?”.
+When a planned module is implemented, mark it complete here and move the next unfinished item to **NEXT**. If no unfinished module remains, do not invent a NEXT item. This file is the canonical source for “what comes next?”.
 
 Every newly implemented module must also receive its own icon on the Famioo mobile loading screen in the same implementation cycle. Family Safety and Family Location are included from this point onward.
 
