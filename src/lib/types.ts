@@ -38,6 +38,7 @@ export type ModuleCode =
   | 'travel'
   | 'vehicles'
   | 'pets'
+  | 'inbox_scan'
   | 'shopping'
   | 'costs'
   | 'school'
