@@ -6,16 +6,20 @@ Last updated: 2026-10-09
 
 ## Implementation order
 
-1. [x] Family Safety / SOS — V1 implemented
+1. [x] Family Safety / SOS — PWA V1 implemented
    - hold-to-SOS
    - household adult alerts
    - optional current location
    - adult "I'm responding" state
-   - call shortcut when a phone number is available
+   - phone call / SMS shortcuts when a phone number is available
+   - Famioo internet-call foundation
+   - active-alert map
    - resolve / "I'm safe"
    - recent resolved-alert history
    - persistent mobile SOS shortcut
-   - later: discreet SOS, lock-screen/watch/native hardware trigger research, critical notifications
+   - native Android + iOS implementation/testing is a mandatory future release gate
+   - canonical native Safety release/test plan: `docs/NATIVE_RELEASE_SAFETY_PLAN.md`
+   - later native extensions: live background SOS location, native incoming VoIP, lock-screen/watch/hardware-trigger research, critical/high-priority notifications, discreet SOS
 
 2. [ ] Family Location + Safe Places — NEXT
    - family map
@@ -147,3 +151,5 @@ These already exist and are not counted as new modules above:
 ## Rule
 
 When a planned module is implemented, mark it complete here and move the next unfinished item to **NEXT**. This file is the canonical source for “what comes next?”.
+
+When native Android/iOS packaging begins, Family Safety is not considered release-complete until the mandatory implementation and real-device test gates in `docs/NATIVE_RELEASE_SAFETY_PLAN.md` pass on Android, iOS and cross-platform combinations.
