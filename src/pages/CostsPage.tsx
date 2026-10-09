@@ -333,6 +333,7 @@ export function CostsPage() {
     const totals = new Map<string, number>([
       ['manual', 0],
       ['shopping', 0],
+    ['shopping_receipt', 0],
       ['task', 0],
       ['home_care', 0],
       ['life_admin', 0],
