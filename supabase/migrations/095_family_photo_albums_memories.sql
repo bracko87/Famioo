@@ -125,7 +125,7 @@ with check(
   and created_by_user_id=auth.uid()
   and exists(
     select 1 from public.family_memory_albums a
-    where a.id=album_id and a.household_id=household_id and a.archived_at is null
+    where a.id=album_id and a.household_id=household_id
   )
   and exists(
     select 1 from public.household_files hf
