@@ -22268,3 +22268,43 @@ b {
   .event-file-list article{grid-template-columns:auto minmax(0,1fr) auto}.event-file-list article>.icon-button{grid-column:3}.event-file-list article>.secondary-button{grid-column:2}
   .event-attachment-controls{grid-template-columns:1fr 1fr}.event-attachment-controls>input{grid-column:1/-1}.event-attachment-button{justify-content:center}
 }
+
+
+/* =========================================================
+   Family Photo Albums / Memories
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .launch-orbit-27 {
+    top: 91% !important;
+    left: 58% !important;
+    transform: translate(-50%,-50%) rotate(-3deg) !important;
+  }
+}
+
+.memories-page{max-width:1180px}
+.memories-heading{align-items:center}
+.memories-toolbar{display:flex;gap:5px;margin-bottom:12px}.memories-toolbar button{border:0;border-radius:999px;padding:7px 10px;background:#f2eef4;color:#817486;font:inherit;font-size:8px;font-weight:700;cursor:pointer}.memories-toolbar button.active{background:#8c58a0;color:#fff}.memories-toolbar span{opacity:.7;margin-left:3px}
+.memory-album-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:5px;margin-bottom:13px}
+.memory-album-chip{min-width:245px;padding:8px;border:1px solid #e4dde7;border-radius:14px;display:grid;grid-template-columns:58px minmax(0,1fr);gap:9px;align-items:center;text-align:left;background:#fff;color:#786b7d;cursor:pointer}.memory-album-chip.active{border-color:#c7a8d0;background:#fbf7fc;box-shadow:0 0 0 2px rgba(139,88,160,.06)}
+.memory-chip-cover{width:58px;height:58px;border-radius:11px;overflow:hidden;display:grid;place-items:center;background:#f0ebf3}.memory-chip-cover img{width:100%;height:100%;object-fit:cover}.memory-chip-cover b{font-size:25px}
+.memory-album-chip>span:last-child{min-width:0;display:grid;gap:2px}.memory-album-chip small{font-size:7px;color:#9d90a1;font-weight:800}.memory-album-chip strong{font-size:10px;color:#5b4f5f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.memory-album-chip em{font-size:7px;color:#96899a;font-style:normal}
+.memory-album-detail{display:grid;gap:10px}
+.memory-album-hero{padding:13px;border:1px solid #e5dee8;border-radius:16px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:11px;align-items:center;background:linear-gradient(135deg,#fbf8fc,#fff)}.memory-album-symbol{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;background:#f0ebf3;font-size:25px}.memory-album-hero h2{margin:2px 0 0;color:#594d5d;font-size:20px}.memory-album-hero p{margin:2px 0 0;color:#897c8d;font-size:8px;line-height:1.4}.memory-album-hero small{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:5px;color:#8c7e91;font-size:8px}.memory-album-hero small>span,.memory-album-hero small>svg{vertical-align:middle}.memory-hero-actions{display:flex;gap:5px;align-items:center}
+.memory-add-panel{padding:10px;border:1px solid #e7e0e9;border-radius:13px;background:#fbfafc;display:grid;gap:7px}.memory-add-meta{display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:7px}.memory-add-meta input,.memory-add-actions select{min-height:36px;padding:0 8px;border:1px solid #ddd4e1;border-radius:9px;background:#fff;color:#5b4f5f;font:inherit;font-size:8px}.memory-add-actions{display:flex;gap:6px;flex-wrap:wrap}.memory-add-actions select{min-width:210px;flex:1}.memory-add-panel>p{margin:0;color:#988b9c;font-size:7px}.memory-file-button{position:relative;overflow:hidden;cursor:pointer}.memory-file-button input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.memory-photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}.memory-photo-card{min-width:0;border:1px solid #e6dfe8;border-radius:13px;overflow:hidden;background:#fff;box-shadow:0 5px 14px rgba(57,40,63,.035)}.memory-photo-card>a,.memory-photo-placeholder{height:185px;display:grid;place-items:center;background:#f1edf3;color:#95889a}.memory-photo-card img{width:100%;height:100%;object-fit:cover}.memory-photo-card>div:last-child{padding:7px 8px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px;align-items:center}.memory-photo-card>div:last-child>span{min-width:0;display:grid;gap:1px}.memory-photo-card strong{font-size:8px;color:#5d5161;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.memory-photo-card small{font-size:7px;color:#9a8d9e}.memory-photo-card button{width:27px;height:27px;border:0;border-radius:8px;display:grid;place-items:center;background:#f1ecf3;color:#7b6a80;cursor:pointer}
+.memories-empty{min-height:190px;padding:22px;border:1px dashed #ddd4e1;border-radius:15px;display:grid;place-items:center;align-content:center;gap:6px;text-align:center;color:#988b9d;background:#fbfafc}.memories-empty.compact{min-height:105px}.memories-empty strong{font-size:11px;color:#625567}.memories-empty span{max-width:460px;font-size:8px;line-height:1.45}
+.memory-editor-backdrop{z-index:2870}.memory-editor{width:min(610px,calc(100vw - 24px));padding:16px}.memory-editor>header{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:12px}.memory-editor h2{margin:3px 0 0;color:#594d5d;font-size:18px}.memory-editor form{display:grid;gap:9px}.memory-editor label{display:grid;gap:5px}.memory-editor label>span{font-size:8px;color:#786b7c;font-weight:700}.memory-editor input,.memory-editor select,.memory-editor textarea{width:100%;min-height:39px;padding:8px 9px;border:1px solid #ddd4e1;border-radius:10px;background:#fff;color:#574c5b;font:inherit;font-size:10px}.memory-editor-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.memory-editor footer{display:flex;justify-content:flex-end;gap:7px;margin-top:3px}
+
+@media(max-width:760px){
+  .memories-page{padding:12px 12px calc(90px + env(safe-area-inset-bottom))!important}
+  .memories-heading{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:start}.memories-heading p{display:none}
+  .memory-album-strip{margin-left:-12px;margin-right:-12px;padding-left:12px;padding-right:12px}
+  .memory-album-chip{min-width:215px}
+  .memory-album-hero{grid-template-columns:auto minmax(0,1fr)}.memory-hero-actions{grid-column:1/-1}
+  .memory-add-meta{grid-template-columns:1fr}.memory-add-actions{display:grid;grid-template-columns:1fr 1fr}.memory-add-actions select{grid-column:1/-1;min-width:0}.memory-add-actions>*{justify-content:center}
+  .memory-photo-grid{grid-template-columns:1fr 1fr}.memory-photo-card>a,.memory-photo-placeholder{height:155px}
+  .memory-editor-row{grid-template-columns:1fr}
+  .memory-editor-backdrop{padding:0!important;align-items:stretch!important}.memory-editor{width:100%!important;max-width:none!important;min-height:100dvh;padding:calc(15px + env(safe-area-inset-top)) 12px calc(20px + env(safe-area-inset-bottom))!important;border-radius:0!important}
+  .memory-editor footer{position:sticky;bottom:0;margin:8px -12px -20px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #e7e0e9;background:rgba(255,255,255,.97)}.memory-editor footer>*{flex:1;justify-content:center}
+}
