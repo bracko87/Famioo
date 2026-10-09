@@ -100,7 +100,7 @@ Last updated: 2026-10-09
    - responsive desktop/mobile vehicle dashboard
 
 9. [x] Pets — PWA V1 implemented
-   - pet profiles with species, breed, sex, birth date, chip number, weight and notes
+   - pet profiles with photo, species, breed, sex, birth date, chip number, weight and notes
    - vet appointments, vaccinations, medication and health records
    - optional Calendar reminders for due health items
    - pet health costs mirrored into Household Costs
@@ -172,7 +172,7 @@ Last updated: 2026-10-09
     - one-tap phone access to the approved pickup person
     - responsive desktop/mobile authorization dashboard
 
-16. [x] QR Scanner / Ticket Wallet — AI-sorted repository implemented
+16. [x] QR Scanner — AI-sorted repository implemented
     - camera QR scan and QR-from-image scanning
     - scanned values are stored persistently per household
     - public QR destination pages are safely inspected by the existing QR AI reader when AI Assistant is available
