@@ -3,12 +3,20 @@ import {
   CheckCircle2,
   Clock3,
   MapPin,
+  MessageSquareText,
   Navigation,
   Phone,
+  PhoneCall,
   ShieldAlert,
+  Smartphone,
   UserCheck,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import {
+  SafetyInternetCall,
+  type SafetyCallContact,
+} from '../components/SafetyInternetCall'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
@@ -36,16 +44,29 @@ type SafetyResponse={
 }
 
 type HouseholdUser={
-  user_id:string
+  profile_id:string
+  user_id:string|null
   email:string|null
   phone:string|null
   display_name:string
-  role:'owner'|'admin'|'user'
+  role:'owner'|'admin'|'user'|'profile'
   status:string
+}
+
+type CallApi={
+  start:(alertId:string,recipientUserId:string)=>Promise<void>
 }
 
 function mapUrl(latitude:number,longitude:number){
   return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`
+}
+
+function mapEmbedUrl(latitude:number,longitude:number){
+  return `https://maps.google.com/maps?q=${latitude},${longitude}&z=16&output=embed`
+}
+
+function smsUrl(phone:string,body:string){
+  return `sms:${phone}?body=${encodeURIComponent(body)}`
 }
 
 function formatTime(value:string){
@@ -70,23 +91,43 @@ export function SafetyPage(){
   const [sending,setSending]=useState(false)
   const [actingAlertId,setActingAlertId]=useState('')
   const [holdProgress,setHoldProgress]=useState(0)
+  const [isMobile,setIsMobile]=useState(()=>window.matchMedia('(max-width: 900px)').matches)
 
   const holdStartedAtRef=useRef(0)
   const holdFrameRef=useRef(0)
   const holdTriggeredRef=useRef(false)
+  const callApiRef=useRef<CallApi|null>(null)
 
   const profileById=useMemo(
     ()=>new Map(profiles.map((profile)=>[profile.id,profile])),
     [profiles],
   )
   const userById=useMemo(
-    ()=>new Map(householdUsers.map((member)=>[member.user_id,member])),
+    ()=>new Map(
+      householdUsers
+        .filter((member):member is HouseholdUser&{user_id:string}=>Boolean(member.user_id))
+        .map((member)=>[member.user_id,member]),
+    ),
     [householdUsers],
   )
 
   const activeAlerts=alerts.filter((alert)=>alert.status==='active')
   const historyAlerts=alerts.filter((alert)=>alert.status!=='active').slice(0,8)
   const myActiveAlert=activeAlerts.find((alert)=>alert.triggered_by_user_id===user.id)??null
+
+  const callContacts=useMemo<SafetyCallContact[]>(
+    ()=>householdUsers
+      .filter((member):member is HouseholdUser&{user_id:string}=>Boolean(member.user_id)&&member.status==='active')
+      .map((member)=>({user_id:member.user_id,display_name:member.display_name})),
+    [householdUsers],
+  )
+
+  const adultContacts=useMemo(
+    ()=>householdUsers.filter((member)=>member.user_id&&member.status==='active'&&member.role!=='profile'),
+    [householdUsers],
+  )
+
+  const missingPhoneContacts=adultContacts.filter((member)=>!member.phone)
 
   const load=useCallback(async (foreground=false)=>{
     if(foreground) setLoading(true)
@@ -124,9 +165,17 @@ export function SafetyPage(){
   },[household.id])
 
   useEffect(()=>{
+    const media=window.matchMedia('(max-width: 900px)')
+    const sync=()=>setIsMobile(media.matches)
+    sync()
+    media.addEventListener?.('change',sync)
+    return ()=>media.removeEventListener?.('change',sync)
+  },[])
+
+  useEffect(()=>{
     void load(true)
 
-    const timer=window.setInterval(()=>{ void load(false) },8000)
+    const timer=window.setInterval(()=>{ void load(false) },5000)
     const onFocus=()=>{ void load(false) }
     window.addEventListener('focus',onFocus)
 
@@ -167,7 +216,7 @@ export function SafetyPage(){
     })
   }
 
-  function requestLocation(alertId:string){
+  function requestLocation(){
     if(!includeLocation||!navigator.geolocation){
       setLocationStatus(includeLocation?'Location is not supported on this device.':'')
       return
@@ -186,7 +235,7 @@ export function SafetyPage(){
             setLocationStatus('SOS is active. Location could not be added.')
             return
           }
-          setLocationStatus('Current location added to the SOS alert.')
+          setLocationStatus('Current location added to the SOS alert and map.')
           void load(false)
         })
       },
@@ -195,14 +244,14 @@ export function SafetyPage(){
       },
       {
         enableHighAccuracy:true,
-        timeout:3500,
-        maximumAge:15000,
+        timeout:5000,
+        maximumAge:10000,
       },
     )
   }
 
   async function sendSos(){
-    if(sending||myActiveAlert) return
+    if(!isMobile||sending||myActiveAlert) return
 
     setSending(true)
     setError('')
@@ -218,16 +267,15 @@ export function SafetyPage(){
       return
     }
 
-    const alertId=String(result.data??'')
-    setMessage('SOS sent. Your household adults have been alerted.')
+    setMessage('SOS sent. Your family has been alerted. Choose a call or message option below while Famioo adds your location.')
     try{
-      navigator.vibrate?.([120,80,120])
+      navigator.vibrate?.([250,120,250,120,450])
     }catch{
       // Vibration is optional.
     }
 
     await load(false)
-    if(alertId) requestLocation(alertId)
+    requestLocation()
   }
 
   function cancelHold(){
@@ -258,7 +306,7 @@ export function SafetyPage(){
   }
 
   function startHold(){
-    if(sending||myActiveAlert) return
+    if(!isMobile||sending||myActiveAlert) return
     cancelHold()
     holdStartedAtRef.current=performance.now()
     holdFrameRef.current=requestAnimationFrame(holdFrame)
@@ -316,13 +364,45 @@ export function SafetyPage(){
     return currentProfile?.profile_type==='adult'
   }
 
+  function startInternetCall(alertId:string,targetUserId:string){
+    void callApiRef.current?.start(alertId,targetUserId)
+  }
+
+  function contactActions(alert:SafetyAlert,target:HouseholdUser,compact=false){
+    if(!target.user_id) return null
+    const name=target.display_name.split(' ')[0]
+    const smsBody=`Famioo SOS: ${alertName(alert)} needs help. Please open Family Safety now.`
+
+    return (
+      <div className={compact?'safety-contact-actions compact':'safety-contact-actions'}>
+        {target.phone&&(
+          <>
+            <a className="safety-action-button call" href={`tel:${target.phone}`}>
+              <Phone size={15}/>Call {name}
+            </a>
+            <a className="safety-action-button text" href={smsUrl(target.phone,smsBody)}>
+              <MessageSquareText size={15}/>Text {name}
+            </a>
+          </>
+        )}
+        <button
+          type="button"
+          className="safety-action-button internet"
+          onClick={()=>startInternetCall(alert.id,target.user_id!)}
+        >
+          <PhoneCall size={15}/>Internet call
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="page safety-page">
       <div className="page-heading-row safety-page-heading">
         <div>
           <span className="eyebrow">FAMILY SAFETY</span>
           <h1>Safety / SOS</h1>
-          <p>Alert your household quickly if you feel unsafe or need immediate family help.</p>
+          <p>Mobile SOS, family response, location and direct contact options in one place.</p>
         </div>
         <span className={activeAlerts.length?'safety-status-chip active':'safety-status-chip'}>
           <ShieldAlert size={15}/>
@@ -330,13 +410,34 @@ export function SafetyPage(){
         </span>
       </div>
 
+      <SafetyInternetCall
+        householdId={household.id}
+        userId={user.id}
+        contacts={callContacts}
+        onReady={(api)=>{ callApiRef.current=api }}
+      />
+
       <div className="safety-emergency-note">
         <BellRing size={16}/>
         <span>
           <strong>Family alert only</strong>
-          <small>Famioo notifies your household. It does not contact police, ambulance or other emergency services.</small>
+          <small>Famioo alerts your household. It does not automatically contact police, ambulance or other emergency services.</small>
         </span>
       </div>
+
+      {missingPhoneContacts.length>0&&(
+        <div className="safety-contact-warning">
+          <Smartphone size={17}/>
+          <span>
+            <strong>Complete family phone numbers</strong>
+            <small>
+              Missing: {missingPhoneContacts.map((member)=>member.display_name).join(', ')}.
+              Internet call remains available, but adding mobile numbers enables one-tap call and SMS.
+            </small>
+          </span>
+          <Link to="/app/settings">Update contacts →</Link>
+        </div>
+      )}
 
       {error&&<div className="notice error">{error}</div>}
       {message&&<div className="notice">{message}</div>}
@@ -345,12 +446,22 @@ export function SafetyPage(){
         <div className="safety-sos-copy">
           <span className="safety-sos-mark"><ShieldAlert size={28}/></span>
           <div>
-            <span className="eyebrow">{myActiveAlert?'YOUR SOS IS ACTIVE':'NEED HELP?'}</span>
-            <h2>{myActiveAlert?'Your family has been alerted':'Hold to send SOS'}</h2>
+            <span className="eyebrow">
+              {myActiveAlert?'YOUR SOS IS ACTIVE':isMobile?'NEED HELP?':'MOBILE SOS'}
+            </span>
+            <h2>
+              {myActiveAlert
+                ?'Your family has been alerted'
+                :isMobile
+                  ?'Hold to send SOS'
+                  :'SOS triggering is available on mobile only'}
+            </h2>
             <p>
               {myActiveAlert
                 ?'Keep this alert active until you or an adult family member confirms that the situation is safe.'
-                :'Press and hold the SOS button for 2 seconds. The alert is sent immediately; location is added afterwards if available.'}
+                :isMobile
+                  ?'Press and hold for 2 seconds. Famioo alerts your family immediately, then adds your current location and opens call/message options.'
+                  :'Desktop can monitor active alerts, locations, responses and communication. Use the Famioo mobile app/PWA to trigger a new SOS.'}
             </p>
           </div>
         </div>
@@ -365,53 +476,87 @@ export function SafetyPage(){
             <CheckCircle2 size={18}/>
             {actingAlertId===myActiveAlert.id?'Resolving…':"I'm safe — resolve SOS"}
           </button>
-        ) : (
-          <button
-            type="button"
-            className="safety-hold-button"
-            disabled={sending}
-            onPointerDown={startHold}
-            onPointerUp={releaseHold}
-            onPointerCancel={releaseHold}
-            onPointerLeave={releaseHold}
-            onKeyDown={(event)=>{
-              if((event.key==='Enter'||event.key===' ')&&!holdStartedAtRef.current){
-                event.preventDefault()
-                startHold()
-              }
-            }}
-            onKeyUp={(event)=>{
-              if(event.key==='Enter'||event.key===' '){
-                event.preventDefault()
-                releaseHold()
-              }
-            }}
-          >
-            <span className="safety-hold-fill" style={{width:`${holdProgress}%`}}/>
-            <ShieldAlert size={24}/>
-            <span>
-              <strong>{sending?'Sending SOS…':'HOLD FOR SOS'}</strong>
-              <small>{sending?'Alerting your household':'Hold for 2 seconds'}</small>
-            </span>
-          </button>
-        )}
+        ) : isMobile ? (
+          <>
+            <button
+              type="button"
+              className="safety-hold-button"
+              disabled={sending}
+              onPointerDown={startHold}
+              onPointerUp={releaseHold}
+              onPointerCancel={releaseHold}
+              onPointerLeave={releaseHold}
+              onKeyDown={(event)=>{
+                if((event.key==='Enter'||event.key===' ')&&!holdStartedAtRef.current){
+                  event.preventDefault()
+                  startHold()
+                }
+              }}
+              onKeyUp={(event)=>{
+                if(event.key==='Enter'||event.key===' '){
+                  event.preventDefault()
+                  releaseHold()
+                }
+              }}
+            >
+              <span className="safety-hold-fill" style={{width:`${holdProgress}%`}}/>
+              <ShieldAlert size={24}/>
+              <span>
+                <strong>{sending?'Sending SOS…':'HOLD FOR SOS'}</strong>
+                <small>{sending?'Alerting your household':'Hold for 2 seconds'}</small>
+              </span>
+            </button>
 
-        {!myActiveAlert&&(
-          <label className="safety-location-toggle">
-            <input
-              type="checkbox"
-              checked={includeLocation}
-              onChange={(event)=>setIncludeLocation(event.target.checked)}
-            />
+            <label className="safety-location-toggle">
+              <input
+                type="checkbox"
+                checked={includeLocation}
+                onChange={(event)=>setIncludeLocation(event.target.checked)}
+              />
+              <span>
+                <strong><Navigation size={14}/>Add my current location when possible</strong>
+                <small>The SOS goes out first, so location permission never delays the family alert.</small>
+              </span>
+            </label>
+          </>
+        ) : (
+          <div className="safety-desktop-readonly">
+            <Smartphone size={18}/>
             <span>
-              <strong><Navigation size={14}/>Add my current location when possible</strong>
-              <small>The SOS is sent first, so location permission never delays the family alert.</small>
+              <strong>Read-only SOS trigger on desktop</strong>
+              <small>Open Famioo on your phone to send an SOS.</small>
             </span>
-          </label>
+          </div>
         )}
 
         {locationStatus&&<div className="safety-location-status"><MapPin size={14}/>{locationStatus}</div>}
       </section>
+
+      {myActiveAlert&&(
+        <section className="safety-contact-panel">
+          <div className="safety-section-head">
+            <div>
+              <span className="eyebrow">GET HELP NOW</span>
+              <h2>Call or message your family</h2>
+            </div>
+            <small>Shown immediately after SOS</small>
+          </div>
+
+          <div className="safety-contact-list">
+            {adultContacts
+              .filter((member)=>member.user_id!==user.id)
+              .map((member)=>(
+                <div className="safety-contact-row" key={member.profile_id}>
+                  <span>
+                    <strong>{member.display_name}</strong>
+                    <small>{member.phone||'No mobile number saved · internet call available'}</small>
+                  </span>
+                  {contactActions(myActiveAlert,member)}
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
 
       <section className="safety-alerts-section">
         <div className="safety-section-head">
@@ -457,28 +602,37 @@ export function SafetyPage(){
                   </header>
 
                   {alert.latitude!=null&&alert.longitude!=null ? (
-                    <a
-                      className="safety-location-card"
-                      href={mapUrl(alert.latitude,alert.longitude)}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <MapPin size={18}/>
-                      <span>
-                        <strong>Current SOS location</strong>
-                        <small>
-                          {alert.latitude.toFixed(5)}, {alert.longitude.toFixed(5)}
-                          {alert.accuracy_m!=null ? ` · ±${Math.round(alert.accuracy_m)} m` : ''}
-                        </small>
-                      </span>
-                      <b>Open map →</b>
-                    </a>
+                    <div className="safety-map-wrap">
+                      <iframe
+                        className="safety-map"
+                        src={mapEmbedUrl(alert.latitude,alert.longitude)}
+                        title={`SOS location for ${alertName(alert)}`}
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                      />
+                      <a
+                        className="safety-location-card"
+                        href={mapUrl(alert.latitude,alert.longitude)}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <MapPin size={18}/>
+                        <span>
+                          <strong>Current SOS location</strong>
+                          <small>
+                            {alert.latitude.toFixed(5)}, {alert.longitude.toFixed(5)}
+                            {alert.accuracy_m!=null ? ` · ±${Math.round(alert.accuracy_m)} m` : ''}
+                          </small>
+                        </span>
+                        <b>Open Google Maps →</b>
+                      </a>
+                    </div>
                   ) : (
                     <div className="safety-location-card unavailable">
                       <MapPin size={18}/>
                       <span>
-                        <strong>No location shared</strong>
-                        <small>The family alert is still active.</small>
+                        <strong>No location shared yet</strong>
+                        <small>The family alert is already active.</small>
                       </span>
                     </div>
                   )}
@@ -503,11 +657,7 @@ export function SafetyPage(){
                       </button>
                     )}
 
-                    {!own&&contact?.phone&&(
-                      <a className="secondary-button" href={`tel:${contact.phone}`}>
-                        <Phone size={15}/>Call {alertName(alert).split(' ')[0]}
-                      </a>
-                    )}
+                    {!own&&contact&&contactActions(alert,contact,true)}
 
                     {canResolve(alert)&&(
                       <button
