@@ -43,6 +43,7 @@ export type ModuleCode =
   | 'calendar_context'
   | 'memories'
   | 'checkin'
+  | 'pickup_authorization'
   | 'shopping'
   | 'costs'
   | 'school'
