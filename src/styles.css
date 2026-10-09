@@ -23288,3 +23288,7 @@ button.notification-item.messenger-notification-item{
   .travel-editor-row {grid-template-columns:repeat(2,minmax(0,1fr))!important}
   .travel-document-linker .custom-select {grid-column:span 1}
 }
+
+/* Custom pickers portal to document.body; keep them above editor modals rather than behind the overlay. */
+.date-picker-popover-portal {z-index:6200!important}
+.mobile-select-backdrop {z-index:6200!important}
