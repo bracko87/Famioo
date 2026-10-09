@@ -112,7 +112,7 @@ export function EmergencyPage(){
   const [error,setError]=useState('')
   const [message,setMessage]=useState('')
 
-  const activeProfiles=profiles.filter(profile=>profile.active!==false)
+  const activeProfiles=profiles
   const selected=activeProfiles.find(profile=>profile.id===selectedId)??activeProfiles[0]??null
   const record=records.find(item=>item.profile_id===selected?.id)??null
   const contactById=useMemo(()=>new Map(contacts.map(contact=>[contact.id,contact])),[contacts])
