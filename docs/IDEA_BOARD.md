@@ -1,6 +1,6 @@
 # Famioo Idea Board
 
-This document collects future product ideas. Items here are ideas, not committed implementation scope unless explicitly moved into the roadmap.
+This document collects future product ideas. Items here are ideas, not committed implementation scope unless explicitly moved into the roadmap.\n\nCanonical implementation roadmap: `docs/MODULE_ROADMAP.md`.
 
 ## User-requested ideas
 
