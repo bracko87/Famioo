@@ -272,7 +272,7 @@ export function AppShell() {
                       </>
                     )
 
-                    return item.notification_type==='safety_sos'
+                    return item.notification_type.startsWith('safety_')
                       ? (
                         <NavLink
                           className="notification-item safety-notification-item"
