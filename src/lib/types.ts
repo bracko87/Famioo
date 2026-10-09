@@ -31,6 +31,7 @@ export type ModuleCode =
   | 'checklists'
   | 'safety'
   | 'location'
+  | 'messenger'
   | 'shopping'
   | 'costs'
   | 'school'
