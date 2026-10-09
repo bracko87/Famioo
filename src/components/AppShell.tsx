@@ -308,6 +308,19 @@ export function AppShell() {
                       )
                     }
 
+                    if(item.notification_type==='messenger_message'){
+                      return (
+                        <NavLink
+                          className="notification-item messenger-notification-item"
+                          to="/app/messenger"
+                          key={item.id}
+                          onClick={()=>setNotificationOpen(false)}
+                        >
+                          {content}
+                        </NavLink>
+                      )
+                    }
+
                     return <div className="notification-item" key={item.id}>{content}</div>
                   })}
                 </div>
