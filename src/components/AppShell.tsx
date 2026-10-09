@@ -9,6 +9,7 @@ import {
   Home,
   House,
   LogOut,
+  MapPinned,
   Menu,
   ChevronLeft,
   ChevronRight,
@@ -31,6 +32,7 @@ import { Brand } from './Brand'
 import { FooterWeather } from './FooterWeather'
 import { Select } from './ui/Select'
 import { MobileAssistantQuick } from './MobileAssistantQuick'
+import { LocationSharingAgent } from './LocationSharingAgent'
 
 const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>> = {
   shopping: ShoppingBag,
@@ -45,6 +47,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   vaccinations: Syringe,
   tickets: Ticket,
   safety: ShieldAlert,
+  location: MapPinned,
 }
 
 const routeByModule: Partial<Record<ModuleCode, string>> = {
@@ -60,6 +63,7 @@ const routeByModule: Partial<Record<ModuleCode, string>> = {
   vaccinations: '/app/vaccinations',
   tickets: '/app/tickets',
   safety: '/app/safety',
+  location: '/app/location',
 }
 
 type HeaderNotification = {
@@ -171,6 +175,7 @@ export function AppShell() {
 
   return (
     <div className={sidebarCollapsed ? 'app-layout sidebar-collapsed' : 'app-layout'}>
+      <LocationSharingAgent />
       <aside className={[
         'app-sidebar',
         mobileMenu ? 'open' : '',
@@ -200,6 +205,7 @@ export function AppShell() {
           <NavLink to="/app/tasks" onClick={() => setMobileMenu(false)} title="Tasks"><ClipboardList size={18} /><span className="nav-text">Tasks</span></NavLink>
           <NavLink to="/app/checklists" onClick={() => setMobileMenu(false)} title="Checklists"><CheckSquare size={18} /><span className="nav-text">Checklists</span></NavLink>
           <NavLink to="/app/safety" onClick={() => setMobileMenu(false)} title="Family Safety"><ShieldAlert size={18} /><span className="nav-text">Family Safety</span></NavLink>
+          <NavLink to="/app/location" onClick={() => setMobileMenu(false)} title="Family Location"><MapPinned size={18} /><span className="nav-text">Family Location</span></NavLink>
           <NavLink to="/app/files" onClick={() => setMobileMenu(false)} title="Files"><FileText size={18} /><span className="nav-text">Files</span></NavLink>
 
           {enabledPaid.length > 0 && <span className="nav-label nav-label-spaced">HOUSEHOLD</span>}
