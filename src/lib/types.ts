@@ -44,6 +44,8 @@ export type ModuleCode =
   | 'memories'
   | 'checkin'
   | 'pickup_authorization'
+  | 'home_remote'
+  | 'voice_integration'
   | 'shopping'
   | 'costs'
   | 'school'
