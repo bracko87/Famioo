@@ -6,6 +6,7 @@ import {
   FolderKanban,
   GraduationCap,
   House,
+  MapPinned,
   Receipt,
   ShoppingBag,
   ShieldAlert,
@@ -39,6 +40,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   vaccinations: Syringe,
   tickets: Ticket,
   safety: ShieldAlert,
+  location: MapPinned,
 }
 
 const routeByModule: Record<ModuleCode, string> = {
@@ -58,6 +60,7 @@ const routeByModule: Record<ModuleCode, string> = {
   vaccinations: '/app/vaccinations',
   tickets: '/app/tickets',
   safety: '/app/safety',
+  location: '/app/location',
 }
 
 export function HomePage() {
@@ -208,6 +211,7 @@ export function HomePage() {
     tasks: `${taskCount} open`,
     checklists: `${checklistCount} active`,
     safety: 'SOS ready · household safety',
+    location: 'Family map & safe places',
     shopping: `${shoppingCount} active lists`,
     costs: new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR' }).format(costMonthTotal) + ' this month',
   }
