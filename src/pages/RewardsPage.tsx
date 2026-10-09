@@ -80,7 +80,7 @@ function fmtDate(value:string){
   return new Date(value).toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'})
 }
 
-export function RewardsPage(){
+export function RewardsPage({embedded=false}:{embedded?:boolean}={}){
   const {household}=useHousehold()
   const canManage=household.role==='owner'||household.role==='admin'
   const [children,setChildren]=useState<ChildBalance[]>([])
@@ -229,18 +229,17 @@ export function RewardsPage(){
     await load(false)
   }
 
-  if(loading)return <div className="page rewards-page"><div className="rewards-empty">Loading rewards…</div></div>
+  if(loading)return <div className={embedded?'rewards-page rewards-page-embedded':'page rewards-page'}><div className="rewards-empty">Loading rewards…</div></div>
 
   return (
-    <div className="page rewards-page">
-      <div className="page-heading-row rewards-heading">
+    <div className={embedded?'rewards-page rewards-page-embedded':'page rewards-page'}>
+      {!embedded&&<div className="page-heading-row rewards-heading">
         <div>
-          <span className="eyebrow">CHILD REWARDS ECONOMY</span>
           <h1>Earn, save & choose rewards</h1>
           <p>Turn completed tasks and chores into points, then let family goals become something children can work toward.</p>
         </div>
         {canManage&&<button type="button" className="primary-button compact" onClick={openNewReward}><Plus size={15}/>Add reward</button>}
-      </div>
+      </div>}
 
       {error&&<div className="notice error">{error}</div>}
       {message&&<div className="notice">{message}</div>}
