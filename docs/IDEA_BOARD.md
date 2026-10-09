@@ -98,7 +98,7 @@ Status: Approved idea
 Connect chores/tasks to configurable points or stars and allow parents to create a controlled reward catalogue for children.
 
 ### Shared Memo / Someday Area
-Status: Approved idea
+Status: PWA V1 implemented
 
 A shared place for undated ideas, notes, places to visit and future plans that can later be converted into Calendar events, Tasks or Projects.
 
