@@ -457,6 +457,8 @@ Deno.serve(async(req)=>{
   return json({
     ok:true,
     source_url:response.url||url.toString(),
+    page_title:page.title.slice(0,200)||new URL(response.url||url.toString()).hostname.replace(/^www\./,""),
+    page_description:page.description.slice(0,700)||null,
     model,
     summary:String(parsed.summary||"").slice(0,900),
     suggest_ticket:Boolean(parsed.suggest_ticket),
