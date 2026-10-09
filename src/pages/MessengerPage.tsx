@@ -149,6 +149,10 @@ export function MessengerPage({embedded=false,initialThreadId=''}:{embedded?:boo
 
   const selectedThread=threads.find((thread)=>thread.id===selectedThreadId)??null
 
+  useEffect(()=>{
+    if(initialThreadId) setSelectedThreadId(initialThreadId)
+  },[initialThreadId])
+
   const directCandidates=useMemo(
     ()=>householdUsers.filter(
       (member):member is HouseholdUser&{user_id:string}=>
@@ -197,8 +201,8 @@ export function MessengerPage({embedded=false,initialThreadId=''}:{embedded?:boo
       }))
       setThreads(rows)
       setSelectedThreadId((current)=>{
-        if(initialThreadId&&rows.some((row)=>row.id===initialThreadId)) return initialThreadId
         if(current&&rows.some((row)=>row.id===current)) return current
+        if(initialThreadId&&rows.some((row)=>row.id===initialThreadId)) return initialThreadId
         if(embedded){
           return rows.find((row)=>row.thread_type==='household')?.id??rows[0]?.id??''
         }
