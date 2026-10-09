@@ -34,6 +34,10 @@ export function MobileAssistantQuick() {
   const speechRef=useRef<any>(null)
   const speechFinalRef=useRef('')
   const voiceModeRef=useRef<'live'|'recording'|null>(null)
+  const sendAfterStopRef=useRef(false)
+  const liveTranscriptRef=useRef('')
+  const previewTimerRef=useRef<ReturnType<typeof setInterval>|null>(null)
+  const previewInFlightRef=useRef(false)
   const [error, setError] = useState('')
   const listRef = useRef<HTMLDivElement | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -131,6 +135,7 @@ export function MobileAssistantQuick() {
     }
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
     speechRef.current?.abort()
+    if(previewTimerRef.current)clearInterval(previewTimerRef.current)
   }, [])
 
   function playMicStartSound() {
@@ -201,16 +206,47 @@ export function MobileAssistantQuick() {
         }
       }
       setError(detail)
+      sendAfterStopRef.current=false
     } else {
       const payload = result.data as { text?: string } | null
       const spoken = payload?.text?.trim()
       if (spoken) {
         const base = voiceBaseMessageRef.current
-        setMessage(base ? base + ' ' + spoken : spoken)
-      }
+        const completed=base ? base + ' ' + spoken : spoken
+        liveTranscriptRef.current=completed
+        setMessage(completed)
+        if(sendAfterStopRef.current){sendAfterStopRef.current=false;void sendText(completed)}
+      }else if(sendAfterStopRef.current){sendAfterStopRef.current=false;setError('No speech was detected. Please try again.')}
     }
 
     setTranscribing(false)
+  }
+
+  async function previewRecordedSpeech(mimeType:string){
+    if(previewInFlightRef.current||voiceModeRef.current!=='recording'||audioChunksRef.current.length===0)return
+    previewInFlightRef.current=true
+    try{
+      const blob=new Blob(audioChunksRef.current,{type:mimeType||'audio/webm'})
+      if(blob.size===0 || blob.size>20*1024*1024)return
+      const ext=mimeType.includes('mp4')?'m4a':mimeType.includes('ogg')?'ogg':'webm'
+      const payload=new FormData()
+      payload.append('household_id',household.id)
+      payload.append('file',new File([blob],'interim.'+ext,{type:mimeType||'audio/webm'}))
+      const result=await supabase.functions.invoke('assistant-transcribe',{body:payload})
+      const text=(result.data as {text?:string}|null)?.text?.trim()
+      if(!result.error&&text&&voiceModeRef.current==='recording'){
+        const preview=[voiceBaseMessageRef.current,text].filter(Boolean).join(' ')
+        liveTranscriptRef.current=preview
+        setMessage(preview)
+      }
+    }catch{/* Live preview may be unavailable for incomplete container audio; final recording remains intact. */}
+    finally{previewInFlightRef.current=false}
+  }
+
+  function stopAndSendVoice(){
+    sendAfterStopRef.current=true
+    if(listening){void toggleVoiceInput();return}
+    if(!transcribing){sendAfterStopRef.current=false;const text=liveTranscriptRef.current||message;if(text.trim())void sendText(text)}
   }
 
   function stopLiveVoice(){
@@ -221,6 +257,7 @@ export function MobileAssistantQuick() {
 
   async function toggleVoiceInput() {
     if (listening) {
+      if(previewTimerRef.current){clearInterval(previewTimerRef.current);previewTimerRef.current=null}
       if(voiceModeRef.current==='live'){stopLiveVoice();return}
       const recorder = mediaRecorderRef.current
       if (recorder && recorder.state === 'recording') {
@@ -234,6 +271,8 @@ export function MobileAssistantQuick() {
       try{
         const recognition=new SpeechRecognitionCtor()
         speechFinalRef.current=''
+        liveTranscriptRef.current=''
+        sendAfterStopRef.current=false
         voiceBaseMessageRef.current=message.trim()
         recognition.continuous=true
         recognition.interimResults=true
@@ -245,14 +284,22 @@ export function MobileAssistantQuick() {
             if(event.results[i].isFinal)speechFinalRef.current+=(speechFinalRef.current?' ':'')+phrase.trim()
             else interim+=phrase
           }
-          setMessage([voiceBaseMessageRef.current,speechFinalRef.current,interim].filter(Boolean).join(' ').trim())
+          const liveText=[voiceBaseMessageRef.current,speechFinalRef.current,interim].filter(Boolean).join(' ').trim()
+          liveTranscriptRef.current=liveText
+          setMessage(liveText)
         }
         recognition.onerror=(event:any)=>{
+          sendAfterStopRef.current=false
           setError(event.error==='not-allowed'?'Microphone permission is required.':'Live transcription interrupted. Please try again.')
           setListening(false);speechRef.current=null;voiceModeRef.current=null
         }
         recognition.onend=()=>{
           setListening(false);speechRef.current=null;voiceModeRef.current=null
+          if(sendAfterStopRef.current){
+            sendAfterStopRef.current=false
+            if(liveTranscriptRef.current.trim())void sendText(liveTranscriptRef.current)
+            else setError('No speech was detected. Please try again.')
+          }
         }
         speechRef.current=recognition
         voiceModeRef.current='live'
@@ -270,6 +317,8 @@ export function MobileAssistantQuick() {
     try {
       setError('')
       voiceBaseMessageRef.current = message.trim()
+      liveTranscriptRef.current=message.trim()
+      sendAfterStopRef.current=false
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       mediaStreamRef.current = stream
@@ -296,9 +345,17 @@ export function MobileAssistantQuick() {
       recorder.onstart = () => {
         setListening(true)
         playMicStartSound()
+        // Request cumulative audio periodically to show interim text on browsers without SpeechRecognition.
+        previewTimerRef.current=setInterval(()=>{
+          if(recorder.state==='recording'){
+            recorder.requestData()
+            window.setTimeout(()=>void previewRecordedSpeech(recorder.mimeType||mimeType),250)
+          }
+        },5000)
       }
 
       recorder.onstop = () => {
+        if(previewTimerRef.current){clearInterval(previewTimerRef.current);previewTimerRef.current=null}
         setListening(false)
         const finalType = recorder.mimeType || mimeType || 'audio/webm'
         const blob = new Blob(audioChunksRef.current, { type: finalType })
@@ -311,6 +368,8 @@ export function MobileAssistantQuick() {
       }
 
       recorder.onerror = () => {
+        if(previewTimerRef.current){clearInterval(previewTimerRef.current);previewTimerRef.current=null}
+        sendAfterStopRef.current=false
         setListening(false)
         mediaStreamRef.current?.getTracks().forEach((track) => track.stop())
         mediaStreamRef.current = null
@@ -327,10 +386,9 @@ export function MobileAssistantQuick() {
     }
   }
 
-  async function submit(event: FormEvent) {
-    event.preventDefault()
-    const value = message.trim()
-    if (!value || sending || !assistantEnabled) return
+  async function sendText(text:string) {
+    const value=text.trim()
+    if (!value || sending || !assistantEnabled || summary?.total_remaining===0) return
 
     setError('')
     setMessage('')
@@ -385,6 +443,8 @@ export function MobileAssistantQuick() {
 
     setSending(false)
   }
+
+  function submit(event:FormEvent){event.preventDefault();void sendText(message)}
 
   if (!assistantEnabled) return null
 
@@ -462,7 +522,8 @@ export function MobileAssistantQuick() {
               {error && <div className="mobile-assistant-error">{error}</div>}
             </div>
 
-            <form className="mobile-assistant-form" onSubmit={(event) => void submit(event)}>
+            {(listening||transcribing)&&<div className="mobile-assistant-record-actions"><span>{transcribing?'Finishing transcription…':'Recording · words appear as available'}</span><button type="button" onClick={()=>{if(listening)void toggleVoiceInput()}} disabled={!listening}>Stop to edit</button><button type="button" className="send-now" onClick={stopAndSendVoice} disabled={!listening&&transcribing}>Stop &amp; send</button></div>}
+            <form className="mobile-assistant-form" onSubmit={submit}>
               <textarea
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
