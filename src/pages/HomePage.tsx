@@ -15,6 +15,7 @@ import {
   Sparkles,
   StickyNote,
   Gift,
+  Plane,
   Syringe,
   Ticket,
   Utensils,
@@ -49,6 +50,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   contacts: ContactRound,
   memo: StickyNote,
   rewards: Gift,
+  travel: Plane,
 }
 
 const routeByModule: Record<ModuleCode, string> = {
@@ -73,6 +75,7 @@ const routeByModule: Record<ModuleCode, string> = {
   contacts: '/app/contacts',
   memo: '/app/memo',
   rewards: '/app/rewards',
+  travel: '/app/travel',
 }
 
 export function HomePage() {
