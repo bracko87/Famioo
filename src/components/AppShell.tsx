@@ -1,5 +1,6 @@
 import {
   BadgeAlert,
+  AudioLines,
   BadgeCheck,
   Bell,
   CalendarDays,
@@ -24,6 +25,7 @@ import {
   Plane,
   ChevronLeft,
   ChevronRight,
+  RadioTower,
   Receipt,
   ScanLine,
   Settings,
@@ -74,6 +76,8 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   memories: Images,
   checkin: CheckCircle2,
   pickup_authorization: BadgeCheck,
+  home_remote: RadioTower,
+  voice_integration: AudioLines,
 }
 
 const routeByModule: Partial<Record<ModuleCode, string>> = {
@@ -103,6 +107,8 @@ const routeByModule: Partial<Record<ModuleCode, string>> = {
   memories: '/app/memories',
   checkin: '/app/check-in',
   pickup_authorization: '/app/pickup-authorization',
+  home_remote: '/app/home-remote',
+  voice_integration: '/app/voice',
 }
 
 type HeaderNotification = {
@@ -257,6 +263,8 @@ export function AppShell() {
           <NavLink to="/app/memories" onClick={() => setMobileMenu(false)} title="Family Photo Albums / Memories"><Images size={18} /><span className="nav-text">Memories</span></NavLink>
           <NavLink to="/app/check-in" onClick={() => setMobileMenu(false)} title="Family Check-In"><CheckCircle2 size={18} /><span className="nav-text">Check-In</span></NavLink>
           <NavLink to="/app/pickup-authorization" onClick={() => setMobileMenu(false)} title="Pickup Authorization"><BadgeCheck size={18} /><span className="nav-text">Pickup Authorization</span></NavLink>
+          <NavLink to="/app/home-remote" onClick={() => setMobileMenu(false)} title="TV Remote / Home Remote"><RadioTower size={18} /><span className="nav-text">Home Remote</span></NavLink>
+          <NavLink to="/app/voice" onClick={() => setMobileMenu(false)} title="Alexa / Voice Integration"><AudioLines size={18} /><span className="nav-text">Alexa / Voice</span></NavLink>
           <NavLink to="/app/files" onClick={() => setMobileMenu(false)} title="Files"><FileText size={18} /><span className="nav-text">Files</span></NavLink>
 
           {enabledPaid.length > 0 && <span className="nav-label nav-label-spaced">HOUSEHOLD</span>}
