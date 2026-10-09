@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, ArrowLeftRight, BarChart3, CalendarDays, ClipboardCheck, GripVertical, Plus, ReceiptText, ShoppingBag, Sparkles, Store, Trash2, Upload, X } from 'lucide-react'
+import { Archive, ArchiveRestore, ArrowLeftRight, BarChart3, CalendarDays, CheckCircle2, ClipboardCheck, GripVertical, Plus, ReceiptText, ShoppingBag, Sparkles, Store, Trash2, Upload, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { Select } from '../components/ui/Select'
@@ -130,6 +130,10 @@ export function ShoppingPage() {
   const [receiptDraft, setReceiptDraft] = useState<ReceiptDraft | null>(null)
   const [receiptModel, setReceiptModel] = useState('')
   const [receiptAiLoading, setReceiptAiLoading] = useState(false)
+  const [receiptUploadOpen,setReceiptUploadOpen]=useState(false)
+  const [standaloneReceiptStatus,setStandaloneReceiptStatus]=useState<'idle'|'reading'|'saving'|'done'>('idle')
+  const [standaloneReceiptSummary,setStandaloneReceiptSummary]=useState<ReceiptDraft|null>(null)
+  const standaloneReceiptInputRef=useRef<HTMLInputElement>(null)
   const receiptInputRef = useRef<HTMLInputElement>(null)
   const [sourceType, setSourceType] = useState<ListSource>('standalone')
   const [sourceEventKey, setSourceEventKey] = useState('')
@@ -636,6 +640,103 @@ export function ShoppingPage() {
     }
   }
 
+  async function processStandaloneReceipt(file:File){
+    if(!canWrite||standaloneReceiptStatus==='reading'||standaloneReceiptStatus==='saving')return
+    if(!hasAiAssistant){
+      setError('AI Assistant is required to read receipt photos automatically.')
+      return
+    }
+    if(file.size>15*1024*1024){
+      setError('Receipt photos can be up to 15 MB.')
+      return
+    }
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type)){
+      setError('Use a JPG, PNG or WebP receipt photo.')
+      return
+    }
+
+    setReceiptUploadOpen(true)
+    setStandaloneReceiptStatus('reading')
+    setStandaloneReceiptSummary(null)
+    setError('')
+
+    let uploadedPath:string|null=null
+    try{
+      const imageData=await fileToDataUrl(file)
+      const extraction=await supabase.functions.invoke('extract-shopping-receipt',{
+        body:{
+          household_id:household.id,
+          image_data_url:imageData,
+          reference_date:new Date().toISOString().slice(0,10),
+        },
+      })
+      if(extraction.error||extraction.data?.error){
+        throw new Error(String(extraction.data?.error||extraction.error?.message||'AI could not read this receipt.'))
+      }
+      const receipt=extraction.data?.receipt
+      if(!receipt)throw new Error('AI returned no receipt information.')
+
+      const draft:ReceiptDraft={
+        store_name:String(receipt.store_name??''),
+        purchase_date:String(receipt.purchase_date??new Date().toISOString().slice(0,10)),
+        total_amount:receipt.total_amount==null?null:Number(receipt.total_amount),
+        currency:String(receipt.currency||'EUR'),
+        confidence:Number(receipt.confidence??0),
+        items:Array.isArray(receipt.items)?receipt.items.map((item:ReceiptDraftItem)=>({
+          ...item,
+          product_name:String(item.product_name??''),
+          normalized_name:String(item.normalized_name??item.product_name??''),
+          quantity:item.quantity==null?null:Number(item.quantity),
+          unit_price:item.unit_price==null?null:Number(item.unit_price),
+          line_total:item.line_total==null?null:Number(item.line_total),
+          confidence:Number(item.confidence??0),
+        })):[],
+      }
+      if(draft.total_amount==null||!Number.isFinite(draft.total_amount)){
+        throw new Error('AI could not determine the receipt total. Please take a clearer photo and try again.')
+      }
+
+      setStandaloneReceiptSummary(draft)
+      setStandaloneReceiptStatus('saving')
+
+      uploadedPath=`${household.id}/${crypto.randomUUID()}/${safeReceiptFileName(file.name||'receipt.jpg')}`
+      const upload=await supabase.storage.from('shopping-receipts').upload(uploadedPath,file,{
+        contentType:file.type,upsert:false,
+      })
+      if(upload.error)throw upload.error
+
+      const saved=await supabase.rpc('save_standalone_shopping_receipt_v1',{
+        p_household_id:household.id,
+        p_total_cost:draft.total_amount,
+        p_currency:draft.currency||'EUR',
+        p_receipt_store:draft.store_name.trim()||null,
+        p_purchase_date:draft.purchase_date,
+        p_file_path:uploadedPath,
+        p_file_name:file.name||'receipt.jpg',
+        p_mime_type:file.type,
+        p_file_size:file.size,
+        p_ai_model:String(extraction.data?.model??'')||null,
+        p_items:draft.items.map((item)=>({
+          product_name:item.product_name.trim(),
+          normalized_name:item.normalized_name.trim()||item.product_name.trim(),
+          quantity:item.quantity,
+          unit:item.unit,
+          unit_price:item.unit_price,
+          line_total:item.line_total,
+          category:item.category,
+        })),
+      })
+      if(saved.error)throw saved.error
+
+      setStandaloneReceiptStatus('done')
+      await load()
+    }catch(reason){
+      if(uploadedPath)await supabase.storage.from('shopping-receipts').remove([uploadedPath])
+      setStandaloneReceiptStatus('idle')
+      setError(reason instanceof Error?reason.message:'Receipt could not be processed.')
+    }
+  }
+
   function updateReceiptItem(index: number, patch: Partial<ReceiptDraftItem>) {
     setReceiptDraft((current) => current ? {
       ...current,
@@ -902,10 +1003,27 @@ export function ShoppingPage() {
         </div>
 
         {canWrite && (
-          <button className="primary-button compact" onClick={openComposer}>
-            <Plus size={16} />
-            Create list
-          </button>
+          <div className="shopping-heading-actions">
+            <label className="secondary-button compact shopping-upload-receipt-button">
+              <Upload size={15}/>
+              Upload receipt
+              <input
+                ref={standaloneReceiptInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                capture="environment"
+                onChange={(event)=>{
+                  const file=event.target.files?.[0]??null
+                  event.target.value=''
+                  if(file)void processStandaloneReceipt(file)
+                }}
+              />
+            </label>
+            <button className="primary-button compact" onClick={openComposer}>
+              <Plus size={16} />
+              Create list
+            </button>
+          </div>
         )}
       </div>
 
@@ -1137,6 +1255,36 @@ export function ShoppingPage() {
           <span>{archivedLists.length}</span>
         </button>
       </div>
+
+      {receiptUploadOpen&&(
+        <div className="modal-backdrop shopping-receipt-capture-backdrop" role="presentation">
+          <section className="modal-card shopping-receipt-capture-modal">
+            <header>
+              <div>
+                <span className="eyebrow">AI RECEIPT CAPTURE</span>
+                <h2>{standaloneReceiptStatus==='done'?'Receipt saved':'Reading receipt'}</h2>
+              </div>
+              {standaloneReceiptStatus==='done'&&<button className="icon-button" type="button" onClick={()=>{setReceiptUploadOpen(false);setStandaloneReceiptStatus('idle');setStandaloneReceiptSummary(null)}}><X size={18}/></button>}
+            </header>
+            {standaloneReceiptStatus!=='done'?(
+              <div className="shopping-receipt-processing">
+                <Sparkles size={28}/>
+                <strong>{standaloneReceiptStatus==='saving'?'Saving receipt & spend…':'AI is reading the receipt…'}</strong>
+                <span>Store, date, total and products are extracted automatically. No extra AI question is needed.</span>
+                <div className="shopping-receipt-processing-bar"><i/></div>
+              </div>
+            ):standaloneReceiptSummary&&(
+              <div className="shopping-receipt-success">
+                <ReceiptText size={27}/>
+                <div><span>{standaloneReceiptSummary.store_name||'Shopping receipt'}</span><strong>{moneyValue(Number(standaloneReceiptSummary.total_amount??0),standaloneReceiptSummary.currency)}</strong><small>{standaloneReceiptSummary.purchase_date} · {standaloneReceiptSummary.items.length} detected item{standaloneReceiptSummary.items.length===1?'':'s'}</small></div>
+                <CheckCircle2 size={21}/>
+              </div>
+            )}
+            {error&&<div className="notice error">{error}</div>}
+            {standaloneReceiptStatus==='done'&&<footer><button className="primary-button" type="button" onClick={()=>{setReceiptUploadOpen(false);setStandaloneReceiptStatus('idle');setStandaloneReceiptSummary(null)}}>Done</button></footer>}
+          </section>
+        </div>
+      )}
 
       {archiveOpen && (
         <div
