@@ -19928,3 +19928,18 @@ b {
     grid-row: 2;
   }
 }
+
+
+.notification-item.location-notification-item {
+  color: inherit;
+  text-decoration: none;
+  background: #f5faf7;
+}
+
+.notification-item.location-notification-item > span {
+  background: #4b9b72;
+}
+
+.notification-item.location-notification-item:hover {
+  background: #edf7f1;
+}
