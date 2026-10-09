@@ -33,6 +33,7 @@ export type ModuleCode =
   | 'location'
   | 'messenger'
   | 'contacts'
+  | 'memo'
   | 'shopping'
   | 'costs'
   | 'school'
