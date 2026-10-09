@@ -20,6 +20,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Receipt,
+  ScanLine,
   Settings,
   ShieldAlert,
   ShoppingBag,
@@ -62,6 +63,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   travel: Plane,
   vehicles: CarFront,
   pets: PawPrint,
+  inbox_scan: ScanLine,
 }
 
 const routeByModule: Partial<Record<ModuleCode, string>> = {
@@ -85,6 +87,7 @@ const routeByModule: Partial<Record<ModuleCode, string>> = {
   travel: '/app/travel',
   vehicles: '/app/vehicles',
   pets: '/app/pets',
+  inbox_scan: '/app/inbox',
 }
 
 type HeaderNotification = {
@@ -234,6 +237,7 @@ export function AppShell() {
           <NavLink to="/app/travel" onClick={() => setMobileMenu(false)} title="Travel & Trips"><Plane size={18} /><span className="nav-text">Travel & Trips</span></NavLink>
           <NavLink to="/app/vehicles" onClick={() => setMobileMenu(false)} title="Vehicles"><CarFront size={18} /><span className="nav-text">Vehicles</span></NavLink>
           <NavLink to="/app/pets" onClick={() => setMobileMenu(false)} title="Pets"><PawPrint size={18} /><span className="nav-text">Pets</span></NavLink>
+          <NavLink to="/app/inbox" onClick={() => setMobileMenu(false)} title="Family Inbox / Scan"><ScanLine size={18} /><span className="nav-text">Inbox / Scan</span></NavLink>
           <NavLink to="/app/files" onClick={() => setMobileMenu(false)} title="Files"><FileText size={18} /><span className="nav-text">Files</span></NavLink>
 
           {enabledPaid.length > 0 && <span className="nav-label nav-label-spaced">HOUSEHOLD</span>}
