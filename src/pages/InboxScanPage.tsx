@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
+import { DocumentScannerModal } from '../components/DocumentScannerModal'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
 
@@ -73,7 +74,7 @@ function actionIcon(type:InboxAction['action_type']){
 }
 
 export function InboxScanPage(){
-  const {household,modules,profiles}=useHousehold()
+  const {household,modules,profiles,user}=useHousehold()
   const canWrite=Boolean(modules.find(module=>module.code==='inbox_scan')?.can_write)
   const assistantEnabled=Boolean(modules.find(module=>module.code==='assistant')?.enabled)
   const childProfiles=profiles.filter(profile=>profile.profile_type==='child'||profile.profile_type==='profile_only')
@@ -89,6 +90,8 @@ export function InboxScanPage(){
   const [childByAction,setChildByAction]=useState<Record<string,string>>({})
   const [error,setError]=useState('')
   const [message,setMessage]=useState('')
+  const [scannerFile,setScannerFile]=useState<File|null>(null)
+  const [scannerSource,setScannerSource]=useState<'camera'|'upload'>('upload')
 
   const visibleItems=useMemo(
     ()=>items.filter(item=>filter==='all'||item.status===filter),
@@ -144,15 +147,15 @@ export function InboxScanPage(){
 
   useEffect(()=>{void load(true)},[household.id])
 
-  async function reserveAndUpload(file:File,sourceKind:'camera'|'upload'){
+  async function reserveAndUpload(file:File,sourceKind:'camera'|'upload'):Promise<boolean>{
     if(!canWrite)return
     if(!/^image\/(jpeg|png|webp)$/i.test(file.type)){
       setError('Family Inbox currently scans JPG, PNG and WebP images.')
-      return
+      return false
     }
     if(file.size>10*1024*1024){
       setError('Scan images can be up to 10 MB.')
-      return
+      return false
     }
 
     setBusy(true);setError('');setMessage('')
@@ -166,7 +169,7 @@ export function InboxScanPage(){
       p_notes:'Added from Family Inbox / Scan',
     })
     if(reserve.error||!reserve.data?.[0]){
-      setBusy(false);setError(reserve.error?.message??'Could not reserve file storage.');return
+      setBusy(false);setError(reserve.error?.message??'Could not reserve file storage.');return false
     }
     const fileId=String(reserve.data[0].file_id)
     const storagePath=String(reserve.data[0].storage_path)
@@ -174,17 +177,17 @@ export function InboxScanPage(){
     const upload=await supabase.storage.from('famioo-files').upload(storagePath,file,{upsert:false,contentType:file.type})
     if(upload.error){
       await supabase.rpc('cancel_household_file_v1',{p_household_id:household.id,p_file_id:fileId})
-      setBusy(false);setError(upload.error.message);return
+      setBusy(false);setError(upload.error.message);return false
     }
     const complete=await supabase.rpc('complete_household_file_v1',{p_household_id:household.id,p_file_id:fileId})
     if(complete.error){
-      setBusy(false);setError(complete.error.message);return
+      setBusy(false);setError(complete.error.message);return false
     }
     const inbox=await supabase.rpc('create_family_inbox_item_v1',{
       p_household_id:household.id,p_file_id:fileId,p_source_kind:sourceKind,
     })
     if(inbox.error||!inbox.data){
-      setBusy(false);setError(inbox.error?.message??'Could not create inbox item.');return
+      setBusy(false);setError(inbox.error?.message??'Could not create inbox item.');return false
     }
 
     const inboxId=String(inbox.data)
@@ -200,6 +203,7 @@ export function InboxScanPage(){
     }
     setBusy(false)
     await load(false)
+    return true
   }
 
   async function extractItem(itemId:string,imageData?:string,showBusy=true){
@@ -272,10 +276,62 @@ export function InboxScanPage(){
     else await load(false)
   }
 
+  async function sendScanInMessenger(file:File,target:string):Promise<boolean>{
+    setError('');setMessage('')
+    try{
+      let threadId=''
+      if(target==='family'){
+        const threads=await supabase.rpc('messenger_threads_v1',{p_household_id:household.id})
+        if(threads.error)throw threads.error
+        const family=(threads.data??[]).find((row:{thread_type?:string;id?:string})=>row.thread_type==='household')
+        if(!family?.id)throw new Error('Family chat is not available yet.')
+        threadId=String(family.id)
+      }else{
+        const direct=await supabase.rpc('create_direct_messenger_thread_v1',{
+          p_household_id:household.id,p_other_user_id:target,
+        })
+        if(direct.error||!direct.data)throw direct.error??new Error('Could not open direct chat.')
+        threadId=String(direct.data)
+      }
+
+      const path=`${household.id}/${threadId}/${user.id}/${crypto.randomUUID()}.jpg`
+      const upload=await supabase.storage.from('messenger-media').upload(path,file,{
+        contentType:'image/jpeg',upsert:false,cacheControl:'3600',
+      })
+      if(upload.error)throw upload.error
+
+      const send=await supabase.rpc('send_messenger_message_v1',{
+        p_thread_id:threadId,p_body:'Scanned document from Inbox / Scan',
+        p_message_type:'photo',p_media_path:path,p_media_name:file.name,
+        p_media_mime:'image/jpeg',p_media_duration_s:null,
+      })
+      if(send.error){
+        await supabase.storage.from('messenger-media').remove([path])
+        throw send.error
+      }
+      setMessage('Scanned document sent in Famioo Messenger.')
+      return true
+    }catch(reason){
+      setError(reason instanceof Error?reason.message:'Could not send scanned document.')
+      return false
+    }
+  }
+
   function handleFile(event:ChangeEvent<HTMLInputElement>,source:'camera'|'upload'){
     const file=event.target.files?.[0]??null
     event.target.value=''
-    if(file)void reserveAndUpload(file,source)
+    if(!file)return
+    if(!/^image\/(jpeg|png|webp)$/i.test(file.type)){
+      setError('Document scanner supports JPG, PNG and WebP images.')
+      return
+    }
+    if(file.size>10*1024*1024){
+      setError('Scan images can be up to 10 MB.')
+      return
+    }
+    setError('')
+    setScannerSource(source)
+    setScannerFile(file)
   }
 
   return <div className="page inbox-scan-page">
@@ -347,5 +403,20 @@ export function InboxScanPage(){
         </article>
       })}
     </section>}
+
+    {scannerFile&&<DocumentScannerModal
+      file={scannerFile}
+      busy={busy}
+      shareTargets={profiles
+        .filter(profile=>Boolean(profile.linked_user_id)&&profile.linked_user_id!==user.id&&profile.active)
+        .map(profile=>({value:String(profile.linked_user_id),label:profile.display_name}))}
+      onClose={()=>{if(!busy)setScannerFile(null)}}
+      onSave={async(file)=>{
+        const ok=await reserveAndUpload(file,scannerSource)
+        if(ok)setScannerFile(null)
+        return ok
+      }}
+      onSendFamioo={sendScanInMessenger}
+    />}
   </div>
 }
