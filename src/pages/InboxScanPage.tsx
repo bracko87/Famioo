@@ -148,7 +148,7 @@ export function InboxScanPage(){
   useEffect(()=>{void load(true)},[household.id])
 
   async function reserveAndUpload(file:File,sourceKind:'camera'|'upload'):Promise<boolean>{
-    if(!canWrite)return
+    if(!canWrite)return false
     if(!/^image\/(jpeg|png|webp)$/i.test(file.type)){
       setError('Family Inbox currently scans JPG, PNG and WebP images.')
       return false
