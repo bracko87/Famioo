@@ -22308,3 +22308,39 @@ b {
   .memory-editor-backdrop{padding:0!important;align-items:stretch!important}.memory-editor{width:100%!important;max-width:none!important;min-height:100dvh;padding:calc(15px + env(safe-area-inset-top)) 12px calc(20px + env(safe-area-inset-bottom))!important;border-radius:0!important}
   .memory-editor footer{position:sticky;bottom:0;margin:8px -12px -20px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid #e7e0e9;background:rgba(255,255,255,.97)}.memory-editor footer>*{flex:1;justify-content:center}
 }
+
+
+/* =========================================================
+   Family Check-In
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .launch-orbit-28 {
+    top: 80% !important;
+    left: 89% !important;
+    transform: translate(-50%,-50%) rotate(4deg) !important;
+  }
+}
+
+.checkin-page{max-width:1120px}
+.checkin-heading{align-items:center}
+.checkin-composer{padding:13px;border:1px solid #e6dfe8;border-radius:16px;background:linear-gradient(135deg,#fbf9fc,#fff);display:grid;gap:12px;margin-bottom:14px}
+.checkin-person{display:flex;align-items:center;gap:9px}.checkin-person>span:last-child{display:grid;gap:1px}.checkin-person small{font-size:7px;font-weight:800;color:#9d90a0}.checkin-person strong{font-size:10px;color:#5d5062}.checkin-person em{font-size:7px;color:#9b8e9f;font-style:normal}.checkin-person-fallback{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:#f0ebf3;color:#806d87}
+.checkin-types{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.checkin-types button{min-height:100px;padding:10px;border:1px solid #e7e0e9;border-radius:13px;display:grid;align-content:start;justify-items:start;gap:4px;text-align:left;background:#fff;color:#786a7d;cursor:pointer}.checkin-types button>span{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#f2edf4;color:#7e6d85}.checkin-types button strong{font-size:10px;color:#5d5062}.checkin-types button small{font-size:7px;line-height:1.35;color:#9a8d9e}.checkin-types button.active{border-color:#c9add2;box-shadow:0 0 0 2px rgba(139,88,160,.06)}.checkin-types button.active.home>span{background:#edf4ee;color:#64806b}.checkin-types button.active.safe>span{background:#eef2f8;color:#617895}.checkin-types button.active.pickup>span{background:#f7efe6;color:#9a704c}.checkin-types button.active.late>span{background:#f8eeee;color:#9a6670}
+.checkin-options{display:grid;grid-template-columns:2fr 1fr;gap:8px}.checkin-options label{display:grid;gap:5px}.checkin-options label>span{font-size:8px;color:#786b7c;font-weight:700}.checkin-note{grid-row:span 2}.checkin-options textarea,.checkin-options input,.checkin-options select{width:100%;min-height:38px;padding:8px 9px;border:1px solid #ddd4e1;border-radius:10px;background:#fff;color:#574c5b;font:inherit;font-size:9px}.checkin-options textarea{height:100%;min-height:84px;resize:vertical}
+.checkin-location-toggle{grid-column:2;padding:8px 9px;border:1px solid #e7e0e9;border-radius:10px;display:grid!important;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:7px!important;background:#faf8fb}.checkin-location-toggle>input{width:17px;height:17px;min-height:17px;accent-color:#8c58a0}.checkin-location-toggle>span{display:grid!important;grid-template-columns:auto 1fr;gap:2px 5px!important;align-items:center;font-size:8px!important}.checkin-location-toggle b{font-size:8px;color:#67596b}.checkin-location-toggle small{grid-column:1/-1;font-size:7px;color:#9b8f9f;font-weight:400}
+.checkin-send{min-height:44px;border:0;border-radius:12px;padding:0 14px;display:flex;align-items:center;justify-content:center;gap:7px;background:#8c58a0;color:#fff;font:inherit;font-size:10px;font-weight:800;cursor:pointer}.checkin-send.home{background:#67836d}.checkin-send.safe{background:#647b99}.checkin-send.pickup{background:#a27853}.checkin-send.late{background:#9b6570}.checkin-send:disabled{opacity:.45;cursor:not-allowed}
+.checkin-feed{display:grid;gap:8px}.checkin-section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px}.checkin-section-head h2{margin:2px 0 0;color:#594d5d;font-size:16px}.checkin-section-head>small{font-size:7px;color:#9b8e9f}
+.checkin-feed-list{display:grid;gap:7px}.checkin-feed-row{padding:9px 10px;border:1px solid #e7e0e9;border-radius:13px;display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;align-items:center;gap:9px;background:#fff}.checkin-feed-icon{width:35px;height:35px;border-radius:11px;display:grid;place-items:center;background:#f1edf3;color:#806d87}.checkin-feed-row.home .checkin-feed-icon{background:#edf4ee;color:#64806b}.checkin-feed-row.safe .checkin-feed-icon{background:#eef2f8;color:#617895}.checkin-feed-row.pickup .checkin-feed-icon{background:#f7efe6;color:#9a704c}.checkin-feed-row.late .checkin-feed-icon{background:#f8eeee;color:#9a6670}
+.checkin-feed-person{min-width:145px;display:flex;align-items:center;gap:7px}.checkin-feed-person>span{display:grid;gap:1px}.checkin-feed-person strong{font-size:9px;color:#5c5060}.checkin-feed-person small{font-size:7px;color:#9c8fa0}
+.checkin-feed-message{display:grid;gap:2px}.checkin-feed-message>strong{font-size:10px;color:#5d5062}.checkin-feed-message>em{font-size:8px;font-style:normal;font-weight:800;color:#95616d}.checkin-feed-message>span{display:flex;align-items:center;gap:4px;font-size:7px;color:#8c7f90}.checkin-feed-message p{margin:2px 0 0;color:#786b7c;font-size:8px;line-height:1.45}
+.checkin-feed-actions{display:flex;gap:5px;align-items:center}.checkin-feed-actions a,.checkin-feed-actions button{min-height:30px;border:0;border-radius:8px;padding:0 8px;display:flex;align-items:center;gap:4px;background:#f1edf3;color:#786a7d;text-decoration:none;font:inherit;font-size:8px;cursor:pointer}
+.checkin-empty{min-height:180px;padding:20px;border:1px dashed #ddd4e1;border-radius:15px;display:grid;place-items:center;align-content:center;gap:6px;text-align:center;color:#988b9d;background:#fbfafc}.checkin-empty.compact{min-height:100px}.checkin-empty strong{font-size:10px;color:#625567}
+
+@media(max-width:760px){
+  .checkin-page{padding:12px 12px calc(90px + env(safe-area-inset-bottom))!important}
+  .checkin-heading p{display:none}
+  .checkin-types{grid-template-columns:1fr 1fr}.checkin-types button{min-height:92px}
+  .checkin-options{grid-template-columns:1fr}.checkin-note{grid-row:auto}.checkin-location-toggle{grid-column:1}.checkin-options textarea{min-height:72px}
+  .checkin-feed-row{grid-template-columns:auto minmax(0,1fr) auto}.checkin-feed-person{min-width:0}.checkin-feed-message{grid-column:2}.checkin-feed-actions{grid-column:3;grid-row:1/3}.checkin-feed-actions a span{display:none}
+}
