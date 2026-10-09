@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { BadgeAlert, CalendarDays, CarFront, CheckCircle2, CheckSquare, ClipboardList, ContactRound, FileText, Folder, FolderKanban, Gift, GraduationCap, Images, MapPinned, MessageCircle, MessagesSquare, PawPrint, Plane, Receipt, ScanLine, ShieldAlert, ShoppingBag, Sparkles, StickyNote, Syringe, Ticket, Utensils, Wrench } from 'lucide-react'
+import { BadgeAlert, BadgeCheck, CalendarDays, CarFront, CheckCircle2, CheckSquare, ClipboardList, ContactRound, FileText, Folder, FolderKanban, Gift, GraduationCap, Images, MapPinned, MessageCircle, MessagesSquare, PawPrint, Plane, Receipt, ScanLine, ShieldAlert, ShoppingBag, Sparkles, StickyNote, Syringe, Ticket, Utensils, Wrench } from 'lucide-react'
 import type { Session, User } from '@supabase/supabase-js'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { supabase } from './lib/supabase'
@@ -43,6 +43,7 @@ import { InboxScanPage } from './pages/InboxScanPage'
 import { EmergencyPage } from './pages/EmergencyPage'
 import { MemoriesPage } from './pages/MemoriesPage'
 import { CheckInPage } from './pages/CheckInPage'
+import { PickupAuthorizationPage } from './pages/PickupAuthorizationPage'
 import { BrandMark } from './components/Brand'
 
 function LoadingScreen() {
@@ -170,6 +171,7 @@ function LoadingScreen() {
         <span className="launch-orbit launch-orbit-26" title="Calendar Comments & Photos"><MessagesSquare size={19} /></span>
         <span className="launch-orbit launch-orbit-27" title="Family Photo Albums / Memories"><Images size={19} /></span>
         <span className="launch-orbit launch-orbit-28" title="Family Check-In"><CheckCircle2 size={19} /></span>
+        <span className="launch-orbit launch-orbit-29" title="Pickup Authorization"><BadgeCheck size={19} /></span>
 
         <div className="launch-brand">
           <BrandMark className="launch-brand-logo" />
@@ -286,6 +288,7 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Route path="emergency" element={<EmergencyPage />} />
           <Route path="memories" element={<MemoriesPage />} />
           <Route path="check-in" element={<CheckInPage />} />
+          <Route path="pickup-authorization" element={<PickupAuthorizationPage />} />
           <Route path="settings" element={<SettingsPage />} />
 
           <Route path="shopping" element={<ShoppingPage />} />
