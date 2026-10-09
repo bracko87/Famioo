@@ -238,8 +238,9 @@ export function PetsPage(){
   async function savePet(event:FormEvent){
     event.preventDefault()
     setSaving(true);setError('')
+    const targetId=petDraft.id||crypto.randomUUID()
     const result=await supabase.rpc('save_family_pet_v1',{
-      p_id:petDraft.id||null,p_household_id:household.id,p_name:petDraft.name.trim(),p_species:petDraft.species.trim(),
+      p_id:targetId,p_household_id:household.id,p_name:petDraft.name.trim(),p_species:petDraft.species.trim(),
       p_breed:petDraft.breed.trim()||null,p_sex:petDraft.sex,p_birth_date:petDraft.birth_date||null,
       p_chip_number:petDraft.chip_number.trim()||null,p_weight_kg:petDraft.weight_kg?Number(petDraft.weight_kg):null,
       p_color_markings:petDraft.color_markings.trim()||null,p_notes:petDraft.notes.trim()||null,
@@ -255,14 +256,18 @@ export function PetsPage(){
         contentType:petPhotoFile.type,
         upsert:false,
       })
-      if(upload.error){setSaving(false);setError(upload.error.message);return}
+      if(upload.error){
+        setPetDraft(current=>({...current,id:petId}))
+        setSaving(false);setError('Pet was saved, but the photo upload failed: '+upload.error.message);return
+      }
 
       const update=await supabase.from('family_pets')
         .update({photo_path:path,updated_at:new Date().toISOString()})
         .eq('id',petId).eq('household_id',household.id)
       if(update.error){
         await supabase.storage.from('pet-media').remove([path])
-        setSaving(false);setError(update.error.message);return
+        setPetDraft(current=>({...current,id:petId}))
+        setSaving(false);setError('Pet was saved, but the photo could not be linked: '+update.error.message);return
       }
       if(previousPath&&previousPath!==path)await supabase.storage.from('pet-media').remove([previousPath])
     }
