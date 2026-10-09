@@ -1,5 +1,6 @@
 import {
   CalendarDays,
+  CarFront,
   CheckSquare,
   ClipboardList,
   ContactRound,
@@ -51,6 +52,7 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   memo: StickyNote,
   rewards: Gift,
   travel: Plane,
+  vehicles: CarFront,
 }
 
 const routeByModule: Record<ModuleCode, string> = {
@@ -76,6 +78,7 @@ const routeByModule: Record<ModuleCode, string> = {
   memo: '/app/memo',
   rewards: '/app/rewards',
   travel: '/app/travel',
+  vehicles: '/app/vehicles',
 }
 
 export function HomePage() {
