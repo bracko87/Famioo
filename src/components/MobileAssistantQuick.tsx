@@ -3,6 +3,7 @@ import { ArrowRight, Mic, Send, Sparkles, X } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
+import { getTravelTraffic, summarizeTraffic } from '../lib/travelTraffic'
 import './MobileAssistantQuick.css'
 
 type ChatMessage = {
@@ -492,10 +493,27 @@ export function MobileAssistantQuick() {
     setSending(true)
 
     const history = chat.slice(-8)
+    let trafficContext=''
+    const lastUser=[...chat].reverse().find(item=>item.role==='user')?.content||''
+    const routeQuestion=/traffic|route|driv(?:e|ing)|road conditions|how long.*(?:car|drive)|verkehr|stau|fahrzeit|saobraćaj|putovanje/i.test(value)
+    const addressFollowUp=/traffic|route|driv(?:e|ing)|road conditions|fahrzeit|verkehr/i.test(lastUser)
+      &&!routeQuestion&&value.length<180
+    if(routeQuestion||addressFollowUp){
+      try{
+        const result=await getTravelTraffic(household.id,addressFollowUp?{origin:value}:{})
+        trafficContext=summarizeTraffic(result)
+        trafficContext+=' Google Maps navigation URL: '+result.navigation_url
+      }catch(error){
+        trafficContext='Live route data unavailable: '+(error instanceof Error?error.message:'Routing request failed')+
+          '. Never invent current traffic. Ask the user for permission to use location or a starting address if necessary.'
+      }
+    }
+    if(!openRef.current || sessionRef.current!==session)return
     const result = await supabase.functions.invoke('assistant-chat', {
       body: {
         household_id: household.id,
         message: value,
+        traffic_context:trafficContext||undefined,
         history,
         page_path: location.pathname,
         conversation_id: conversationIdRef.current,
