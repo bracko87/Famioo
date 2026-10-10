@@ -778,6 +778,7 @@ export function CostsPage() {
             <article><span>Recorded spending</span><strong>{comparison.summary.map(row=>money(row.spent,row.currency)).join(' + ')||'—'}</strong></article>
             <article><span>Matching entries</span><strong>{comparison.rows.length}</strong></article>
             <article><span>Scheduled plans</span><strong>{comparison.summary.map(row=>money(row.scheduled,row.currency)).join(' + ')||'—'}</strong></article>
+            <article><span>Income</span><strong>{comparison.summary.map(row=>money(row.income,row.currency)).join(' + ')||'—'}</strong></article>
           </div>
           {comparison.missing>0&&<p className="shopping-compare-limited">{comparison.missing} entries have no valid amount.</p>}
           <p className="compare-filter-note compare-cost-notice">Scheduled commitments are displayed separately and are not counted as completed purchases. Shopping receipts already linked to a cost are counted once.</p>
