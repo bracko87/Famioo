@@ -2,6 +2,7 @@ import { Archive, ArchiveRestore, ArrowLeftRight, BarChart3, CalendarDays, Check
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { Select } from '../components/ui/Select'
+import { DatePicker } from '../components/ui/DatePicker'
 import { PrivacyNotice } from '../components/PrivacyNotice'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
@@ -148,7 +149,14 @@ export function ShoppingPage() {
   const [saving, setSaving] = useState(false)
   const [draggedListId, setDraggedListId] = useState<string | null>(null)
   const [compareOpen,setCompareOpen] = useState(false)
-  const [comparePeriod,setComparePeriod] = useState<'month'|'30days'|'all'>('all')
+  const [comparePeriod,setComparePeriod] = useState<'month'|'30days'|'all'|'custom'>('month')
+  const [compareFrom,setCompareFrom] = useState('')
+  const [compareTo,setCompareTo] = useState('')
+  const [compareStore,setCompareStore] = useState('all')
+  const [compareCategory,setCompareCategory] = useState('all')
+  const [compareCurrency,setCompareCurrency] = useState('all')
+  const [compareProduct,setCompareProduct] = useState('')
+  const [compareSort,setCompareSort] = useState<'total'|'count'>('total')
   const [receiptHistoryComplete,setReceiptHistoryComplete]=useState(true)
   const [error, setError] = useState('')
 
@@ -355,92 +363,118 @@ export function ShoppingPage() {
   }, [monthlyReceipts, receiptItems, receiptById])
 
 
-  const receiptComparisonReport = useMemo(() => {
+
+  const compareStores = useMemo(()=>[...new Set(receipts.map(receipt=>receipt.store_name?.trim()||'Unknown store'))].sort((a,b)=>a.localeCompare(b)),[receipts])
+  const compareCategories = useMemo(()=>[...new Set(receiptItems.map(item=>item.category?.trim()).filter((value):value is string=>Boolean(value)))].sort((a,b)=>a.localeCompare(b)),[receiptItems])
+  const compareCurrencies = useMemo(()=>[...new Set(receipts.map(receipt=>receipt.currency||'EUR'))].sort(),[receipts])
+
+  const receiptComparisonReport = useMemo(()=>{
     const now=new Date()
-    const start30=new Date(now)
-    start30.setDate(start30.getDate()-29)
-    const start30Key=start30.toISOString().slice(0,10)
-    const monthKey=now.toISOString().slice(0,7)
+    const iso=(date:Date)=>[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-')
+    const start30=new Date(now);start30.setDate(start30.getDate()-29)
+    const from=comparePeriod==='all'?'':comparePeriod==='month'?iso(new Date(now.getFullYear(),now.getMonth(),1)):comparePeriod==='30days'?iso(start30):compareFrom
+    const to=comparePeriod==='custom'?compareTo:''
+    const productTerm=compareProduct.trim().toLocaleLowerCase()
+    const itemFiltered=Boolean(productTerm||compareCategory!=='all')
 
-    const selectedReceipts=receipts
-      .filter((receipt)=>comparePeriod==='all' ||
-        (comparePeriod==='month' ? receipt.purchase_date.startsWith(monthKey) : receipt.purchase_date>=start30Key))
+    const baseReceipts=receipts.filter(receipt=>{
+      const name=receipt.store_name?.trim()||'Unknown store'
+      return (!from||receipt.purchase_date>=from)&&(!to||receipt.purchase_date<=to)
+        &&(compareStore==='all'||name===compareStore)
+        &&(compareCurrency==='all'||(receipt.currency||'EUR')===compareCurrency)
+    })
+    const eligibleIds=new Set(baseReceipts.map(receipt=>receipt.id))
+    const matchedItems=receiptItems.filter(item=>{
+      if(!eligibleIds.has(item.receipt_id))return false
+      if(compareCategory!=='all'&&item.category!==compareCategory)return false
+      return !productTerm||(item.normalized_name||item.product_name).toLocaleLowerCase().includes(productTerm)
+        ||item.product_name.toLocaleLowerCase().includes(productTerm)
+    })
+    const matchedIds=new Set(matchedItems.map(item=>item.receipt_id))
+    const selectedReceipts=baseReceipts.filter(receipt=>!itemFiltered||matchedIds.has(receipt.id))
       .sort((a,b)=>a.purchase_date.localeCompare(b.purchase_date))
-
-    const selectedIds=new Set(selectedReceipts.map((receipt)=>receipt.id))
-    const selectedItems=receiptItems.filter((item)=>selectedIds.has(item.receipt_id))
-    const total=selectedReceipts.reduce((sum,receipt)=>sum+Number(receipt.total_amount??0),0)
-    const average=selectedReceipts.length ? total/selectedReceipts.length : 0
-
-    const storeTotals=new Map<string,number>()
+    const selectedIds=new Set(selectedReceipts.map(receipt=>receipt.id))
+    const selectedItems=matchedItems.filter(item=>selectedIds.has(item.receipt_id))
+    const totals=new Map<string,number>()
+    const stores=new Map<string,{store:string;currency:string;total:number;count:number;unknown:number}>()
+    let unknownTotals=0
     for(const receipt of selectedReceipts){
-      const store=receipt.store_name?.trim()||'Unknown store'
-      storeTotals.set(store,(storeTotals.get(store)??0)+Number(receipt.total_amount??0))
+      const name=receipt.store_name?.trim()||'Unknown store'
+      const currency=receipt.currency||'EUR'
+      const receiptItemsForComparison=itemFiltered?selectedItems.filter(item=>item.receipt_id===receipt.id):[]
+      // A product/category filter shows matching line totals, NOT a full receipt spend.
+      const amounts=itemFiltered?receiptItemsForComparison.map(item=>item.line_total!=null?Number(item.line_total):(item.unit_price!=null&&item.quantity!=null?Number(item.unit_price)*Number(item.quantity):null)):[receipt.total_amount]
+      const missing=amounts.filter(value=>value==null||!Number.isFinite(Number(value))).length
+      const value=amounts.reduce<number>((sum,amount)=>sum+(amount==null||!Number.isFinite(Number(amount))?0:Number(amount)),0)
+      unknownTotals+=missing
+      totals.set(currency,(totals.get(currency)??0)+value)
+      const key=name+'::'+currency
+      const row=stores.get(key)??{store:name,currency,total:0,count:0,unknown:0}
+      row.total+=value;row.count++;row.unknown+=missing
+      stores.set(key,row)
     }
-
-    const products=new Map<string,Array<{price:number;date:string;store:string;label:string}>>()
+    const products=new Map<string,Array<{price:number;date:string;store:string;label:string;currency:string;unit:string}>>()
     for(const item of selectedItems){
-      const price=item.unit_price ?? item.line_total
-      const key=item.normalized_name.trim().toLowerCase()
-      if(price==null || !key) continue
+      if(item.unit_price==null)continue
       const receipt=receiptById.get(item.receipt_id)
-      if(!receipt) continue
-      const rows=products.get(key)??[]
-      rows.push({
-        price:Number(price),
-        date:receipt.purchase_date,
-        store:receipt.store_name?.trim()||'Unknown store',
-        label:item.product_name,
-      })
-      products.set(key,rows)
+      if(!receipt)continue
+      const name=(item.normalized_name||item.product_name).trim().toLocaleLowerCase()
+      const currency=receipt.currency||'EUR'
+      const unit=(item.unit||'unspecified').trim().toLocaleLowerCase()
+      const key=[name,currency,unit].join('::')
+      const group=products.get(key)??[]
+      group.push({price:Number(item.unit_price),date:receipt.purchase_date,store:receipt.store_name?.trim()||'Unknown store',label:item.product_name,currency,unit})
+      products.set(key,group)
     }
-
-    const changes=Array.from(products.entries())
-      .filter(([,rows])=>rows.length>=2)
+    const comparisons=[...products.entries()].filter(([,rows])=>rows.length>=2)
       .map(([key,rows])=>{
-        const sorted=[...rows].sort((a,b)=>a.date.localeCompare(b.date))
-        const first=sorted[0]
-        const last=sorted[sorted.length-1]
+        const chronological=[...rows].sort((a,b)=>a.date.localeCompare(b.date))
+        const cheapest=[...rows].sort((a,b)=>a.price-b.price)[0]
+        const mostExpensive=[...rows].sort((a,b)=>b.price-a.price)[0]
+        const first=chronological[0],last=chronological[chronological.length-1]
         const delta=last.price-first.price
-        const percent=first.price>0 ? (delta/first.price)*100 : 0
-        return { key,label:last.label,first,last,delta,percent,observations:rows.length }
+        return {key,label:last.label,observations:rows.length,first,last,cheapest,mostExpensive,delta,
+          percent:first.price>0?100*delta/first.price:0}
       })
-      .sort((a,b)=>Math.abs(b.percent)-Math.abs(a.percent))
+      .sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta))
+    const biggestProduct=selectedItems
+      .filter(item=>item.line_total!=null)
+      .map(item=>({item,receipt:receiptById.get(item.receipt_id)}))
+      .filter((row):row is {item:ShoppingReceiptItem;receipt:ShoppingReceipt}=>Boolean(row.receipt))
+      .sort((a,b)=>Number(b.item.line_total)-Number(a.item.line_total))[0]??null
+    const highestReceipt=[...selectedReceipts].filter(receipt=>receipt.total_amount!=null).sort((a,b)=>Number(b.total_amount)-Number(a.total_amount))[0]??null
+    const storeRows=[...stores.values()].sort((a,b)=>compareSort==='count'?b.count-a.count:b.total-a.total)
+    return {selectedReceipts,selectedItems,stores:storeRows,totals:[...totals].map(([currency,total])=>({currency,total})),
+      averagePerCurrency:[...totals].map(([currency,total])=>({currency,average:selectedReceipts.filter(receipt=>(receipt.currency||'EUR')===currency).length?total/selectedReceipts.filter(receipt=>(receipt.currency||'EUR')===currency).length:0})),
+      itemFiltered,from,to,unknownTotals,highestReceipt,biggestProduct,
+      increases:comparisons.filter(item=>item.delta>0).slice(0,6),
+      decreases:comparisons.filter(item=>item.delta<0).slice(0,6),
+      priceComparisons:comparisons.slice(0,15)}
+  },[receipts,receiptItems,receiptById,comparePeriod,compareFrom,compareTo,compareStore,compareCategory,compareCurrency,compareProduct,compareSort])
 
-    const lastTwo=selectedReceipts.slice(-2)
-    const previous=lastTwo.length===2 ? lastTwo[0] : null
-    const latest=lastTwo.length ? lastTwo[lastTwo.length-1] : null
-    const receiptDelta=previous && latest
-      ? Number(latest.total_amount??0)-Number(previous.total_amount??0)
-      : null
-
-    return {
-      selectedReceipts,
-      total,
-      average,
-      stores:Array.from(storeTotals.entries())
-        .map(([store,value])=>({store,value}))
-        .sort((a,b)=>b.value-a.value),
-      increases:changes.filter((item)=>item.delta>0).slice(0,5),
-      decreases:changes.filter((item)=>item.delta<0).sort((a,b)=>a.percent-b.percent).slice(0,5),
-      latest,
-      previous,
-      receiptDelta,
-    }
-  },[receipts,receiptItems,receiptById,comparePeriod])
+  function resetCompareFilters(){
+    setComparePeriod('month')
+    setCompareFrom('');setCompareTo('');setCompareStore('all');setCompareCategory('all')
+    setCompareCurrency('all');setCompareProduct('');setCompareSort('total')
+  }
 
   function askAssistantAboutShopping(){
     const report=receiptComparisonReport
-    const periodLabel=comparePeriod==='all'?'all recorded history':comparePeriod==='month' ? 'this month' : 'the last 30 days'
-    const increases=report.increases.map((item)=>item.label+' '+item.percent.toFixed(0)+'%').join(', ') || 'none detected'
-    const decreases=report.decreases.map((item)=>item.label+' '+Math.abs(item.percent).toFixed(0)+'%').join(', ') || 'none detected'
-    const stores=report.stores.slice(0,5).map((item)=>item.store+' '+moneyValue(item.value)).join(', ') || 'no store data'
-
-    window.dispatchEvent(new CustomEvent('famioo:assistant-prefill',{
-      detail:{
-        message:'Compare ALL our shopping receipts and recorded shopping costs for '+periodLabel+'. Use the household database, include receipts from every shop, group receipts and totals by store, compare repeated product prices across different shops and dates, and show which stores are cheaper. Deduplicate costs already linked to receipts. Our on-screen receipt overview shows '+report.selectedReceipts.length+' receipts, '+moneyValue(report.total)+' in receipt totals, stores: '+stores+', largest detected increases: '+increases+', decreases: '+decreases+'. '+(receiptHistoryComplete?'Receipt history shown in the app was loaded completely.':'Receipt history shown in the app may be incomplete; verify server records before claiming totals are complete.')+' Explain useful spending trends and savings using real data, and mark missing details clearly.',
-      },
-    }))
+    const currencies=report.totals.map(item=>moneyValue(item.total,item.currency)).join(' + ')
+    const stores=report.stores.slice(0,8).map(row=>row.store+' '+moneyValue(row.total,row.currency)).join(', ')
+    const period=comparePeriod==='custom'?'from '+(compareFrom||'earliest')+' to '+(compareTo||'today'):
+      comparePeriod==='month'?'this month':comparePeriod==='30days'?'last 30 days':'all recorded history'
+    window.dispatchEvent(new CustomEvent('famioo:assistant-prefill',{detail:{
+      message:'Analyze ONLY the following shopping receipt comparison selection: period '+period+
+        '; store '+(compareStore==='all'?'all shops':compareStore)+'; product search '+(compareProduct||'all products')+
+        '; category '+(compareCategory==='all'?'all categories':compareCategory)+
+        '; currency '+(compareCurrency==='all'?'all currencies separately':compareCurrency)+
+        '. Filter the real household receipt database accordingly. Compare repeated identical products only with comparable units, highlight price increases, most expensive items and opportunities to save. Do not double-count receipt-linked costs. Current filtered view: '+
+        report.selectedReceipts.length+' receipts, totals '+(currencies||'no complete amounts')+
+        ', stores '+(stores||'none')+', '+report.unknownTotals+' missing prices. '+
+        (receiptHistoryComplete?'The frontend receipt history was fully loaded.':'The frontend receipt history is incomplete.')+
+        ' Clearly say when filtered data is unavailable, avoid inventing product prices, and never combine different currencies into one total.'
+    }}))
     setCompareOpen(false)
   }
 
