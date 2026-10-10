@@ -244,7 +244,7 @@ export function ShoppingPage() {
       ))
     }
 
-    if (receiptHistory.error) setError((current) => current || receiptHistory.error)
+    if (receiptHistory.error) setError((current) => current || receiptHistory.error || 'Could not load receipt history.')
     else {
       setReceipts(receiptHistory.receiptsFound)
       setReceiptItems(receiptHistory.itemsFound)
