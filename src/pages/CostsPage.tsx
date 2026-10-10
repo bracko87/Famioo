@@ -93,6 +93,7 @@ export function CostsPage() {
   const mondayFirst = household.week_starts_on === 1
 
   const [costs, setCosts] = useState<HouseholdCost[]>([])
+  const [costHistoryComplete,setCostHistoryComplete]=useState(true)
   const [finance, setFinance] = useState<FinanceSettings | null>(null)
   const [range, setRange] = useState<CostRange>('month')
   const [listSource, setListSource] = useState('all')
@@ -113,16 +114,25 @@ export function CostsPage() {
   const [error, setError] = useState('')
   const [mobilePanel,setMobilePanel]=useState<'plan'|'entries'|null>(null)
 
+  async function loadAllCostHistory() {
+    const rows:HouseholdCost[]=[]
+    for(let offset=0;offset<20000;offset+=500){
+      const result=await supabase.from('household_costs')
+        .select('id,title,amount,currency,cost_date,cost_kind,source_type,source_shopping_list_id,source_task_id,source_home_care_activity_id,source_home_care_asset_id,source_life_admin_item_id,schedule_type,schedule_day,schedule_interval_months,flow_type,notes,created_at')
+        .eq('household_id',household.id).order('cost_date',{ascending:false}).order('id').range(offset,offset+499)
+      if(result.error)return {data:rows,error:result.error.message,complete:false}
+      const chunk=(result.data??[]) as HouseholdCost[]
+      rows.push(...chunk)
+      if(chunk.length<500)return {data:rows,error:null,complete:true}
+    }
+    return {data:rows,error:null,complete:false}
+  }
+
   async function load() {
     setError('')
 
     const [costResult, financeResult] = await Promise.all([
-      supabase
-        .from('household_costs')
-        .select('id,title,amount,currency,cost_date,cost_kind,source_type,source_shopping_list_id,source_task_id,source_home_care_activity_id,source_home_care_asset_id,source_life_admin_item_id,schedule_type,schedule_day,schedule_interval_months,flow_type,notes,created_at')
-        .eq('household_id', household.id)
-        .order('cost_date', { ascending: false })
-        .order('created_at', { ascending: false }),
+      loadAllCostHistory(),
       supabase
         .from('household_finance_settings')
         .select('household_id,monthly_income,monthly_budget,currency')
@@ -130,8 +140,8 @@ export function CostsPage() {
         .maybeSingle(),
     ])
 
-    if (costResult.error) setError(costResult.error.message)
-    else setCosts((costResult.data ?? []) as HouseholdCost[])
+    if (costResult.error) setError(costResult.error)
+    else {setCosts(costResult.data);setCostHistoryComplete(costResult.complete)}
 
     if (financeResult.error) {
       setError((current) => current || financeResult.error.message)
@@ -452,7 +462,7 @@ export function CostsPage() {
       .join('; ')
     const shoppingSpend=spending.filter(row=>row.cost.source_type==='shopping'||row.cost.source_type==='shopping_receipt')
     window.dispatchEvent(new CustomEvent('famioo:assistant-prefill',{detail:{
-      message:'Please analyze and compare our household COSTS for '+label+' ('+rangeBounds.start+' to '+rangeBounds.end+'). Retrieve actual household cost records and shopping receipts from Famioo. Compare all expenses by source and shopping costs by shop/store, show the real totals, major categories, trends and practical savings. Do not double-count any receipt which is already recorded as a household cost. Differentiate recurring scheduled costs from actual purchases. The Costs report currently shows '+spending.length+' expense occurrences, with '+shoppingSpend.length+' shopping-related occurrences; breakdown: '+(breakdown||'no entries')+'. Use your own authorized database queries to verify the amounts and clearly label missing or incomplete records.'
+      message:'Please analyze and compare our household COSTS for '+label+' ('+rangeBounds.start+' to '+rangeBounds.end+'). Retrieve actual household cost records and shopping receipts from Famioo. Compare all expenses by source and shopping costs by shop/store, show the real totals, major categories, trends and practical savings. Do not double-count any receipt which is already recorded as a household cost. Differentiate recurring scheduled costs from actual purchases. The Costs report currently shows '+spending.length+' expense occurrences, with '+shoppingSpend.length+' shopping-related occurrences; breakdown: '+(breakdown||'no entries')+'. '+(costHistoryComplete?'All cost records are loaded in the app.':'Some cost entries may be missing from the app because of the history size; do not assume completeness.')+' Use your own authorized database queries to verify the amounts and clearly label missing or incomplete records.'
     }}))
     setMobilePanel(null)
   }
