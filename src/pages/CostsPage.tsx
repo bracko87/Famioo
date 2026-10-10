@@ -121,6 +121,7 @@ export function CostsPage() {
   const [compareSource,setCompareSource]=useState('all')
   const [compareStore,setCompareStore]=useState('all')
   const [compareTiming,setCompareTiming]=useState<'all'|'one_time'|'scheduled'>('all')
+  const [compareFlow,setCompareFlow]=useState<'expense'|'income'|'all'>('expense')
   const [compareCurrency,setCompareCurrency]=useState('all')
   const [compareSearch,setCompareSearch]=useState('')
   const [compareMin,setCompareMin]=useState('')
@@ -517,6 +518,7 @@ export function CostsPage() {
       &&(compareSource==='all'||row.source===compareSource)
       &&(compareStore==='all'||row.store===compareStore)
       &&(compareTiming==='all'||row.timing===compareTiming)
+      &&(compareFlow==='all'||row.flow===compareFlow)
       &&(compareCurrency==='all'||row.currency===compareCurrency)
       &&(!term||row.title.toLocaleLowerCase().includes(term)||row.store.toLocaleLowerCase().includes(term))
       &&(min===null||!Number.isFinite(min)||row.amount>=min)
@@ -556,11 +558,11 @@ export function CostsPage() {
       byShop:[...byShop.values()].sort((a,b)=>b.amount-a.amount),
       byMonth:[...byMonth.values()].sort((a,b)=>a.month.localeCompare(b.month)),
       biggest,missing}
-  },[costs,compareReceipts,comparePeriod,compareFrom,compareTo,compareSource,compareStore,compareTiming,compareCurrency,compareSearch,compareMin,compareMax])
+  },[costs,compareReceipts,comparePeriod,compareFrom,compareTo,compareSource,compareStore,compareTiming,compareFlow,compareCurrency,compareSearch,compareMin,compareMax])
 
   function resetComparison(){
     setComparePeriod('month');setCompareFrom('');setCompareTo('');setCompareSource('all')
-    setCompareStore('all');setCompareTiming('all');setCompareCurrency('all')
+    setCompareStore('all');setCompareTiming('all');setCompareFlow('expense');setCompareCurrency('all')
     setCompareSearch('');setCompareMin('');setCompareMax('')
   }
 
@@ -569,7 +571,7 @@ export function CostsPage() {
       comparePeriod==='all'?'all recorded history':comparePeriod==='month'?'this month':'the past 30 days'
     window.dispatchEvent(new CustomEvent('famioo:assistant-prefill',{detail:{
       message:'Compare the filtered household expenses for '+period+'. Cost category/source '+compareSource+
-        ', store '+compareStore+', timing '+compareTiming+', currency '+compareCurrency+
+        ', store '+compareStore+', timing '+compareTiming+', direction '+compareFlow+', currency '+compareCurrency+
         ', search '+(compareSearch||'none')+', min '+(compareMin||'none')+', max '+(compareMax||'none')+
         '. Use only permitted records, group shopping receipts by actual stores, identify the most expensive expenses and compare spending over time. Do not duplicate shopping receipts that are linked to cost entries. Never treat scheduled budget commitments as actual past purchases. The filtered comparison panel has '+
         comparison.rows.length+' entries; actual spending totals: '+comparison.summary.map(row=>money(row.spent,row.currency)).join(' + ')+
@@ -697,7 +699,7 @@ export function CostsPage() {
         </div>
 
         <div className="cost-heading-actions">
-          {access?.enabled&&hasAiAssistant&&<button type="button" className="secondary-button compact" onClick={askAssistantAboutCosts}><Sparkles size={15}/>Compare costs with AI</button>}
+          {access?.enabled&&<button type="button" className="secondary-button compact" onClick={()=>setCompareOpen(true)}><ArrowLeftRight size={15}/>Compare costs</button>}
           {canWrite && <button className="primary-button compact" onClick={() => setComposerOpen(true)}>
             <Plus size={16} />Add cost
           </button>}
@@ -719,10 +721,109 @@ export function CostsPage() {
           <Receipt size={20}/>
           <span>Entries</span>
         </button>
-        {hasAiAssistant && <button type="button" onClick={askAssistantAboutCosts} aria-label="Compare household costs with AI" title="Compare costs with AI">
-          <Sparkles size={20}/><span>AI Compare</span>
-        </button>}
+        <button type="button" className="cost-compare-tab" onClick={()=>setCompareOpen(true)} aria-label="Compare household costs" title="Compare costs" aria-expanded={compareOpen}>
+          <ArrowLeftRight size={20}/><span>Compare</span>
+        </button>
       </nav>
+
+      {compareOpen&&<>
+        <button type="button" className="shopping-compare-backdrop" onClick={()=>setCompareOpen(false)} aria-label="Close cost comparison"/>
+        <aside className="shopping-compare-drawer cost-compare-drawer" role="dialog" aria-modal="true" aria-label="Compare household costs">
+          <header><div><span className="eyebrow">HOUSEHOLD COMPARE</span><h2>Cost comparison</h2></div>
+            <button type="button" onClick={()=>setCompareOpen(false)} aria-label="Close comparison"><X size={18}/></button>
+          </header>
+          <div className="shopping-compare-period">
+            {(['month','30days','all','custom'] as const).map(value=>(
+              <button key={value} type="button" className={comparePeriod===value?'active':''} onClick={()=>setComparePeriod(value)}>
+                {value==='month'?'This month':value==='30days'?'30 days':value==='all'?'All history':'Custom'}
+              </button>
+            ))}
+          </div>
+          <div className="compare-filter-head"><strong>Filter & compare</strong><button type="button" onClick={resetComparison}>Reset filters</button></div>
+          <div className="shopping-compare-filters">
+            {comparePeriod==='custom'&&<div className="compare-filter-dates">
+              <label>From<DatePicker value={compareFrom} onChange={setCompareFrom} ariaLabel="Cost comparison start date"/></label>
+              <label>To<DatePicker value={compareTo} min={compareFrom||undefined} onChange={setCompareTo} ariaLabel="Cost comparison end date"/></label>
+            </div>}
+            <label>Category / source
+              <Select value={compareSource} onChange={setCompareSource} options={[{value:'all',label:'All sources'},...comparison.sources.map(source=>({value:source,label:sourceLabel(source as HouseholdCost['source_type'])}))]} ariaLabel="Filter cost category"/>
+            </label>
+            <label>Shop / store
+              <Select value={compareStore} onChange={setCompareStore} options={[{value:'all',label:'All stores'},...comparison.shops.map(store=>({value:store,label:store}))]} ariaLabel="Filter shopping store"/>
+            </label>
+            <div className="compare-filter-dates">
+              <label>Direction
+                <Select value={compareFlow} onChange={value=>setCompareFlow(value as 'expense'|'income'|'all')}
+                  options={[{value:'expense',label:'Expenses'},{value:'income',label:'Income'},{value:'all',label:'Both'}]} ariaLabel="Cost comparison direction"/>
+              </label>
+              <label>Timing
+                <Select value={compareTiming} onChange={value=>setCompareTiming(value as 'all'|'one_time'|'scheduled')}
+                  options={[{value:'all',label:'Any timing'},{value:'one_time',label:'Recorded one-time'},{value:'scheduled',label:'Scheduled plans'}]} ariaLabel="Cost timing filter"/>
+              </label>
+            </div>
+            <label>Currency
+              <Select value={compareCurrency} onChange={setCompareCurrency}
+                options={[{value:'all',label:'All currencies'},...comparison.currencies.map(currency=>({value:currency,label:currency}))]} ariaLabel="Cost comparison currency"/>
+            </label>
+            <label>Search expense / merchant
+              <input type="search" value={compareSearch} onChange={event=>setCompareSearch(event.target.value)} placeholder="e.g. supermarket, electricity…" aria-label="Find cost entries"/>
+            </label>
+            <div className="compare-filter-dates">
+              <label>Min. amount<input inputMode="decimal" value={compareMin} onChange={event=>setCompareMin(event.target.value)} placeholder="Any"/></label>
+              <label>Max. amount<input inputMode="decimal" value={compareMax} onChange={event=>setCompareMax(event.target.value)} placeholder="Any"/></label>
+            </div>
+          </div>
+          {(!costHistoryComplete||!compareReceiptComplete)&&<p className="shopping-compare-limited">Some records were unavailable or exceeded history limits. Treat these results as partial.</p>}
+          <div className="shopping-compare-summary">
+            <article><span>Recorded spending</span><strong>{comparison.summary.map(row=>money(row.spent,row.currency)).join(' + ')||'—'}</strong></article>
+            <article><span>Matching entries</span><strong>{comparison.rows.length}</strong></article>
+            <article><span>Scheduled plans</span><strong>{comparison.summary.map(row=>money(row.scheduled,row.currency)).join(' + ')||'—'}</strong></article>
+          </div>
+          {comparison.missing>0&&<p className="shopping-compare-limited">{comparison.missing} entries have no valid amount.</p>}
+          <p className="compare-filter-note compare-cost-notice">Scheduled commitments are displayed separately and are not counted as completed purchases. Shopping receipts already linked to a cost are counted once.</p>
+          <section className="shopping-compare-section">
+            <h3>Spending by category</h3>
+            {comparison.bySource.length?comparison.bySource.map(row=>(
+              <div className="shopping-compare-row" key={row.source+row.currency}>
+                <span>{sourceLabel(row.source as HouseholdCost['source_type'])}<small className="compare-row-sub">{row.count} entries</small></span>
+                <strong>{money(row.amount,row.currency)}</strong>
+              </div>
+            )):<small>No matching recorded expenses.</small>}
+          </section>
+          <section className="shopping-compare-section">
+            <h3>Shopping costs by store</h3>
+            {comparison.byShop.length?comparison.byShop.map(row=>(
+              <div className="shopping-compare-row" key={row.store+row.currency}>
+                <span>{row.store}<small className="compare-row-sub">{row.count} entries</small></span>
+                <strong>{money(row.amount,row.currency)}</strong>
+              </div>
+            )):<small>No shopping receipts or shopping costs match these filters.</small>}
+          </section>
+          <section className="shopping-compare-section">
+            <h3>Most expensive expenses</h3>
+            {comparison.biggest.length?comparison.biggest.map(row=>(
+              <div className="shopping-compare-row" key={row.id}>
+                <span>{row.title}<small className="compare-row-sub">{row.date}{row.store!=='Unknown shop'?' · '+row.store:''}</small></span>
+                <strong>{money(row.amount,row.currency)}</strong>
+              </div>
+            )):<small>No matching recorded expenses.</small>}
+          </section>
+          <section className="shopping-compare-section">
+            <h3>Spending over time</h3>
+            {comparison.byMonth.length?comparison.byMonth.map(row=>(
+              <div className="shopping-compare-row" key={row.month+row.currency}>
+                <span>{row.month}</span><strong>{money(row.amount,row.currency)}</strong>
+              </div>
+            )):<small>No dated expenses match these filters.</small>}
+          </section>
+          <div className="compare-optional-ai">
+            <p>Optional AI analysis</p>
+            {hasAiAssistant?<button type="button" className="secondary-button shopping-compare-ai" onClick={askAssistantAboutCosts}>
+              <Sparkles size={15}/>Ask AI about these filtered costs
+            </button>:<small>Enable Famioo Assistant for additional recommendations.</small>}
+          </div>
+        </aside>
+      </>}
 
       <section className="finance-overview-grid">
         <form className="list-card finance-plan-card" onSubmit={saveFinance}>
@@ -801,7 +902,7 @@ export function CostsPage() {
           <div>
             <span className="eyebrow">REPORTING</span>
             <h2>Cost overview</h2>
-            {hasAiAssistant&&<button type="button" className="secondary-button compact cost-report-ai-action" onClick={askAssistantAboutCosts}><Sparkles size={14}/>Analyze costs with AI</button>}
+            <button type="button" className="secondary-button compact cost-report-ai-action" onClick={()=>setCompareOpen(true)}><ArrowLeftRight size={14}/>Compare costs</button>
           </div>
 
           <div className="cost-range-tabs" aria-label="Cost range">
