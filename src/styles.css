@@ -23292,3 +23292,244 @@ button.notification-item.messenger-notification-item{
 /* Custom pickers portal to document.body; keep them above editor modals rather than behind the overlay. */
 .date-picker-popover-portal {z-index:6200!important}
 .mobile-select-backdrop {z-index:6200!important}
+
+
+/* Restored receipt comparisons work on desktop as well as mobile. */
+@media(min-width:768px){
+  .shopping-compare-tab {
+    position: fixed;
+    z-index: 75;
+    right: 0;
+    bottom: calc(228px + env(safe-area-inset-bottom, 0px));
+    width: 50px;
+    min-height: 52px;
+    padding: 0;
+    border: 1px solid rgba(255,255,255,.46);
+    border-right: 0;
+    border-radius: 16px 0 0 16px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: linear-gradient(145deg,#397d78,#6656bd);
+    box-shadow: 0 12px 30px rgba(50,62,118,.24);
+  }
+
+  .shopping-compare-tab.active {
+    transform: translateX(4px);
+  }
+
+  .shopping-compare-backdrop {
+    position: fixed;
+    z-index: 77;
+    inset: 0;
+    display: block;
+    border: 0;
+    background: rgba(28,25,37,.38);
+    backdrop-filter: blur(2px);
+  }
+
+  .shopping-compare-drawer {
+    position: fixed;
+    z-index: 78;
+    right: 0;
+    bottom: calc(72px + env(safe-area-inset-bottom,0px));
+    width: min(92vw,410px);
+    height: min(760px,calc(100svh - 96px - env(safe-area-inset-top,0px)));
+    padding-bottom: 14px;
+    display: block;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 22px 0 0 22px;
+    background: #fff;
+    box-shadow: -18px 0 52px rgba(31,24,52,.24);
+  }
+
+  .shopping-compare-drawer > header {
+    position: sticky;
+    z-index: 2;
+    top: 0;
+    min-height: 66px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #ece6ef;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: rgba(255,255,255,.96);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .shopping-compare-drawer > header h2 {
+    margin: 3px 0 0;
+    font-size: 17px;
+  }
+
+  .shopping-compare-drawer > header > button {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    color: #786c7d;
+    background: #f2eef4;
+  }
+
+  .shopping-compare-period {
+    margin: 13px 14px 10px;
+    padding: 3px;
+    border-radius: 11px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+    background: #f2eff4;
+  }
+
+  .shopping-compare-period button {
+    min-height: 36px;
+    border: 0;
+    border-radius: 9px;
+    color: #857989;
+    background: transparent;
+    font-size: 12px;
+  }
+
+  .shopping-compare-period button.active {
+    color: #65417b;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(57,41,65,.09);
+  }
+
+  .shopping-compare-summary {
+    padding: 0 14px 10px;
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 7px;
+  }
+
+  .shopping-compare-summary article {
+    min-width: 0;
+    min-height: 76px;
+    padding: 10px 8px;
+    border: 1px solid #ebe4ee;
+    border-radius: 12px;
+    display: grid;
+    align-content: center;
+    gap: 3px;
+    background: #fbfafc;
+  }
+
+  .shopping-compare-summary span,
+  .shopping-compare-summary small {
+    color: #988c9c;
+    font-size: 9px;
+  }
+
+  .shopping-compare-summary strong {
+    overflow: hidden;
+    color: #55495b;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .shopping-compare-section {
+    margin: 0 14px;
+    padding: 13px 0;
+    border-top: 1px solid #eee8f0;
+  }
+
+  .shopping-compare-section h3 {
+    margin: 0 0 8px;
+    color: #5c5061;
+    font-size: 12px;
+  }
+
+  .shopping-compare-section > small {
+    color: #9a8e9e;
+    font-size: 10px;
+    line-height: 1.4;
+  }
+
+  .shopping-compare-row,
+  .shopping-compare-product,
+  .shopping-compare-latest {
+    min-height: 42px;
+    padding: 7px 0;
+    border-bottom: 1px solid #f1edf2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 9px;
+  }
+
+  .shopping-compare-row:last-child,
+  .shopping-compare-product:last-child {
+    border-bottom: 0;
+  }
+
+  .shopping-compare-row span,
+  .shopping-compare-row strong,
+  .shopping-compare-latest strong {
+    color: #5c5061;
+    font-size: 11px;
+  }
+
+  .shopping-compare-product > span,
+  .shopping-compare-latest > span {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+  }
+
+  .shopping-compare-product strong {
+    overflow: hidden;
+    color: #5b4f60;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .shopping-compare-product small,
+  .shopping-compare-latest small {
+    color: #9b909f;
+    font-size: 9px;
+  }
+
+  .shopping-compare-product b {
+    flex: 0 0 auto;
+    color: #74518b;
+    font-size: 11px;
+  }
+
+  .shopping-compare-ai {
+    width: calc(100% - 28px);
+    min-height: 44px;
+    margin: 5px 14px 0;
+    justify-content: center;
+  }
+
+
+ .shopping-compare-drawer{right:20px;bottom:20px;border-radius:20px;width:min(430px,calc(100vw - 40px));height:min(760px,calc(100dvh - 40px))}
+ .shopping-compare-tab{right:8px;border-radius:15px;bottom:230px}
+}
+/* Compare is always discoverable from the module header; keep mobile side shortcut accessible. */
+.shopping-compare-limited,.shopping-compare-ai-note{display:block;margin:8px 14px;font-size:11px;color:#957c99;line-height:1.45}
+.shopping-compare-period{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.shopping-compare-tab{cursor:pointer}
+.shopping-compare-tab span{font-size:9px;line-height:1}
+.shopping-compare-action{white-space:nowrap}
+.cost-heading-actions{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.cost-report-ai-action{margin-top:8px}
+@media(max-width:767px){
+ .shopping-compare-tab{align-content:center;gap:1px;bottom:calc(228px + env(safe-area-inset-bottom,0px));min-height:54px}
+ .shopping-heading-actions{display:flex!important;flex-wrap:wrap;gap:7px;width:100%}
+ .shopping-heading-actions>*{flex:1 1 auto}
+ .shopping-heading-actions .shopping-compare-action{flex:1 0 100%}
+ .cost-heading-actions{width:100%;display:flex;flex-wrap:wrap;gap:6px}
+ .cost-heading-actions>*{flex:1 1 auto;justify-content:center}
+ .mobile-cost-side-tabs>button:nth-child(3){position:fixed;right:0;bottom:calc(286px + env(safe-area-inset-bottom,0px));z-index:75;display:grid!important}
+ .mobile-cost-side-tabs>button:nth-child(3) svg{display:block}
+}
