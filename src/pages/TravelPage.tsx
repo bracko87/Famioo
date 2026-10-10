@@ -6,6 +6,7 @@ import {
   FileText,
   ImagePlus,
   MapPin,
+  Route,
   PackageCheck,
   Pencil,
   Plane,
@@ -18,6 +19,7 @@ import {
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
+import { getTravelTraffic, type TrafficResult } from '../lib/travelTraffic'
 import { DatePicker } from '../components/ui/DatePicker'
 import { Select } from '../components/ui/Select'
 import { TimePicker } from '../components/ui/TimePicker'
@@ -172,9 +174,23 @@ export function TravelPage(){
   const [loading,setLoading]=useState(true)
   const [saving,setSaving]=useState(false)
   const [error,setError]=useState('')
+  const [trafficBusy,setTrafficBusy]=useState(false)
+  const [trafficError,setTrafficError]=useState('')
+  const [trafficResult,setTrafficResult]=useState<TrafficResult|null>(null)
+  const [trafficOrigin,setTrafficOrigin]=useState('')
   const [message,setMessage]=useState('')
 
   const selectedTrip=trips.find(trip=>trip.id===selectedTripId)??trips[0]??null
+  useEffect(()=>{setTrafficResult(null);setTrafficError('');setTrafficOrigin('')},[selectedTripId])
+
+  async function checkTripTraffic(){
+    if(!selectedTrip)return
+    setTrafficBusy(true);setTrafficError('');setTrafficResult(null)
+    try{setTrafficResult(await getTravelTraffic(household.id,{trip_id:selectedTrip.id,...(trafficOrigin.trim()?{origin:trafficOrigin.trim()}:{})}))}
+    catch(error){setTrafficError(error instanceof Error?error.message:'Unable to check traffic')}
+    finally{setTrafficBusy(false)}
+  }
+
   const selectedTripCover=selectedTrip?(tripPhotoUrls[selectedTrip.id] || (selectedTrip.calendar_event_id?fileUrls[eventPhotoFileIds[selectedTrip.calendar_event_id]]:'') || ''):''
   const selectedItinerary=useMemo(
     ()=>itinerary.filter(item=>item.trip_id===selectedTrip?.id).sort((a,b)=>(a.start_at??'').localeCompare(b.start_at??'')||a.sort_order-b.sort_order),
@@ -442,11 +458,25 @@ export function TravelPage(){
               </div>
               <div className="travel-hero-actions">
                 {selectedTrip.calendar_event_id&&<span className="travel-calendar-badge"><CalendarDays size={13}/>Calendar synced</span>}
+                <button type="button" className="secondary-button compact" onClick={()=>void checkTripTraffic()} disabled={trafficBusy}><Route size={14}/>{trafficBusy?'Checking…':'Check traffic'}</button>
                 {canWrite&&<button type="button" className="secondary-button compact" onClick={()=>openEditTrip(selectedTrip)}><Pencil size={13}/>Edit</button>}
                 {canWrite&&<button type="button" className="icon-button" onClick={()=>void archiveTrip(selectedTrip)} title="Archive trip"><Archive size={15}/></button>}
               </div>
             </section>
 
+            {(trafficResult||trafficError)&&<section className="travel-traffic-result" aria-live="polite">
+              <header><strong>Google Maps driving estimate</strong><button type="button" onClick={()=>{setTrafficResult(null);setTrafficError('')}} aria-label="Dismiss traffic result"><X size={14}/></button></header>
+              {trafficResult?<>
+                <p>{trafficResult.traffic_type} to {trafficResult.destination}</p>
+                {trafficResult.routes.map((route,index)=><div className="travel-traffic-row" key={index}><b>Route {index+1}</b><span>{route.distance_km} km · {route.duration_minutes!=null?Math.floor(route.duration_minutes/60)+'h '+(route.duration_minutes%60)+'m':'Time unavailable'}</span></div>)}
+                <small>{trafficResult.warning}</small>
+                <a className="secondary-button compact" href={trafficResult.navigation_url} target="_blank" rel="noopener noreferrer">Open route in Google Maps</a>
+              </>:<>
+                <p>{trafficError}</p>
+                <label>Start address (optional alternative to GPS)<input value={trafficOrigin} onChange={event=>setTrafficOrigin(event.target.value)} placeholder="Street, town, country"/></label>
+                <button type="button" className="secondary-button compact" disabled={trafficBusy} onClick={()=>void checkTripTraffic()}>Try route again</button>
+              </>}
+            </section>}
             <nav className="projects-tabs travel-tabs" aria-label="Trip sections">
               <button type="button" className={tab==='overview'?'active':''} onClick={()=>setTab('overview')}>Overview</button>
               <button type="button" className={tab==='itinerary'?'active':''} onClick={()=>setTab('itinerary')}>Itinerary <span>{selectedItinerary.length}</span></button>
