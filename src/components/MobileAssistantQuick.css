@@ -1,10 +1,4 @@
-.mobile-assistant-tab,
-.mobile-assistant-drawer,
-.mobile-assistant-backdrop {
-  display: none;
-}
-
-@media (max-width: 700px) {
+/* Assistant drawer is available for Shopping/Costs AI analysis on desktop too. */
   .mobile-assistant-tab {
     position: fixed;
     z-index: 76;
@@ -298,7 +292,6 @@
     font-size: .79rem;
     cursor: pointer;
   }
-}
 
 /* iOS keyboard: retain the modal's scale and keep the composer visible. */
 @media (max-width: 700px) {
@@ -317,4 +310,15 @@
  .mobile-assistant-record-actions button:disabled {opacity:.5;cursor:default}
  .mobile-assistant-form textarea {font-size:16px!important}
  .mobile-assistant-drawer.keyboard-open {bottom:8px!important;height:min(760px,calc(var(--famioo-viewport-height,100dvh) - 16px))!important}
+}
+
+@media(min-width:701px){
+ .mobile-assistant-tab{right:12px;bottom:170px;border-radius:15px;min-height:50px;z-index:76}
+ .mobile-assistant-drawer{right:20px;bottom:20px;width:min(440px,calc(100vw - 40px));height:min(760px,calc(100dvh - 40px));border-radius:20px;z-index:78}
+ .mobile-assistant-backdrop{z-index:77}
+ .mobile-assistant-form textarea{font-size:16px}
+ .mobile-assistant-record-actions{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:7px 11px;border-top:1px solid #eee}
+ .mobile-assistant-record-actions span{flex:1 0 100%;font-size:12px;color:#7059a8}
+ .mobile-assistant-record-actions button{border:1px solid #d9cfe8;border-radius:8px;padding:7px 11px;background:#fff;color:#7059a8;cursor:pointer}
+ .mobile-assistant-record-actions .send-now{background:#6750b9;color:#fff;border-color:#6750b9}
 }
