@@ -110,6 +110,25 @@ function localPeriod(message:string,timeZone:string){
   const [year,month,day]=today.split("-").map(Number)
   const utcDay=new Date(Date.UTC(year,month-1,day,12))
   const iso=(d:Date)=>d.toISOString().slice(0,10)
+  const explicitDates=message.match(/(20\\d{2}-\\d{2}-\\d{2})\\s*(?:to|through|until|–|—)\\s*(20\\d{2}-\\d{2}-\\d{2})/)
+  if(explicitDates){
+    const end=new Date(explicitDates[2]+"T12:00:00Z")
+    end.setUTCDate(end.getUTCDate()+1)
+    return {start:explicitDates[1],end:iso(end),label:"requested inclusive date range"}
+  }
+  if(/all recorded history|all receipts|all shopping|all shops|all stores|entire history|all costs|all household|all expenses|all.time|all entries|entire period/i.test(message)){
+    const end=new Date(utcDay);end.setUTCDate(end.getUTCDate()+1)
+    return {start:"1900-01-01",end:iso(end),label:"all recorded history"}
+  }
+  if(/this year|current year|dieses jahr/i.test(message)){
+    return {start:iso(new Date(Date.UTC(year,0,1,12))),end:iso(new Date(Date.UTC(year+1,0,1,12))),label:"current calendar year"}
+  }
+  if(/this week|current week|diese woche/i.test(message)){
+    const weekday=(utcDay.getUTCDay()+6)%7
+    const start=new Date(utcDay);start.setUTCDate(start.getUTCDate()-weekday)
+    const end=new Date(start);end.setUTCDate(end.getUTCDate()+7)
+    return {start:iso(start),end:iso(end),label:"current calendar week"}
+  }
   if(/last month|previous month|letzten monat|prošlog meseca|proslog meseca/i.test(message)){
     return {start:iso(new Date(Date.UTC(year,month-2,1,12))),end:iso(new Date(Date.UTC(year,month-1,1,12))),label:"previous calendar month"}
   }
@@ -155,26 +174,80 @@ async function calculateShoppingSummary(client:any,householdId:string,message:st
   const linkedCostIds=new Set(receipts.values.map(r=>r.linked_cost_id).filter(Boolean))
   const receiptIds=new Set(receipts.values.map(r=>r.id))
   const otherShoppingCosts=costs.values.filter(c=>
-    (c.source_type==="shopping" || c.source_shopping_list_id || c.source_receipt_id)
+    (c.source_type==="shopping" || c.source_type==="shopping_receipt" || c.source_shopping_list_id || c.source_receipt_id)
     && c.flow_type!=="income"
     && !linkedCostIds.has(c.id)
     && !receiptIds.has(c.source_receipt_id)
   )
   const totals:Record<string,{receipt_cents:number;other_shopping_cents:number;total_cents:number}>={}
+  const byStore:Record<string,{receipts:number;currencies:Record<string,number>;missing_amounts:number}>={}
+  const sourceTotals:Record<string,Record<string,number>>={}
+  const missingReceiptAmounts=receipts.values.filter(r=>r.total_amount==null).length
   const ensure=(currency:any)=>{
     const key=typeof currency==="string" && currency?currency:"EUR"
     return totals[key]??(totals[key]={receipt_cents:0,other_shopping_cents:0,total_cents:0})
   }
   for(const r of receipts.values){
-    const value=Math.round(Number(r.total_amount||0)*100)
+    const store=(typeof r.store_name==="string"&&r.store_name.trim())||"Unknown store"
+    const bucket=byStore[store]??(byStore[store]={receipts:0,currencies:{},missing_amounts:0})
+    bucket.receipts++
+    if(r.total_amount==null){bucket.missing_amounts++;continue}
+    const value=Math.round(Number(r.total_amount)*100)
     if(!Number.isFinite(value))continue
-    const total=ensure(r.currency);total.receipt_cents+=value;total.total_cents+=value
+    const currency=r.currency||"EUR"
+    bucket.currencies[currency]=(bucket.currencies[currency]??0)+value
+    const total=ensure(currency);total.receipt_cents+=value;total.total_cents+=value
+  }
+  for(const c of costs.values){
+    if(c.flow_type==="income")continue
+    const value=Math.round(Number(c.amount||0)*100)
+    if(!Number.isFinite(value))continue
+    const group=sourceTotals[c.source_type||"manual"]??(sourceTotals[c.source_type||"manual"]={})
+    const currency=c.currency||"EUR"
+    group[currency]=(group[currency]??0)+value
   }
   for(const c of otherShoppingCosts){
     const value=Math.round(Number(c.amount||0)*100)
     if(!Number.isFinite(value))continue
     const total=ensure(c.currency);total.other_shopping_cents+=value;total.total_cents+=value
   }
+  const itemsByReceipt=await (async()=>{
+    // Product price records may be numerous; check completeness and do not present capped data as exhaustive.
+    const rows:any[]=[]
+    let failed=false
+    let capped=false
+    for(let offset=0;offset<10000;offset+=500){
+      const result=await client.from("shopping_receipt_items")
+        .select("receipt_id,product_name,normalized_name,unit_price,quantity,unit,line_total")
+        .eq("household_id",householdId).order("id").range(offset,offset+499)
+      if(result.error){failed=true;break}
+      const page=result.data??[]
+      rows.push(...page)
+      if(page.length<500)break
+      if(offset===9500)capped=true
+    }
+    return {rows,failed,capped}
+  })()
+  const receiptsById=new Map(receipts.values.map(r=>[r.id,r]))
+  const sameProducts=new Map<string,Array<{store:string;date:string;unit_price:number;currency:string}>>()
+  for(const item of itemsByReceipt.rows){
+    const receipt=receiptsById.get(item.receipt_id)
+    if(!receipt||item.unit_price==null)continue
+    const key=String(item.normalized_name||item.product_name||"").trim().toLowerCase()
+    if(!key)continue
+    const row=sameProducts.get(key)??[]
+    row.push({store:receipt.store_name?.trim()||"Unknown store",date:receipt.purchase_date,unit_price:Number(item.unit_price),currency:receipt.currency||"EUR"})
+    sameProducts.set(key,row)
+  }
+  const productComparisons=[...sameProducts.entries()]
+    .filter(([,rows])=>rows.length>=2)
+    .map(([product,rows])=>{
+      const sorted=[...rows].sort((a,b)=>a.unit_price-b.unit_price)
+      const min=sorted[0],max=sorted[sorted.length-1]
+      return {product,observations:rows.length,cheapest:min,highest:max,spread_cents:Math.round((max.unit_price-min.unit_price)*100)}
+    })
+    .sort((a,b)=>b.spread_cents-a.spread_cents)
+    .slice(0,20)
   return {
     period:{...period,end_exclusive:true,time_zone:timeZone},
     shopping_list_entries_created:items.values.length,
@@ -182,11 +255,16 @@ async function calculateShoppingSummary(client:any,householdId:string,message:st
     receipts_count:receipts.values.length,
     separately_recorded_shopping_costs_count:otherShoppingCosts.length,
     shopping_spend_by_currency_minor_units:totals,
+    receipt_totals_by_store:Object.entries(byStore).map(([store,totals])=>({store,...totals})).sort((a,b)=>b.receipts-a.receipts),
+    all_recorded_household_expenses_by_source_and_currency_minor_units:sourceTotals,
+    repeated_product_price_comparisons:productComparisons,
+    missing_receipt_amounts_count:missingReceiptAmounts,
     explanation:"Receipt totals plus shopping-specific costs not already linked to those receipts. Shopping-list entries are not assumed to have a price. Amounts are in cents (minor currency units).",
     completeness:{
       receipts:receipts.error?{error:receipts.error}:{complete:!receipts.capped},
       costs:costs.error?{error:costs.error}:{complete:!costs.capped},
       shopping_items:items.error?{error:items.error}:{complete:!items.capped},
+      receipt_product_items:itemsByReceipt.failed?{error:"Product price records unavailable"}:{complete:!itemsByReceipt.capped},
     },
   }
 }
@@ -645,7 +723,7 @@ Deno.serve(async(req)=>{
     "If essential information for a requested creation is missing, action_type must be none and reply with one concise follow-up question.",
     "You have read-only access to the current household data records below. Use them for calculations, totals, counts, comparisons, schedules, status and cross-module questions. Read table_status first: if has_more or error is set, NEVER present partial counts or totals as complete.",
     "Never claim that you cannot access household records when the needed records are present. Shopping list items do not contain prices: use dated receipts or household_costs for spending totals, deduplicate costs linked to receipts.",
-    "For shopping spending/count questions, calculated_shopping_summary supplies verified period-scoped counts and currency totals in minor units. Divide cents by 100 when displaying money. If completeness reports an error or incomplete data, explicitly say the result is partial. Do not confuse shopping-list entries with purchases.",
+    "For shopping spending/count questions, calculated_shopping_summary supplies period-scoped counts, store totals, repeated-product price comparisons, expense source totals and currency totals in minor units. Divide cents by 100 when displaying money. If completeness reports an error or incomplete data, explicitly say the result is partial. Do not confuse shopping-list entries with purchases. Do not add receipt totals to expense-by-source totals because the expense table may mirror receipts.",
     "Respect the signed-in user's existing Famioo permissions: the snapshot only contains rows allowed by current RLS.",
     "Do not expose credentials, tokens, encryption material or secrets. Those are intentionally not included.",
     "Do not invent private household data or participant names. If the snapshot does not contain enough data, say exactly what is missing.",
