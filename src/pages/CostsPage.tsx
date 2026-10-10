@@ -1,4 +1,4 @@
-import { CalendarClock, Plus, Receipt, ShoppingBag, WalletCards, X } from 'lucide-react'
+import { CalendarClock, Plus, Receipt, ShoppingBag, Sparkles, WalletCards, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { DatePicker } from '../components/ui/DatePicker'
 import { Select } from '../components/ui/Select'
@@ -89,6 +89,7 @@ export function CostsPage() {
   const { household, modules } = useHousehold()
   const access = modules.find((module) => module.code === 'costs')
   const canWrite = Boolean(access?.can_write)
+  const hasAiAssistant=Boolean(modules.find(module=>module.code==='assistant')?.enabled)
   const mondayFirst = household.week_starts_on === 1
 
   const [costs, setCosts] = useState<HouseholdCost[]>([])
@@ -434,6 +435,28 @@ export function CostsPage() {
     if (listPage > listPageCount) setListPage(listPageCount)
   }, [listPage,listPageCount])
 
+
+  function askAssistantAboutCosts() {
+    const label=range==='all'?'all recorded history':range==='week'?'this week':range==='month'?'this month':'this year'
+    const spending=occurrences.filter(row=>row.cost.flow_type!=='income')
+    const sourceTotals=new Map<string,number>()
+    const currencies=new Set<string>()
+    for(const row of spending){
+      const name=sourceLabel(row.cost.source_type)
+      sourceTotals.set(name,(sourceTotals.get(name)??0)+row.amount)
+      currencies.add(row.cost.currency)
+    }
+    const breakdown=Array.from(sourceTotals.entries())
+      .sort((a,b)=>b[1]-a[1])
+      .map(([source,total])=>source+': '+money(total,currencies.size===1?[...currencies][0]:'EUR'))
+      .join('; ')
+    const shoppingSpend=spending.filter(row=>row.cost.source_type==='shopping'||row.cost.source_type==='shopping_receipt')
+    window.dispatchEvent(new CustomEvent('famioo:assistant-prefill',{detail:{
+      message:'Please analyze and compare our household COSTS for '+label+' ('+rangeBounds.start+' to '+rangeBounds.end+'). Retrieve actual household cost records and shopping receipts from Famioo. Compare all expenses by source and shopping costs by shop/store, show the real totals, major categories, trends and practical savings. Do not double-count any receipt which is already recorded as a household cost. Differentiate recurring scheduled costs from actual purchases. The Costs report currently shows '+spending.length+' expense occurrences, with '+shoppingSpend.length+' shopping-related occurrences; breakdown: '+(breakdown||'no entries')+'. Use your own authorized database queries to verify the amounts and clearly label missing or incomplete records.'
+    }}))
+    setMobilePanel(null)
+  }
+
   function sourceLabel(source: HouseholdCost['source_type']) {
     if (source === 'shopping') return 'Shopping'
     if (source === 'shopping_receipt') return 'Shopping receipt'
@@ -549,12 +572,12 @@ export function CostsPage() {
           <p className="page-subtitle">Plan the family budget, track one-time spending and keep monthly scheduled costs visible before they happen.</p>
         </div>
 
-        {canWrite && (
-          <button className="primary-button compact" onClick={() => setComposerOpen(true)}>
-            <Plus size={16} />
-            Add cost
-          </button>
-        )}
+        <div className="cost-heading-actions">
+          {access?.enabled&&hasAiAssistant&&<button type="button" className="secondary-button compact" onClick={askAssistantAboutCosts}><Sparkles size={15}/>Compare costs with AI</button>}
+          {canWrite && <button className="primary-button compact" onClick={() => setComposerOpen(true)}>
+            <Plus size={16} />Add cost
+          </button>}
+        </div>
       </div>
 
       <div className="cost-privacy-top"><PrivacyNotice compact /></div>
@@ -572,6 +595,9 @@ export function CostsPage() {
           <Receipt size={20}/>
           <span>Entries</span>
         </button>
+        {hasAiAssistant && <button type="button" onClick={askAssistantAboutCosts} aria-label="Compare household costs with AI" title="Compare costs with AI">
+          <Sparkles size={20}/><span>AI Compare</span>
+        </button>}
       </nav>
 
       <section className="finance-overview-grid">
@@ -651,6 +677,7 @@ export function CostsPage() {
           <div>
             <span className="eyebrow">REPORTING</span>
             <h2>Cost overview</h2>
+            {hasAiAssistant&&<button type="button" className="secondary-button compact cost-report-ai-action" onClick={askAssistantAboutCosts}><Sparkles size={14}/>Analyze costs with AI</button>}
           </div>
 
           <div className="cost-range-tabs" aria-label="Cost range">
