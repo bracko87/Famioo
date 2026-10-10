@@ -18,6 +18,7 @@ type RequestBody={
   household_id?:string
   message?:string
   history?:ChatMessage[]
+  traffic_context?:string
   page_path?:string
   conversation_id?:string
 }
@@ -732,6 +733,8 @@ Deno.serve(async(req)=>{
     "Respect the signed-in user's existing Famioo permissions: the snapshot only contains rows allowed by current RLS.",
     "Do not expose credentials, tokens, encryption material or secrets. Those are intentionally not included.",
     "Do not invent private household data or participant names. If the snapshot does not contain enough data, say exactly what is missing.",
+    "When a Maps traffic report is supplied below, use its exact route distances and times instead of inventing estimates. State when it was checked, distinguish current conditions from future forecasts, and do not claim incident/closure data unless explicitly supplied. If traffic is unavailable, say why without guessing live delays.",
+    "Google Maps route context (may be unavailable): "+(typeof body.traffic_context==="string"?body.traffic_context.slice(0,1700):"No current routing request."),
     "Household timezone: "+timezone+". Current household-local date/time: "+now+".",
     "CURRENT HOUSEHOLD DATA RECORDS (JSON): "+householdContext,
     body.page_path?"Current Famioo page: "+String(body.page_path).slice(0,160)+".":"",
