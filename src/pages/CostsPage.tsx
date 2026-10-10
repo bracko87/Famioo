@@ -1,4 +1,4 @@
-import { CalendarClock, Plus, Receipt, ShoppingBag, Sparkles, WalletCards, X } from 'lucide-react'
+import { ArrowLeftRight, CalendarClock, Plus, Receipt, ShoppingBag, Sparkles, WalletCards, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { DatePicker } from '../components/ui/DatePicker'
 import { Select } from '../components/ui/Select'
@@ -27,6 +27,7 @@ type HouseholdCost = {
   schedule_interval_months: number
   flow_type: CostFlow
   notes: string | null
+  source_receipt_id: string | null
   created_at: string
 }
 
@@ -113,12 +114,25 @@ export function CostsPage() {
   const [savingFinance, setSavingFinance] = useState(false)
   const [error, setError] = useState('')
   const [mobilePanel,setMobilePanel]=useState<'plan'|'entries'|null>(null)
+  const [compareOpen,setCompareOpen]=useState(false)
+  const [comparePeriod,setComparePeriod]=useState<'month'|'30days'|'all'|'custom'>('month')
+  const [compareFrom,setCompareFrom]=useState('')
+  const [compareTo,setCompareTo]=useState('')
+  const [compareSource,setCompareSource]=useState('all')
+  const [compareStore,setCompareStore]=useState('all')
+  const [compareTiming,setCompareTiming]=useState<'all'|'one_time'|'scheduled'>('all')
+  const [compareCurrency,setCompareCurrency]=useState('all')
+  const [compareSearch,setCompareSearch]=useState('')
+  const [compareMin,setCompareMin]=useState('')
+  const [compareMax,setCompareMax]=useState('')
+  const [compareReceipts,setCompareReceipts]=useState<Array<{id:string;linked_cost_id:string|null;store_name:string|null;total_amount:number|null;purchase_date:string;currency:string}>>([])
+  const [compareReceiptComplete,setCompareReceiptComplete]=useState(true)
 
   async function loadAllCostHistory() {
     const rows:HouseholdCost[]=[]
     for(let offset=0;offset<20000;offset+=500){
       const result=await supabase.from('household_costs')
-        .select('id,title,amount,currency,cost_date,cost_kind,source_type,source_shopping_list_id,source_task_id,source_home_care_activity_id,source_home_care_asset_id,source_life_admin_item_id,schedule_type,schedule_day,schedule_interval_months,flow_type,notes,created_at')
+        .select('id,title,amount,currency,cost_date,cost_kind,source_type,source_shopping_list_id,source_task_id,source_home_care_activity_id,source_home_care_asset_id,source_life_admin_item_id,source_receipt_id,schedule_type,schedule_day,schedule_interval_months,flow_type,notes,created_at')
         .eq('household_id',household.id).order('cost_date',{ascending:false}).order('id').range(offset,offset+499)
       if(result.error)return {data:rows,error:result.error.message,complete:false}
       const chunk=(result.data??[]) as HouseholdCost[]
@@ -128,17 +142,35 @@ export function CostsPage() {
     return {data:rows,error:null,complete:false}
   }
 
+  async function loadReceiptReferences(){
+    const rows:Array<{id:string;linked_cost_id:string|null;store_name:string|null;total_amount:number|null;purchase_date:string;currency:string}>=[]
+    for(let offset=0;offset<20000;offset+=500){
+      const result=await supabase.from('shopping_receipts')
+        .select('id,linked_cost_id,store_name,total_amount,purchase_date,currency')
+        .eq('household_id',household.id).order('id').range(offset,offset+499)
+      // Costs still works for households without Shopping permissions.
+      if(result.error)return {rows:[],complete:false}
+      const chunk=result.data??[]
+      rows.push(...chunk)
+      if(chunk.length<500)return {rows,complete:true}
+    }
+    return {rows,complete:false}
+  }
+
   async function load() {
     setError('')
 
-    const [costResult, financeResult] = await Promise.all([
+    const [costResult, financeResult, receiptResult] = await Promise.all([
       loadAllCostHistory(),
       supabase
         .from('household_finance_settings')
         .select('household_id,monthly_income,monthly_budget,currency')
         .eq('household_id', household.id)
         .maybeSingle(),
+      loadReceiptReferences(),
     ])
+    setCompareReceipts(receiptResult.rows)
+    setCompareReceiptComplete(receiptResult.complete)
 
     if (costResult.error) setError(costResult.error)
     else {setCosts(costResult.data);setCostHistoryComplete(costResult.complete)}
@@ -446,24 +478,106 @@ export function CostsPage() {
   }, [listPage,listPageCount])
 
 
-  function askAssistantAboutCosts() {
-    const label=range==='all'?'all recorded history':range==='week'?'this week':range==='month'?'this month':'this year'
-    const spending=occurrences.filter(row=>row.cost.flow_type!=='income')
-    const sourceTotals=new Map<string,number>()
-    const currencies=new Set<string>()
-    for(const row of spending){
-      const name=sourceLabel(row.cost.source_type)
-      sourceTotals.set(name,(sourceTotals.get(name)??0)+row.amount)
-      currencies.add(row.cost.currency)
+
+  const comparison = useMemo(()=>{
+    const now=new Date()
+    const start30=addDays(now,-29)
+    const from=comparePeriod==='month'?dateKey(new Date(now.getFullYear(),now.getMonth(),1,12)):
+      comparePeriod==='30days'?dateKey(start30):comparePeriod==='custom'?compareFrom:''
+    const to=comparePeriod==='custom'?compareTo:''
+    const linkedIds=new Set(costs.map(cost=>cost.source_receipt_id).filter(Boolean))
+    const linkedCostIds=new Set(costs.map(cost=>cost.id))
+    const storeByCost=new Map<string,string>()
+    const storeByReceipt=new Map<string,string>()
+    for(const receipt of compareReceipts){
+      const store=receipt.store_name?.trim()||'Unknown shop'
+      if(receipt.linked_cost_id)storeByCost.set(receipt.linked_cost_id,store)
+      storeByReceipt.set(receipt.id,store)
     }
-    const breakdown=Array.from(sourceTotals.entries())
-      .sort((a,b)=>b[1]-a[1])
-      .map(([source,total])=>source+': '+money(total,currencies.size===1?[...currencies][0]:'EUR'))
-      .join('; ')
-    const shoppingSpend=spending.filter(row=>row.cost.source_type==='shopping'||row.cost.source_type==='shopping_receipt')
+    type ComparisonRow={id:string;title:string;amount:number;currency:string;date:string;source:string;flow:CostFlow;timing:ScheduleType;store:string}
+    const fromCosts:ComparisonRow[]=costs.map(cost=>({
+      id:cost.id,title:cost.title,amount:Number(cost.amount),currency:cost.currency||'EUR',date:cost.cost_date,
+      source:cost.source_type,flow:cost.flow_type,timing:cost.schedule_type,
+      store:storeByCost.get(cost.id)||(cost.source_receipt_id?storeByReceipt.get(cost.source_receipt_id):undefined)||'Unknown shop',
+    }))
+    const extraReceipts:ComparisonRow[]=compareReceipts
+      .filter(receipt=>!linkedIds.has(receipt.id)&&(!receipt.linked_cost_id||!linkedCostIds.has(receipt.linked_cost_id)))
+      .map(receipt=>({id:'receipt-'+receipt.id,title:'Receipt · '+(receipt.store_name?.trim()||'Unknown shop'),
+        amount:receipt.total_amount===null?Number.NaN:Number(receipt.total_amount),currency:receipt.currency||'EUR',
+        date:receipt.purchase_date,source:'shopping_receipt',flow:'expense' as const,timing:'one_time' as const,
+        store:receipt.store_name?.trim()||'Unknown shop'}))
+    const allRows=[...fromCosts,...extraReceipts]
+    const sources=[...new Set(allRows.map(row=>row.source))].sort()
+    const shops=[...new Set(allRows.filter(row=>row.source==='shopping'||row.source==='shopping_receipt').map(row=>row.store))].sort()
+    const currencies=[...new Set(allRows.map(row=>row.currency))].sort()
+    const term=compareSearch.trim().toLocaleLowerCase()
+    const min=compareMin.trim()===''?null:Number(compareMin.replace(',','.'))
+    const max=compareMax.trim()===''?null:Number(compareMax.replace(',','.'))
+    const rows=allRows.filter(row=>(!from||row.date>=from)&&(!to||row.date<=to)
+      &&(compareSource==='all'||row.source===compareSource)
+      &&(compareStore==='all'||row.store===compareStore)
+      &&(compareTiming==='all'||row.timing===compareTiming)
+      &&(compareCurrency==='all'||row.currency===compareCurrency)
+      &&(!term||row.title.toLocaleLowerCase().includes(term)||row.store.toLocaleLowerCase().includes(term))
+      &&(min===null||!Number.isFinite(min)||row.amount>=min)
+      &&(max===null||!Number.isFinite(max)||row.amount<=max))
+    const summary=new Map<string,{spent:number;scheduled:number;income:number;count:number}>()
+    const bySource=new Map<string,{source:string;currency:string;amount:number;count:number}>()
+    const byShop=new Map<string,{store:string;currency:string;amount:number;count:number}>()
+    const byMonth=new Map<string,{month:string;currency:string;amount:number}>()
+    let missing=0
+    for(const row of rows){
+      const item=summary.get(row.currency)??{spent:0,scheduled:0,income:0,count:0}
+      item.count++
+      if(!Number.isFinite(row.amount)){missing++;summary.set(row.currency,item);continue}
+      if(row.flow==='income')item.income+=row.amount
+      else if(row.timing==='scheduled')item.scheduled+=row.amount
+      else{
+        item.spent+=row.amount
+        const key=row.source+'::'+row.currency
+        const group=bySource.get(key)??{source:row.source,currency:row.currency,amount:0,count:0}
+        group.amount+=row.amount;group.count++;bySource.set(key,group)
+        if(row.source==='shopping'||row.source==='shopping_receipt'){
+          const storeKey=row.store+'::'+row.currency
+          const shop=byShop.get(storeKey)??{store:row.store,currency:row.currency,amount:0,count:0}
+          shop.amount+=row.amount;shop.count++;byShop.set(storeKey,shop)
+        }
+        const month=row.date.slice(0,7)
+        const monthKey=month+'::'+row.currency
+        const monthly=byMonth.get(monthKey)??{month,currency:row.currency,amount:0}
+        monthly.amount+=row.amount;byMonth.set(monthKey,monthly)
+      }
+      summary.set(row.currency,item)
+    }
+    const biggest=[...rows].filter(row=>row.flow==='expense'&&row.timing==='one_time'&&Number.isFinite(row.amount))
+      .sort((a,b)=>b.amount-a.amount).slice(0,8)
+    return {from,to,rows,sources,shops,currencies,summary:[...summary].map(([currency,amounts])=>({currency,...amounts})),
+      bySource:[...bySource.values()].sort((a,b)=>b.amount-a.amount),
+      byShop:[...byShop.values()].sort((a,b)=>b.amount-a.amount),
+      byMonth:[...byMonth.values()].sort((a,b)=>a.month.localeCompare(b.month)),
+      biggest,missing}
+  },[costs,compareReceipts,comparePeriod,compareFrom,compareTo,compareSource,compareStore,compareTiming,compareCurrency,compareSearch,compareMin,compareMax])
+
+  function resetComparison(){
+    setComparePeriod('month');setCompareFrom('');setCompareTo('');setCompareSource('all')
+    setCompareStore('all');setCompareTiming('all');setCompareCurrency('all')
+    setCompareSearch('');setCompareMin('');setCompareMax('')
+  }
+
+  function askAssistantAboutCosts(){
+    const period=comparePeriod==='custom'?'from '+(compareFrom||'earliest')+' to '+(compareTo||'today'):
+      comparePeriod==='all'?'all recorded history':comparePeriod==='month'?'this month':'the past 30 days'
     window.dispatchEvent(new CustomEvent('famioo:assistant-prefill',{detail:{
-      message:'Please analyze and compare our household COSTS for '+label+' ('+rangeBounds.start+' to '+rangeBounds.end+'). Retrieve actual household cost records and shopping receipts from Famioo. Compare all expenses by source and shopping costs by shop/store, show the real totals, major categories, trends and practical savings. Do not double-count any receipt which is already recorded as a household cost. Differentiate recurring scheduled costs from actual purchases. The Costs report currently shows '+spending.length+' expense occurrences, with '+shoppingSpend.length+' shopping-related occurrences; breakdown: '+(breakdown||'no entries')+'. '+(costHistoryComplete?'All cost records are loaded in the app.':'Some cost entries may be missing from the app because of the history size; do not assume completeness.')+' Use your own authorized database queries to verify the amounts and clearly label missing or incomplete records.'
+      message:'Compare the filtered household expenses for '+period+'. Cost category/source '+compareSource+
+        ', store '+compareStore+', timing '+compareTiming+', currency '+compareCurrency+
+        ', search '+(compareSearch||'none')+', min '+(compareMin||'none')+', max '+(compareMax||'none')+
+        '. Use only permitted records, group shopping receipts by actual stores, identify the most expensive expenses and compare spending over time. Do not duplicate shopping receipts that are linked to cost entries. Never treat scheduled budget commitments as actual past purchases. The filtered comparison panel has '+
+        comparison.rows.length+' entries; actual spending totals: '+comparison.summary.map(row=>money(row.spent,row.currency)).join(' + ')+
+        '. Store totals: '+comparison.byShop.slice(0,10).map(row=>row.store+' '+money(row.amount,row.currency)).join(', ')+
+        '. '+(costHistoryComplete&&compareReceiptComplete?'Records loaded within current app query bounds.':'Some records could not be fully loaded.')+
+        ' Do not invent missing details or merge different currencies.'
     }}))
+    setCompareOpen(false)
     setMobilePanel(null)
   }
 
