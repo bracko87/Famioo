@@ -23578,3 +23578,5 @@ html[data-famioo-theme="dark"] .shopping-compare-filters input{background:#0e0e0
 html[data-famioo-theme="dark"] .shopping-compare-filters label,
 html[data-famioo-theme="dark"] .compare-filter-head strong,
 html[data-famioo-theme="dark"] .compare-optional-ai p{color:#eee!important}
+
+.cost-compare-drawer .shopping-compare-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
