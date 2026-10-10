@@ -110,7 +110,7 @@ function localPeriod(message:string,timeZone:string){
   const [year,month,day]=today.split("-").map(Number)
   const utcDay=new Date(Date.UTC(year,month-1,day,12))
   const iso=(d:Date)=>d.toISOString().slice(0,10)
-  const explicitDates=message.match(/(20\\d{2}-\\d{2}-\\d{2})\\s*(?:to|through|until|–|—)\\s*(20\\d{2}-\\d{2}-\\d{2})/)
+  const explicitDates=message.match(/(20\d{2}-\d{2}-\d{2})\s*(?:to|through|until|–|—)\s*(20\d{2}-\d{2}-\d{2})/)
   if(explicitDates){
     const end=new Date(explicitDates[2]+"T12:00:00Z")
     end.setUTCDate(end.getUTCDate()+1)
@@ -136,6 +136,11 @@ function localPeriod(message:string,timeZone:string){
     const start=new Date(utcDay);start.setUTCDate(start.getUTCDate()-13)
     const end=new Date(utcDay);end.setUTCDate(end.getUTCDate()+1)
     return {start:iso(start),end:iso(end),label:"past 14 calendar days"}
+  }
+  if(/last (?:30|thirty) days|past (?:30|thirty) days|last 30 calendar days/i.test(message)){
+    const start=new Date(utcDay);start.setUTCDate(start.getUTCDate()-29)
+    const end=new Date(utcDay);end.setUTCDate(end.getUTCDate()+1)
+    return {start:iso(start),end:iso(end),label:"past 30 calendar days"}
   }
   if(/last week|past week|past 7 days|letzte woche|prošle nedelje/i.test(message)){
     const start=new Date(utcDay);start.setUTCDate(start.getUTCDate()-6)
@@ -233,7 +238,7 @@ async function calculateShoppingSummary(client:any,householdId:string,message:st
   for(const item of itemsByReceipt.rows){
     const receipt=receiptsById.get(item.receipt_id)
     if(!receipt||item.unit_price==null)continue
-    const key=String(item.normalized_name||item.product_name||"").trim().toLowerCase()
+    const key=String(item.normalized_name||item.product_name||"").trim().toLowerCase()+"::"+(receipt.currency||"EUR")
     if(!key)continue
     const row=sameProducts.get(key)??[]
     row.push({store:receipt.store_name?.trim()||"Unknown store",date:receipt.purchase_date,unit_price:Number(item.unit_price),currency:receipt.currency||"EUR"})
@@ -244,7 +249,7 @@ async function calculateShoppingSummary(client:any,householdId:string,message:st
     .map(([product,rows])=>{
       const sorted=[...rows].sort((a,b)=>a.unit_price-b.unit_price)
       const min=sorted[0],max=sorted[sorted.length-1]
-      return {product,observations:rows.length,cheapest:min,highest:max,spread_cents:Math.round((max.unit_price-min.unit_price)*100)}
+      return {product:product.split("::")[0],currency:min.currency,observations:rows.length,cheapest:min,highest:max,spread_cents:Math.round((max.unit_price-min.unit_price)*100)}
     })
     .sort((a,b)=>b.spread_cents-a.spread_cents)
     .slice(0,20)
@@ -259,7 +264,7 @@ async function calculateShoppingSummary(client:any,householdId:string,message:st
     all_recorded_household_expenses_by_source_and_currency_minor_units:sourceTotals,
     repeated_product_price_comparisons:productComparisons,
     missing_receipt_amounts_count:missingReceiptAmounts,
-    explanation:"Receipt totals plus shopping-specific costs not already linked to those receipts. Shopping-list entries are not assumed to have a price. Amounts are in cents (minor currency units).",
+    explanation:"Receipt totals plus shopping-specific costs not already linked to those receipts. Shopping-list entries are not assumed to have a price. Amounts are in cents (minor currency units). Product prices should only be compared when package sizes and units are equivalent.",
     completeness:{
       receipts:receipts.error?{error:receipts.error}:{complete:!receipts.capped},
       costs:costs.error?{error:costs.error}:{complete:!costs.capped},
