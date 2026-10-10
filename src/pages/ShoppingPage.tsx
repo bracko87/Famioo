@@ -148,8 +148,44 @@ export function ShoppingPage() {
   const [saving, setSaving] = useState(false)
   const [draggedListId, setDraggedListId] = useState<string | null>(null)
   const [compareOpen,setCompareOpen] = useState(false)
-  const [comparePeriod,setComparePeriod] = useState<'month'|'30days'>('month')
+  const [comparePeriod,setComparePeriod] = useState<'month'|'30days'|'all'>('all')
+  const [receiptHistoryComplete,setReceiptHistoryComplete]=useState(true)
   const [error, setError] = useState('')
+
+  async function loadAllReceiptHistory(){
+    const receiptsFound:ShoppingReceipt[]=[]
+    const itemsFound:ShoppingReceiptItem[]=[]
+    let complete=true
+    const [receiptHistory,itemHistory]=await Promise.all([
+      (async()=>{
+        for(let offset=0;offset<20000;offset+=500){
+          const response=await supabase.from('shopping_receipts')
+            .select('id,shopping_list_id,linked_cost_id,store_name,purchase_date,total_amount,currency,file_path,file_name,extraction_status,ai_model,created_at')
+            .eq('household_id',household.id).order('purchase_date',{ascending:false}).order('id').range(offset,offset+499)
+          if(response.error)return response.error.message
+          const chunk=(response.data??[]) as ShoppingReceipt[]
+          receiptsFound.push(...chunk)
+          if(chunk.length<500)return null
+          if(offset===19500)complete=false
+        }
+        return null
+      })(),
+      (async()=>{
+        for(let offset=0;offset<20000;offset+=500){
+          const response=await supabase.from('shopping_receipt_items')
+            .select('id,receipt_id,product_name,normalized_name,quantity,unit,unit_price,line_total,category')
+            .eq('household_id',household.id).order('id').range(offset,offset+499)
+          if(response.error)return response.error.message
+          const chunk=(response.data??[]) as ShoppingReceiptItem[]
+          itemsFound.push(...chunk)
+          if(chunk.length<500)return null
+          if(offset===19500)complete=false
+        }
+        return null
+      })(),
+    ])
+    return {receiptsFound,itemsFound,complete,error:receiptHistory||itemHistory}
+  }
 
   async function load() {
     setError('')
@@ -160,7 +196,7 @@ export function ShoppingPage() {
     const future = new Date()
     future.setDate(future.getDate() + 365)
 
-    const [listResult, itemResult, categoryResult, eventResult, receiptResult, receiptItemResult] = await Promise.all([
+    const [listResult, itemResult, categoryResult, eventResult, receiptHistory] = await Promise.all([
       supabase
         .from('shopping_lists')
         .select('id,title,status,linked_event_id,sync_task,linked_task_id,category_id,scheduled_date,location_text,total_cost,currency,archived_at,expanded_slot,created_at')
@@ -183,17 +219,7 @@ export function ShoppingPage() {
         p_range_start: today,
         p_range_end: future.toISOString().slice(0, 10),
       }),
-      supabase
-        .from('shopping_receipts')
-        .select('id,shopping_list_id,linked_cost_id,store_name,purchase_date,total_amount,currency,file_path,file_name,extraction_status,ai_model,created_at')
-        .eq('household_id', household.id)
-        .order('purchase_date', { ascending: false })
-        .limit(500),
-      supabase
-        .from('shopping_receipt_items')
-        .select('id,receipt_id,product_name,normalized_name,quantity,unit,unit_price,line_total,category')
-        .eq('household_id', household.id)
-        .limit(4000),
+      loadAllReceiptHistory(),
     ])
 
     if (listResult.error) setError(listResult.error.message)
@@ -218,11 +244,12 @@ export function ShoppingPage() {
       ))
     }
 
-    if (receiptResult.error) setError((current) => current || receiptResult.error.message)
-    else setReceipts((receiptResult.data ?? []) as ShoppingReceipt[])
-
-    if (receiptItemResult.error) setError((current) => current || receiptItemResult.error.message)
-    else setReceiptItems((receiptItemResult.data ?? []) as ShoppingReceiptItem[])
+    if (receiptHistory.error) setError((current) => current || receiptHistory.error || 'Could not load receipt history.')
+    else {
+      setReceipts(receiptHistory.receiptsFound)
+      setReceiptItems(receiptHistory.itemsFound)
+      setReceiptHistoryComplete(receiptHistory.complete)
+    }
   }
 
   useEffect(() => { void load() }, [household.id])
@@ -336,9 +363,8 @@ export function ShoppingPage() {
     const monthKey=now.toISOString().slice(0,7)
 
     const selectedReceipts=receipts
-      .filter((receipt)=>comparePeriod==='month'
-        ? receipt.purchase_date.startsWith(monthKey)
-        : receipt.purchase_date>=start30Key)
+      .filter((receipt)=>comparePeriod==='all' ||
+        (comparePeriod==='month' ? receipt.purchase_date.startsWith(monthKey) : receipt.purchase_date>=start30Key))
       .sort((a,b)=>a.purchase_date.localeCompare(b.purchase_date))
 
     const selectedIds=new Set(selectedReceipts.map((receipt)=>receipt.id))
@@ -405,14 +431,14 @@ export function ShoppingPage() {
 
   function askAssistantAboutShopping(){
     const report=receiptComparisonReport
-    const periodLabel=comparePeriod==='month' ? 'this month' : 'the last 30 days'
+    const periodLabel=comparePeriod==='all'?'all recorded history':comparePeriod==='month' ? 'this month' : 'the last 30 days'
     const increases=report.increases.map((item)=>item.label+' '+item.percent.toFixed(0)+'%').join(', ') || 'none detected'
     const decreases=report.decreases.map((item)=>item.label+' '+Math.abs(item.percent).toFixed(0)+'%').join(', ') || 'none detected'
     const stores=report.stores.slice(0,5).map((item)=>item.store+' '+moneyValue(item.value)).join(', ') || 'no store data'
 
     window.dispatchEvent(new CustomEvent('famioo:assistant-prefill',{
       detail:{
-        message:'Analyze our shopping receipts for '+periodLabel+'. We have '+report.selectedReceipts.length+' receipts totaling '+moneyValue(report.total)+'. Spend by store: '+stores+'. Biggest detected price increases: '+increases+'. Biggest detected price decreases: '+decreases+'. Give me useful household shopping insights, point out where we pay more or less, and suggest practical ways to save money. Do not invent data that is not included here.',
+        message:'Compare ALL our shopping receipts and recorded shopping costs for '+periodLabel+'. Use the household database, include receipts from every shop, group receipts and totals by store, compare repeated product prices across different shops and dates, and show which stores are cheaper. Deduplicate costs already linked to receipts. Our on-screen receipt overview shows '+report.selectedReceipts.length+' receipts, '+moneyValue(report.total)+' in receipt totals, stores: '+stores+', largest detected increases: '+increases+', decreases: '+decreases+'. '+(receiptHistoryComplete?'Receipt history shown in the app was loaded completely.':'Receipt history shown in the app may be incomplete; verify server records before claiming totals are complete.')+' Explain useful spending trends and savings using real data, and mark missing details clearly.',
       },
     }))
     setCompareOpen(false)
@@ -1002,8 +1028,9 @@ export function ShoppingPage() {
           <p className="page-subtitle">Create several shared lists, or connect a list to a Calendar event and inherit its date, category and location.</p>
         </div>
 
-        {canWrite && (
-          <div className="shopping-heading-actions">
+        <div className="shopping-heading-actions">
+          {access?.enabled&&<button type="button" className="secondary-button compact shopping-compare-action" onClick={()=>setCompareOpen(true)}><ArrowLeftRight size={15}/>Compare receipts</button>}
+          {canWrite&&<>
             <label className="secondary-button compact shopping-upload-receipt-button">
               <Upload size={15}/>
               Upload receipt
@@ -1023,8 +1050,8 @@ export function ShoppingPage() {
               <Plus size={16} />
               Create list
             </button>
-          </div>
-        )}
+          </>}
+        </div>
       </div>
 
       <PrivacyNotice compact />
@@ -1036,7 +1063,7 @@ export function ShoppingPage() {
         aria-label={compareOpen ? 'Close shopping comparison' : 'Compare shopping receipts'}
         aria-expanded={compareOpen}
       >
-        <ArrowLeftRight size={19}/>
+        <ArrowLeftRight size={19}/><span>Compare</span>
       </button>
 
       {compareOpen && (
@@ -1054,8 +1081,10 @@ export function ShoppingPage() {
             <div className="shopping-compare-period">
               <button type="button" className={comparePeriod==='month'?'active':''} onClick={()=>setComparePeriod('month')}>This month</button>
               <button type="button" className={comparePeriod==='30days'?'active':''} onClick={()=>setComparePeriod('30days')}>Last 30 days</button>
+              <button type="button" className={comparePeriod==='all'?'active':''} onClick={()=>setComparePeriod('all')}>All receipts</button>
             </div>
 
+            {!receiptHistoryComplete&&<p className="shopping-compare-limited">Very large receipt history: the report shows the first 20,000 records. AI can query additional records separately.</p>}
             <div className="shopping-compare-summary">
               <article><span>Total spend</span><strong>{moneyValue(receiptComparisonReport.total)}</strong></article>
               <article><span>Receipts</span><strong>{receiptComparisonReport.selectedReceipts.length}</strong></article>
@@ -1113,11 +1142,11 @@ export function ShoppingPage() {
               )) : <small>No repeated products with a detected price decrease yet.</small>}
             </section>
 
-            {hasAiAssistant && (
+            {hasAiAssistant ? (
               <button type="button" className="primary-button shopping-compare-ai" onClick={askAssistantAboutShopping}>
-                <Sparkles size={15}/>Ask AI for a deeper report
+                <Sparkles size={15}/>Compare all stores with AI
               </button>
-            )}
+            ):<small className="shopping-compare-ai-note">Enable Famioo Assistant to request an AI comparison of all your receipts and shopping costs.</small>}
           </aside>
         </>
       )}
