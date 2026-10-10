@@ -1113,74 +1113,114 @@ export function ShoppingPage() {
             </header>
 
             <div className="shopping-compare-period">
-              <button type="button" className={comparePeriod==='month'?'active':''} onClick={()=>setComparePeriod('month')}>This month</button>
-              <button type="button" className={comparePeriod==='30days'?'active':''} onClick={()=>setComparePeriod('30days')}>Last 30 days</button>
-              <button type="button" className={comparePeriod==='all'?'active':''} onClick={()=>setComparePeriod('all')}>All receipts</button>
+              {(['month','30days','all','custom'] as const).map(period=>(
+                <button type="button" key={period} className={comparePeriod===period?'active':''} onClick={()=>setComparePeriod(period)}>
+                  {period==='month'?'This month':period==='30days'?'30 days':period==='all'?'All history':'Custom'}
+                </button>
+              ))}
+            </div>
+            <div className="compare-filter-head"><strong>Filter & compare</strong><button type="button" onClick={resetCompareFilters}>Reset filters</button></div>
+            <div className="shopping-compare-filters">
+              {comparePeriod==='custom'&&<div className="compare-filter-dates">
+                <label>From<DatePicker value={compareFrom} onChange={setCompareFrom} ariaLabel="Comparison start date"/></label>
+                <label>To<DatePicker value={compareTo} min={compareFrom||undefined} onChange={setCompareTo} ariaLabel="Comparison end date"/></label>
+              </div>}
+              <label>Shop / store
+                <Select value={compareStore} onChange={setCompareStore}
+                  options={[{value:'all',label:'All stores'},...compareStores.map(store=>({value:store,label:store}))]} ariaLabel="Select shop to compare"/>
+              </label>
+              <label>Product name
+                <input type="search" value={compareProduct} onChange={event=>setCompareProduct(event.target.value)}
+                  placeholder="e.g. milk, coffee, bread…" aria-label="Filter receipt products"/>
+              </label>
+              <div className="compare-filter-dates">
+                <label>Product category
+                  <Select value={compareCategory} onChange={setCompareCategory}
+                    options={[{value:'all',label:'All categories'},...compareCategories.map(category=>({value:category,label:category}))]} ariaLabel="Compare product category"/>
+                </label>
+                <label>Currency
+                  <Select value={compareCurrency} onChange={setCompareCurrency}
+                    options={[{value:'all',label:'All currencies'},...compareCurrencies.map(currency=>({value:currency,label:currency}))]} ariaLabel="Comparison currency"/>
+                </label>
+              </div>
+              <label>Sort stores
+                <Select value={compareSort} onChange={value=>setCompareSort(value as 'total'|'count')}
+                  options={[{value:'total',label:'Highest spending'},{value:'count',label:'Most visits / receipts'}]} ariaLabel="Store sort order"/>
+              </label>
+              {receiptComparisonReport.itemFiltered&&<small className="compare-filter-note">Totals use only matched product lines, not entire receipt amounts. Receipts without readable product lines are excluded.</small>}
             </div>
 
-            {!receiptHistoryComplete&&<p className="shopping-compare-limited">Very large receipt history: the report shows the first 20,000 records. AI can query additional records separately.</p>}
+            {!receiptHistoryComplete&&<p className="shopping-compare-limited">This report may be incomplete: the history limit was reached. Do not treat these totals as exhaustive.</p>}
             <div className="shopping-compare-summary">
-              <article><span>Total spend</span><strong>{moneyValue(receiptComparisonReport.total)}</strong></article>
-              <article><span>Receipts</span><strong>{receiptComparisonReport.selectedReceipts.length}</strong></article>
-              <article><span>Average trip</span><strong>{moneyValue(receiptComparisonReport.average)}</strong></article>
+              <article><span>Total spend</span><strong>{receiptComparisonReport.totals.length
+                ? receiptComparisonReport.totals.map(row=>moneyValue(row.total,row.currency)).join(' + '):'—'}</strong></article>
+              <article><span>Receipts found</span><strong>{receiptComparisonReport.selectedReceipts.length}</strong></article>
+              <article><span>Average / receipt</span><strong>{receiptComparisonReport.averagePerCurrency.length
+                ? receiptComparisonReport.averagePerCurrency.map(row=>moneyValue(row.average,row.currency)).join(' + '):'—'}</strong></article>
             </div>
-
-            {receiptComparisonReport.latest && (
-              <section className="shopping-compare-section">
-                <h3>Latest receipt</h3>
-                <div className="shopping-compare-latest">
-                  <span>
-                    <strong>{receiptComparisonReport.latest.store_name || 'Unknown store'}</strong>
-                    <small>{receiptComparisonReport.latest.purchase_date}</small>
+            {receiptComparisonReport.unknownTotals>0&&<p className="shopping-compare-limited">{receiptComparisonReport.unknownTotals} missing or invalid amount(s) excluded from totals.</p>}
+            {receiptComparisonReport.selectedReceipts.length===0&&<p className="shopping-compare-limited">No matching receipts found. Try another date, store, product, or category.</p>}
+            <section className="shopping-compare-section">
+              <h3>Spending by shop</h3>
+              {receiptComparisonReport.stores.length?receiptComparisonReport.stores.map(row=>(
+                <div className="shopping-compare-row" key={row.store+'-'+row.currency}>
+                  <span>{row.store}<small className="compare-row-sub">{row.count} receipt{row.count===1?'':'s'}</small></span>
+                  <strong>{moneyValue(row.total,row.currency)}</strong>
+                </div>
+              )):<small>No matching shop totals available.</small>}
+            </section>
+            <section className="shopping-compare-section">
+              <h3>Most expensive</h3>
+              {receiptComparisonReport.highestReceipt&&!receiptComparisonReport.itemFiltered&&
+                <div className="shopping-compare-row">
+                  <span>Receipt: {receiptComparisonReport.highestReceipt.store_name||'Unknown store'}
+                    <small className="compare-row-sub">{receiptComparisonReport.highestReceipt.purchase_date}</small>
                   </span>
-                  <strong>{moneyValue(Number(receiptComparisonReport.latest.total_amount??0),receiptComparisonReport.latest.currency)}</strong>
-                </div>
-                {receiptComparisonReport.previous && receiptComparisonReport.receiptDelta!=null && (
-                  <small>
-                    {receiptComparisonReport.receiptDelta===0
-                      ? 'Same total as the previous receipt.'
-                      : Math.abs(receiptComparisonReport.receiptDelta)>0
-                        ? (receiptComparisonReport.receiptDelta>0 ? 'Up ' : 'Down ')+moneyValue(Math.abs(receiptComparisonReport.receiptDelta))+' versus the previous receipt.'
-                        : ''}
-                  </small>
-                )}
-              </section>
-            )}
-
-            <section className="shopping-compare-section">
-              <h3>Spend by store</h3>
-              {receiptComparisonReport.stores.length ? receiptComparisonReport.stores.slice(0,6).map((item)=>(
-                <div className="shopping-compare-row" key={item.store}>
-                  <span>{item.store}</span><strong>{moneyValue(item.value)}</strong>
-                </div>
-              )) : <small>No receipt data for this period.</small>}
+                  <strong>{moneyValue(Number(receiptComparisonReport.highestReceipt.total_amount),receiptComparisonReport.highestReceipt.currency)}</strong>
+                </div>}
+              {receiptComparisonReport.biggestProduct&&
+                <div className="shopping-compare-row">
+                  <span>Product: {receiptComparisonReport.biggestProduct.item.product_name}
+                    <small className="compare-row-sub">{receiptComparisonReport.biggestProduct.receipt.store_name||'Unknown store'}</small>
+                  </span>
+                  <strong>{moneyValue(Number(receiptComparisonReport.biggestProduct.item.line_total),receiptComparisonReport.biggestProduct.receipt.currency)}</strong>
+                </div>}
+              {!receiptComparisonReport.highestReceipt&&!receiptComparisonReport.biggestProduct&&<small>No priced purchases in this selection.</small>}
             </section>
-
             <section className="shopping-compare-section">
-              <h3>Prices that increased</h3>
-              {receiptComparisonReport.increases.length ? receiptComparisonReport.increases.map((item)=>(
-                <div className="shopping-compare-product" key={'up-'+item.key}>
-                  <span><strong>{item.label}</strong><small>{item.first.store} → {item.last.store}</small></span>
-                  <b>+{item.percent.toFixed(0)}%</b>
+              <h3>Product prices across shops and dates</h3>
+              {receiptComparisonReport.priceComparisons.length?receiptComparisonReport.priceComparisons.map(row=>(
+                <div className="shopping-compare-product compare-price-product" key={row.key}>
+                  <span><strong>{row.label}</strong>
+                    <small>{row.cheapest.store}: {moneyValue(row.cheapest.price,row.cheapest.currency)} → {row.mostExpensive.store}: {moneyValue(row.mostExpensive.price,row.mostExpensive.currency)}</small>
+                    <small>{row.observations} observations · {row.cheapest.unit==='unspecified'?'unit not recorded':row.cheapest.unit}</small>
+                  </span>
+                  <b>{moneyValue(row.mostExpensive.price-row.cheapest.price,row.cheapest.currency)}</b>
                 </div>
-              )) : <small>No repeated products with a detected price increase yet.</small>}
+              )):<small>At least two priced observations of the same product are needed for comparisons.</small>}
+              <small className="compare-filter-note">Compare equivalent package sizes before judging which store is cheaper. Unit labels are taken from receipts.</small>
             </section>
-
             <section className="shopping-compare-section">
-              <h3>Prices that decreased</h3>
-              {receiptComparisonReport.decreases.length ? receiptComparisonReport.decreases.map((item)=>(
-                <div className="shopping-compare-product" key={'down-'+item.key}>
-                  <span><strong>{item.label}</strong><small>{item.first.store} → {item.last.store}</small></span>
-                  <b>{item.percent.toFixed(0)}%</b>
+              <h3>Detected price changes</h3>
+              {receiptComparisonReport.increases.length ? receiptComparisonReport.increases.map(row=>(
+                <div className="shopping-compare-product" key={'rise-'+row.key}>
+                  <span><strong>{row.label}</strong><small>{row.first.date} → {row.last.date}</small></span>
+                  <b>+{row.percent.toFixed(1)}%</b>
                 </div>
-              )) : <small>No repeated products with a detected price decrease yet.</small>}
+              )):<small>No verified increases for the current filters.</small>}
+              {receiptComparisonReport.decreases.length ? receiptComparisonReport.decreases.map(row=>(
+                <div className="shopping-compare-product" key={'fall-'+row.key}>
+                  <span><strong>{row.label}</strong><small>{row.first.date} → {row.last.date}</small></span>
+                  <b>{row.percent.toFixed(1)}%</b>
+                </div>
+              )):null}
             </section>
-
-            {hasAiAssistant ? (
-              <button type="button" className="primary-button shopping-compare-ai" onClick={askAssistantAboutShopping}>
-                <Sparkles size={15}/>Compare all stores with AI
-              </button>
-            ):<small className="shopping-compare-ai-note">Enable Famioo Assistant to request an AI comparison of all your receipts and shopping costs.</small>}
+            <div className="compare-optional-ai">
+              <p>Optional AI analysis</p>
+              {hasAiAssistant?<button type="button" className="secondary-button shopping-compare-ai" onClick={askAssistantAboutShopping}>
+                <Sparkles size={15}/>Ask AI to explain these results
+              </button>:<small>AI insights are available when Famioo Assistant is enabled.</small>}
+            </div>
           </aside>
         </>
       )}
