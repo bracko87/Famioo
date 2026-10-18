@@ -23764,3 +23764,69 @@ html[data-famioo-theme="dark"] .travel-traffic-result{background:#131313;border-
   .side-nav button.sidebar-module-pin { min-height: 38px; height: 38px; width: 32px; }
   .side-nav .sidebar-module-row { grid-template-columns: minmax(0,1fr) 32px; }
 }
+
+
+/* Sidebar favorites polish: a clean, unframed section with discreet pin buttons. */
+.side-nav .sidebar-favorites {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 4px 0;
+  margin: 2px 0 8px;
+}
+.side-nav .sidebar-favorites.drop-target {
+  border: 0;
+  background: rgba(255,255,255,.11);
+  outline: 1px dashed rgba(255,255,255,.65);
+  outline-offset: -1px;
+}
+.sidebar-favorites-header { padding: 0 10px 2px; }
+.sidebar-favorites-links .sidebar-module-row { background: transparent; }
+.side-nav .sidebar-module-row { grid-template-columns: minmax(0,1fr) 24px; gap: 0; }
+.side-nav button.sidebar-module-pin {
+  width: 22px;
+  min-width: 22px;
+  min-height: 23px;
+  height: 23px;
+  border-radius: 6px;
+  opacity: .75;
+}
+.side-nav button.sidebar-module-pin:hover,
+.side-nav button.sidebar-module-pin:focus-visible,
+.side-nav button.sidebar-module-pin.active { opacity: 1; }
+.side-nav button.sidebar-module-pin svg { width: 12px; height: 12px; }
+.sidebar-favorites-count { min-width: 18px; height: 18px; padding-inline: 5px; }
+
+.home-upcoming-calendar > header { display: flex; justify-content: space-between; gap: 10px; }
+.home-upcoming-next .home-upcoming-calendar-groups { max-height: 320px; }
+.home-upcoming-calendar .home-upcoming-period {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 400;
+  color: #918196;
+}
+.home-upcoming-count {
+  display: grid;
+  place-items: center;
+  align-self: center;
+  min-width: 26px;
+  height: 23px;
+  border-radius: 999px;
+  padding: 0 7px;
+  background: #f1eaf4;
+  color: #80658b;
+  font-size: 11px;
+}
+@media (max-width: 900px) {
+  .side-nav .sidebar-module-row { grid-template-columns: minmax(0,1fr) 26px; }
+  .side-nav button.sidebar-module-pin {
+    min-height: 28px;
+    height: 28px;
+    width: 26px;
+    min-width: 26px;
+    opacity: 1;
+  }
+  .side-nav .sidebar-favorites { padding: 4px 0; }
+  .app-sidebar.collapsed .side-nav .sidebar-favorites { border: 0; padding: 4px 0; }
+}
