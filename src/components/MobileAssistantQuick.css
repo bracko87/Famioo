@@ -322,3 +322,23 @@
  .mobile-assistant-record-actions button{border:1px solid #d9cfe8;border-radius:8px;padding:7px 11px;background:#fff;color:#7059a8;cursor:pointer}
  .mobile-assistant-record-actions .send-now{background:#6750b9;color:#fff;border-color:#6750b9}
 }
+
+
+/* Keep the closed AI shortcut in the bottom-right viewport corner, not halfway
+   up the right edge. Leave room for the fixed mobile bottom navigation. */
+@media (min-width: 701px) {
+  .mobile-assistant-tab {
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+  }
+}
+@media (max-width: 700px) {
+  .mobile-assistant-tab {
+    position: fixed;
+    right: 12px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    border-right: 1px solid rgba(255,255,255,.46);
+    border-radius: 15px;
+  }
+}
