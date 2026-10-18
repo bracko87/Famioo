@@ -18,6 +18,7 @@ import {
   LogOut,
   MapPinned,
   Menu,
+  Star,
   MessageCircle,
   MessagesSquare,
   PawPrint,
@@ -38,7 +39,7 @@ import {
   Utensils,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState, type ComponentType } from 'react'
+import { useEffect, useMemo, useRef, useState, type ComponentType, type DragEvent } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
@@ -162,6 +163,28 @@ const sidebarCategories = [
   { id: 'connected' as const, label: 'Connected' },
 ]
 
+
+const favoritePreferenceKey = 'famioo_favorite_modules_v1'
+const moduleCodes = new Set<ModuleCode>(sidebarModuleItems.map((item) => item.code))
+
+function validFavoriteModules(value: unknown): ModuleCode[] {
+  if (!Array.isArray(value)) return []
+  return [...new Set(value.filter((code): code is ModuleCode => (
+    typeof code === 'string' && moduleCodes.has(code as ModuleCode)
+  )))]
+}
+
+function readFavoriteModules(userId: string, cloudValue: unknown): ModuleCode[] {
+  // Supabase auth metadata is per account and syncs to the user's other devices.
+  // The local copy keeps the sidebar usable when temporarily offline.
+  if (Array.isArray(cloudValue)) return validFavoriteModules(cloudValue)
+  try {
+    return validFavoriteModules(JSON.parse(window.localStorage.getItem(`famioo.favorites.${userId}`) ?? '[]'))
+  } catch {
+    return []
+  }
+}
+
 type HeaderNotification = {
   id: string
   notification_type: string
@@ -187,12 +210,24 @@ export function AppShell() {
   })
   const [notificationOpen, setNotificationOpen] = useState(false)
   const [openSidebarCategory, setOpenSidebarCategory] = useState<string>('')
+  const [favorites, setFavorites] = useState<ModuleCode[]>(() => readFavoriteModules(user.id, user.user_metadata?.[favoritePreferenceKey]))
+  const [draggedModule, setDraggedModule] = useState<ModuleCode | null>(null)
+  const [favoriteDropTarget, setFavoriteDropTarget] = useState(false)
+  const [favoriteSyncError, setFavoriteSyncError] = useState(false)
+  const favoriteSaveQueue = useRef<Promise<unknown>>(Promise.resolve())
+  const favoritesRef = useRef(favorites)
   const [notifications, setNotifications] = useState<HeaderNotification[]>([])
   const [profileAvatarUrl, setProfileAvatarUrl] = useState('')
   const visibleSidebarModules = useMemo(() => {
     const enabledCodes = new Set(modules.filter((module) => module.enabled).map((module) => module.code))
     return sidebarModuleItems.filter((item) => enabledCodes.has(item.code) && routeByModule[item.code])
   }, [modules])
+  const accessibleModuleCodes = useMemo(() => new Set(visibleSidebarModules.map((item) => item.code)), [visibleSidebarModules])
+  const pinnedModuleItems = favorites
+    .filter((code) => accessibleModuleCodes.has(code))
+    .map((code) => visibleSidebarModules.find((item) => item.code === code))
+    .filter((item): item is SidebarModuleItem => Boolean(item))
+  const regularModuleItems = visibleSidebarModules.filter((item) => !favorites.includes(item.code))
   const useCategorizedSidebar = visibleSidebarModules.length > 15
 
   const currentProfile = profiles.find((profile) => profile.linked_user_id === user.id)
@@ -202,6 +237,119 @@ export function AppShell() {
     ?? 'Profile'
   const profileMark = currentProfile?.avatar_emoji ?? profileName.slice(0, 1).toUpperCase()
   const unreadCount = notifications.filter((item) => item.status === 'sent').length
+
+  useEffect(() => {
+    const saved = readFavoriteModules(user.id, user.user_metadata?.[favoritePreferenceKey])
+    favoritesRef.current = saved
+    setFavorites(saved)
+    setFavoriteSyncError(false)
+    favoriteSaveQueue.current = Promise.resolve()
+  }, [user.id])
+
+  function saveFavorites(next: ModuleCode[]) {
+    const cleaned = validFavoriteModules(next)
+    if (cleaned.join('|') === favoritesRef.current.join('|')) return
+    favoritesRef.current = cleaned
+    setFavorites(cleaned)
+    setFavoriteSyncError(false)
+    try {
+      window.localStorage.setItem(`famioo.favorites.${user.id}`, JSON.stringify(cleaned))
+    } catch {
+      // The cloud account preference still works if browser storage is unavailable.
+    }
+
+    // Serialize rapid drag/drop and pin actions so an older save cannot overwrite
+    // the last user choice. Metadata is private to the authenticated user.
+    favoriteSaveQueue.current = favoriteSaveQueue.current
+      .catch(() => undefined)
+      .then(async () => {
+        const { error } = await supabase.auth.updateUser({
+          data: { [favoritePreferenceKey]: cleaned },
+        })
+        if (error) throw error
+        setFavoriteSyncError(false)
+      })
+      .catch((error: unknown) => {
+        console.warn('Could not synchronize favorite modules', error)
+        setFavoriteSyncError(true)
+      })
+  }
+
+  function pinModule(code: ModuleCode) {
+    if (!accessibleModuleCodes.has(code)) return
+    saveFavorites([...favoritesRef.current.filter((item) => item !== code), code])
+  }
+
+  function unpinModule(code: ModuleCode) {
+    saveFavorites(favoritesRef.current.filter((item) => item !== code))
+  }
+
+  function moveFavoriteBefore(code: ModuleCode, before: ModuleCode | null) {
+    if (!accessibleModuleCodes.has(code) || code === before) return
+    const next = favoritesRef.current.filter((item) => item !== code)
+    const index = before ? next.indexOf(before) : -1
+    next.splice(index === -1 ? next.length : index, 0, code)
+    saveFavorites(next)
+  }
+
+  function moduleFromDrop(event: DragEvent<HTMLElement>): ModuleCode | null {
+    const code = event.dataTransfer.getData('application/x-famioo-module') || draggedModule || ''
+    return moduleCodes.has(code as ModuleCode) && accessibleModuleCodes.has(code as ModuleCode)
+      ? code as ModuleCode
+      : null
+  }
+
+  function beginModuleDrag(event: DragEvent<HTMLElement>, code: ModuleCode) {
+    event.dataTransfer.setData('application/x-famioo-module', code)
+    event.dataTransfer.effectAllowed = 'move'
+    setDraggedModule(code)
+  }
+
+  function endModuleDrag() {
+    setDraggedModule(null)
+    setFavoriteDropTarget(false)
+  }
+
+  function renderModuleItem(item: SidebarModuleItem, isPinned: boolean) {
+    const Icon = iconByModule[item.code] ?? Sparkles
+    const route = routeByModule[item.code]
+    if (!route) return null
+    return (
+      <div
+        className={'sidebar-module-row' + (isPinned ? ' pinned' : '')}
+        key={item.code}
+        draggable
+        onDragStart={(event) => beginModuleDrag(event, item.code)}
+        onDragEnd={endModuleDrag}
+        onDragOver={isPinned ? (event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          event.dataTransfer.dropEffect = 'move'
+        } : undefined}
+        onDrop={isPinned ? (event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          const code = moduleFromDrop(event)
+          if (code) moveFavoriteBefore(code, item.code)
+          endModuleDrag()
+        } : undefined}
+      >
+        <NavLink to={route} onClick={() => setMobileMenu(false)} title={item.label}>
+          <Icon size={18} /><span className="nav-text">{item.label}</span>
+        </NavLink>
+        <button
+          type="button"
+          className={'sidebar-module-pin' + (isPinned ? ' active' : '')}
+          aria-label={(isPinned ? 'Unpin ' : 'Add ') + item.label + (isPinned ? ' from favorites' : ' to favorites')}
+          title={isPinned ? 'Remove from favorites' : 'Add to favorites'}
+          aria-pressed={isPinned}
+          onClick={() => isPinned ? unpinModule(item.code) : pinModule(item.code)}
+        >
+          <Star size={14} fill={isPinned ? 'currentColor' : 'none'} />
+        </button>
+      </div>
+    )
+  }
 
   useEffect(() => {
     window.scrollTo({ top:0,left:0,behavior:'auto' })
@@ -308,25 +456,68 @@ export function AppShell() {
         </button>
 
         <nav className={'side-nav '+(useCategorizedSidebar?'side-nav-categorized':'side-nav-flat')} aria-label="Main navigation">
-          <span className="nav-label">{useCategorizedSidebar ? 'MODULES' : 'PLAN'}</span>
+          <span className="nav-label">MODULES</span>
           <NavLink to="/app" end onClick={() => setMobileMenu(false)} title="Home"><Home size={18} /><span className="nav-text">Home</span></NavLink>
 
+          <section
+            className={'sidebar-favorites' + (favoriteDropTarget ? ' drop-target' : '')}
+            aria-label="Favorite modules"
+            onDragOver={(event) => {
+              event.preventDefault()
+              event.dataTransfer.dropEffect = 'move'
+              setFavoriteDropTarget(true)
+            }}
+            onDragLeave={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node)) setFavoriteDropTarget(false)
+            }}
+            onDrop={(event) => {
+              event.preventDefault()
+              const code = moduleFromDrop(event)
+              if (code) moveFavoriteBefore(code, null)
+              endModuleDrag()
+            }}
+          >
+            <div className="sidebar-favorites-header">
+              <Star size={15} fill={pinnedModuleItems.length ? 'currentColor' : 'none'} aria-hidden="true" />
+              <span className="nav-text">Favorites</span>
+              <small className="sidebar-favorites-count">{pinnedModuleItems.length}</small>
+            </div>
+            {pinnedModuleItems.length ? (
+              <div className="sidebar-favorites-links">
+                {pinnedModuleItems.map((item) => renderModuleItem(item, true))}
+              </div>
+            ) : (
+              <span className="sidebar-favorites-empty nav-text">Drag a module here or tap its star to pin it.</span>
+            )}
+            {favoriteSyncError && <small className="sidebar-favorites-error nav-text" role="status">Saved on this device; account sync failed. Try pinning again later.</small>}
+          </section>
+
           <div className="sidebar-flat-modules">
-            {visibleSidebarModules.map((item) => {
-              const Icon = iconByModule[item.code] ?? Sparkles
-              const route = routeByModule[item.code]
-              if (!route) return null
-              return <NavLink to={route} key={item.code} onClick={() => setMobileMenu(false)} title={item.label}><Icon size={18} /><span className="nav-text">{item.label}</span></NavLink>
-            })}
+            {regularModuleItems.map((item) => renderModuleItem(item, false))}
           </div>
 
           <div className="sidebar-category-modules">
             {sidebarCategories.map((category) => {
-              const items = visibleSidebarModules.filter((item) => item.category === category.id)
+              const items = regularModuleItems.filter((item) => item.category === category.id)
               if (!items.length) return null
               const open = openSidebarCategory === category.id
               return (
-                <section className={open ? 'sidebar-module-group open' : 'sidebar-module-group'} key={category.id}>
+                <section
+                  className={open ? 'sidebar-module-group open' : 'sidebar-module-group'}
+                  key={category.id}
+                  onDragOver={(event) => {
+                    // A pinned module dropped into a group returns to its original category.
+                    if (draggedModule && favorites.includes(draggedModule)) event.preventDefault()
+                  }}
+                  onDrop={(event) => {
+                    const code = moduleFromDrop(event)
+                    if (code && favorites.includes(code) && sidebarModuleItems.find((item) => item.code === code)?.category === category.id) {
+                      event.preventDefault()
+                      unpinModule(code)
+                    }
+                    endModuleDrag()
+                  }}
+                >
                   <button
                     type="button"
                     className="sidebar-module-group-toggle"
@@ -338,12 +529,7 @@ export function AppShell() {
                     <ChevronDown size={15} />
                   </button>
                   <div className="sidebar-module-group-links">
-                    {items.map((item) => {
-                      const Icon = iconByModule[item.code] ?? Sparkles
-                      const route = routeByModule[item.code]
-                      if (!route) return null
-                      return <NavLink to={route} key={item.code} onClick={() => setMobileMenu(false)} title={item.label}><Icon size={18} /><span className="nav-text">{item.label}</span></NavLink>
-                    })}
+                    {items.map((item) => renderModuleItem(item, false))}
                   </div>
                 </section>
               )
