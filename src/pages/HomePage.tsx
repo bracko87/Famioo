@@ -106,6 +106,27 @@ const routeByModule: Record<ModuleCode, string> = {
   voice_integration: '/app/voice',
 }
 
+function householdDateKey(date: Date, timezone: string) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date)
+  const part = (type: string) => parts.find((entry) => entry.type === type)?.value ?? ''
+  return `${part('year')}-${part('month')}-${part('day')}`
+}
+
+function moveDateKey(dateKey: string, days: number) {
+  const [year, month, day] = dateKey.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, day + days, 12)).toISOString().slice(0, 10)
+}
+
+function eventDayKey(item: CalendarOccurrence, timezone: string) {
+  if (item.all_day || !item.occurrence_start_at) return item.occurrence_start_date ?? ''
+  return householdDateKey(new Date(item.occurrence_start_at), timezone)
+}
+
 export function HomePage() {
   const { household, modules, profiles } = useHousehold()
   const [eventCount, setEventCount] = useState(0)
@@ -118,11 +139,10 @@ export function HomePage() {
   useEffect(() => {
     void supabase.rpc('purge_old_archives_v1', { p_household_id: household.id })
 
-    const now = new Date()
-    const today = now.toISOString().slice(0, 10)
-    const upcomingEndDate = new Date(now)
-    upcomingEndDate.setDate(upcomingEndDate.getDate() + 10)
-    const upcomingEnd = upcomingEndDate.toISOString().slice(0, 10)
+    const today = householdDateKey(new Date(), household.timezone)
+    // Today + tomorrow are displayed in the first card. The second card holds
+    // the following ten complete calendar days, without overlapping dates.
+    const upcomingEnd = moveDateKey(today, 11)
     const calendarModule = modules.find((module) => module.code === 'calendar')
     const tasksModule = modules.find((module) => module.code === 'tasks')
     const checklistsModule = modules.find((module) => module.code === 'checklists')
@@ -185,8 +205,7 @@ export function HomePage() {
       })
       setUpcomingEvents(orderedOccurrences)
       setEventCount(orderedOccurrences.filter((item) => {
-        const day = item.occurrence_start_date ?? item.occurrence_start_at?.slice(0,10)
-        return day === today
+        return eventDayKey(item, household.timezone) === today
       }).length)
       setTaskCount(tasks.count ?? 0)
       setChecklistCount(lists.count ?? 0)
@@ -199,7 +218,7 @@ export function HomePage() {
           }, 0)
         : 0)
     })
-  }, [household.id, modules])
+  }, [household.id, household.timezone, modules])
 
   useEffect(() => {
     const projectsModule = modules.find((module) => module.code === 'projects')
@@ -227,13 +246,16 @@ export function HomePage() {
   }, [household.id,modules])
 
 
-  const todayKey = new Date().toISOString().slice(0,10)
-  const todayEvents = upcomingEvents.filter((item) =>
-    (item.occurrence_start_date ?? item.occurrence_start_at?.slice(0,10)) === todayKey,
-  )
-  const nextEvents = upcomingEvents.filter((item) =>
-    (item.occurrence_start_date ?? item.occurrence_start_at?.slice(0,10)) !== todayKey,
-  )
+  const todayKey = householdDateKey(new Date(), household.timezone)
+  const tomorrowKey = moveDateKey(todayKey, 1)
+  const nextPeriodStart = moveDateKey(todayKey, 2)
+  const nextPeriodEnd = moveDateKey(todayKey, 11)
+  const todayEvents = upcomingEvents.filter((item) => eventDayKey(item, household.timezone) === todayKey)
+  const tomorrowEvents = upcomingEvents.filter((item) => eventDayKey(item, household.timezone) === tomorrowKey)
+  const nextEvents = upcomingEvents.filter((item) => {
+    const key = eventDayKey(item, household.timezone)
+    return key >= nextPeriodStart && key <= nextPeriodEnd
+  })
 
   function occurrenceMeta(item: CalendarOccurrence) {
     const dayKey = item.occurrence_start_date ?? item.occurrence_start_at?.slice(0,10) ?? ''
@@ -303,50 +325,65 @@ export function HomePage() {
 
         <div className="home-future-area">
           {modules.find((module) => module.code === 'calendar')?.enabled && (
-            <Link className="home-upcoming-calendar list-card" to="/app/calendar">
-              <header>
-                <div>
-                  <span className="eyebrow">UPCOMING</span>
-                  <h2>Today & next 10 days</h2>
+            <>
+              <Link className="home-upcoming-calendar list-card" to="/app/calendar">
+                <header>
+                  <div>
+                    <span className="eyebrow">UPCOMING</span>
+                    <h2>Today & Tomorrow</h2>
+                  </div>
+                </header>
+
+                <div className="home-upcoming-calendar-groups">
+                  <section>
+                    <div className="home-upcoming-calendar-label">
+                      <span>Today</span>
+                      <small>{todayEvents.length}</small>
+                    </div>
+                    {todayEvents.length ? todayEvents.map((item) => (
+                      <div className="home-upcoming-calendar-row" key={item.occurrence_key}>
+                        <CalendarDays size={14} />
+                        <span><strong>{item.title}</strong><small>{occurrenceMeta(item)}</small></span>
+                      </div>
+                    )) : <div className="home-upcoming-calendar-empty">Nothing planned today.</div>}
+                  </section>
+
+                  <section>
+                    <div className="home-upcoming-calendar-label">
+                      <span>Tomorrow</span>
+                      <small>{tomorrowEvents.length}</small>
+                    </div>
+                    {tomorrowEvents.length ? tomorrowEvents.map((item) => (
+                      <div className="home-upcoming-calendar-row" key={item.occurrence_key}>
+                        <CalendarDays size={14} />
+                        <span><strong>{item.title}</strong><small>{occurrenceMeta(item)}</small></span>
+                      </div>
+                    )) : <div className="home-upcoming-calendar-empty">Nothing planned tomorrow.</div>}
+                  </section>
                 </div>
-              </header>
+                <footer>Open Calendar →</footer>
+              </Link>
 
-              <div className="home-upcoming-calendar-groups">
-                <section>
-                  <div className="home-upcoming-calendar-label">
-                    <span>Today</span>
-                    <small>{todayEvents.length}</small>
+              <Link className="home-upcoming-calendar home-upcoming-next list-card" to="/app/calendar">
+                <header>
+                  <div>
+                    <span className="eyebrow">UPCOMING</span>
+                    <h2>Next 10 days</h2>
+                    <small className="home-upcoming-period">After tomorrow · {new Date(nextPeriodStart + 'T12:00:00').toLocaleDateString(undefined, { day:'numeric', month:'short' })} – {new Date(nextPeriodEnd + 'T12:00:00').toLocaleDateString(undefined, { day:'numeric', month:'short' })}</small>
                   </div>
-                  {todayEvents.length ? todayEvents.map((item)=>(
+                  <small className="home-upcoming-count">{nextEvents.length}</small>
+                </header>
+                <div className="home-upcoming-calendar-groups">
+                  {nextEvents.length ? nextEvents.map((item) => (
                     <div className="home-upcoming-calendar-row" key={item.occurrence_key}>
-                      <CalendarDays size={14}/>
-                      <span>
-                        <strong>{item.title}</strong>
-                        <small>{occurrenceMeta(item)}</small>
-                      </span>
+                      <CalendarDays size={14} />
+                      <span><strong>{item.title}</strong><small>{occurrenceMeta(item)}</small></span>
                     </div>
-                  )) : <div className="home-upcoming-calendar-empty">Nothing planned today.</div>}
-                </section>
-
-                <section>
-                  <div className="home-upcoming-calendar-label">
-                    <span>Next 10 days</span>
-                    <small>{nextEvents.length}</small>
-                  </div>
-                  {nextEvents.length ? nextEvents.map((item)=>(
-                    <div className="home-upcoming-calendar-row" key={item.occurrence_key}>
-                      <CalendarDays size={14}/>
-                      <span>
-                        <strong>{item.title}</strong>
-                        <small>{occurrenceMeta(item)}</small>
-                      </span>
-                    </div>
-                  )) : <div className="home-upcoming-calendar-empty">No upcoming events in the next 10 days.</div>}
-                </section>
-              </div>
-
-              <footer>Open Calendar →</footer>
-            </Link>
+                  )) : <div className="home-upcoming-calendar-empty">No events scheduled for the following ten days.</div>}
+                </div>
+                <footer>Open Calendar →</footer>
+              </Link>
+            </>
           )}
 
           {modules.find((module) => module.code === 'projects')?.enabled && (
