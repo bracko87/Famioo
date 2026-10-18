@@ -53,6 +53,8 @@ import { LocationSharingAgent } from './LocationSharingAgent'
 
 const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>> = {
   calendar: CalendarDays,
+  calendar_connections: CalendarDays,
+  rewards: FolderKanban,
   tasks: ClipboardList,
   checklists: CheckSquare,
   shopping: ShoppingBag,
@@ -85,6 +87,11 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
 }
 
 const routeByModule: Partial<Record<ModuleCode, string>> = {
+  calendar: '/app/calendar',
+  calendar_connections: '/app/calendar/connections',
+  tasks: '/app/tasks',
+  checklists: '/app/checklists',
+  rewards: '/app/rewards',
   shopping: '/app/shopping',
   costs: '/app/costs',
   school: '/app/school',
@@ -123,6 +130,8 @@ type SidebarModuleItem = {
 
 const sidebarModuleItems: SidebarModuleItem[] = [
   { code: 'calendar', label: 'Calendar', category: 'plan' },
+  { code: 'calendar_connections', label: 'Calendar connections', category: 'plan' },
+  { code: 'calendar_context', label: 'Calendar comments & photos', category: 'plan' },
   { code: 'tasks', label: 'Tasks', category: 'plan' },
   { code: 'checklists', label: 'Checklists', category: 'plan' },
   { code: 'memo', label: 'Memo / Someday', category: 'plan' },
@@ -144,6 +153,7 @@ const sidebarModuleItems: SidebarModuleItem[] = [
   { code: 'home_care', label: 'Home Care', category: 'life' },
   { code: 'life_admin', label: 'Life Admin', category: 'life' },
   { code: 'projects', label: 'Projects, Chores & Rewards', category: 'life' },
+  { code: 'rewards', label: 'Child Rewards', category: 'life' },
   { code: 'travel', label: 'Travel & Trips', category: 'life' },
   { code: 'vehicles', label: 'Vehicles', category: 'life' },
   { code: 'pets', label: 'Pets', category: 'life' },
@@ -345,7 +355,7 @@ export function AppShell() {
           aria-pressed={isPinned}
           onClick={() => isPinned ? unpinModule(item.code) : pinModule(item.code)}
         >
-          <Star size={14} fill={isPinned ? 'currentColor' : 'none'} />
+          <Star size={12} fill={isPinned ? 'currentColor' : 'none'} />
         </button>
       </div>
     )
