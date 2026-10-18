@@ -474,6 +474,17 @@ export function CalendarPage() {
     setError('')
   }
 
+  function changeComposerStartDate(nextStartDate: string) {
+    // The start date is required. Clearing it must not silently close the editor.
+    if (!composerDate || !nextStartDate) return
+
+    // Moving an appointment also moves its end date, preserving multi-day length.
+    // Users may still choose a different end date afterwards.
+    const offsetDays = daysBetweenDateKeys(composerDate, nextStartDate)
+    setEndDate((currentEndDate) => shiftDateKey(currentEndDate || composerDate, offsetDays))
+    setComposerDate(nextStartDate)
+  }
+
   function openComposer(day: string, timedStart?: string) {
     if (!canWrite) return
 
@@ -1580,7 +1591,7 @@ export function CalendarPage() {
                 Start date
                 <DatePicker
                   value={composerDate}
-                  onChange={setComposerDate}
+                  onChange={changeComposerStartDate}
                   format={household.date_format}
                   ariaLabel="Choose event start date"
                   disabled={editingExternalReadOnly}

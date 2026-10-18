@@ -23594,3 +23594,33 @@ html[data-famioo-theme="dark"] .compare-optional-ai p{color:#eee!important}
 .travel-traffic-result input{width:100%;min-width:0;box-sizing:border-box;border:1px solid #e1d8e8;border-radius:9px;min-height:38px;padding:8px;font-size:16px}
 .travel-traffic-result a{justify-content:center;text-decoration:none}
 html[data-famioo-theme="dark"] .travel-traffic-result{background:#131313;border-color:#303030}
+
+
+/* The calendar editor is itself a <form class="modal-card">, not a modal card
+   containing a nested form. The shared centered-dialog rule intentionally hides
+   overflow on cards with inner forms; restore the calendar form as the scroller
+   so the date, participants and Save changes controls remain reachable on iOS. */
+.modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) > form.modal-card.event-composer {
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+@media (max-width: 700px) {
+  .modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) > form.modal-card.event-composer {
+    max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)) !important;
+  }
+
+  .event-composer > .event-composer-actions {
+    position: sticky;
+    bottom: -13px;
+    z-index: 7;
+    margin: 8px -13px -13px;
+    padding: 12px 13px calc(12px + env(safe-area-inset-bottom));
+    background: #fff;
+    border-top: 1px solid #eee8f1;
+  }
+}
