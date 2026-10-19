@@ -52,3 +52,18 @@ export function limitModulesForFreeAccount(
     }
   })
 }
+
+/** Block paid pages even when an old bookmark or direct URL is used. */
+const PAID_PAGE_PATHS = [
+  '/app/location', '/app/check-in', '/app/memo', '/app/rewards',
+  '/app/travel', '/app/vehicles', '/app/pets', '/app/inbox',
+  '/app/home-remote', '/app/shopping', '/app/costs',
+  '/app/school', '/app/home-care', '/app/life-admin',
+  '/app/projects', '/app/meals', '/app/vaccinations',
+  '/app/tickets', '/app/assistant',
+] as const
+
+export function isPaidPage(pathname: string): boolean {
+  const path = pathname.replace(/\/+$/, '').toLowerCase()
+  return PAID_PAGE_PATHS.some(root => path === root || path.startsWith(root + '/'))
+}
