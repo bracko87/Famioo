@@ -23876,3 +23876,19 @@ html[data-famioo-theme="dark"] .travel-traffic-result{background:#131313;border-
   .family-module-tabs button { min-height: 40px; padding-inline: 11px; }
   .family-module-hub > .page { padding-top: 10px; }
 }
+
+/* Individual Free plan status: separate from household's purchased modules. */
+.header-profile .free-account-label {
+  display: inline-block;
+  margin-left: 7px;
+  padding: 2px 7px;
+  border: 1px solid #d7c9dd;
+  border-radius: 999px;
+  background: #f7f2fa;
+  color: #664577;
+  font-size: 10px;
+  line-height: 1.25;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.free-storage-note { margin-top: 8px; color: #65566a; font-size: 12px; line-height: 1.45; }
