@@ -86,12 +86,14 @@ export function PromoCarousel({ modules }: { modules: ModuleAccess[] }) {
     [modules],
   )
   const individualFree = isFreePlanAccount(user)
-  const slides = useMemo(
-    () => individualFree
-      ? promoSlides.filter(slide => Boolean(modulesByCode.get(slide.code)?.enabled))
-      : promoSlides,
-    [individualFree, modulesByCode],
-  )
+  // A stable primitive key prevents resets when Home re-renders with a new
+  // modules array containing the same access values.
+  const enabledCodesKey = modules.filter(module => module.enabled).map(module => module.code).sort().join('|')
+  const slides = useMemo(() => {
+    if (!individualFree) return promoSlides
+    const enabled = new Set(enabledCodesKey.split('|'))
+    return promoSlides.filter(slide => enabled.has(slide.code))
+  }, [individualFree, enabledCodesKey])
 
   useEffect(() => {
     if (!slides.length) return
