@@ -131,20 +131,16 @@ type SidebarModuleItem = {
 const sidebarModuleItems: SidebarModuleItem[] = [
   { code: 'calendar', label: 'Calendar', category: 'plan' },
   { code: 'calendar_connections', label: 'Calendar connections', category: 'plan' },
-  { code: 'calendar_context', label: 'Calendar comments & photos', category: 'plan' },
   { code: 'tasks', label: 'Tasks', category: 'plan' },
   { code: 'checklists', label: 'Checklists', category: 'plan' },
   { code: 'memo', label: 'Memo / Someday', category: 'plan' },
   { code: 'inbox_scan', label: 'Inbox / Scan', category: 'plan' },
 
   { code: 'safety', label: 'Family Safety', category: 'family' },
-  { code: 'location', label: 'Family Location', category: 'family' },
+  { code: 'location', label: 'Family Location & Check-In', category: 'family' },
   { code: 'messenger', label: 'Family Messenger', category: 'family' },
-  { code: 'contacts', label: 'Family Contacts', category: 'family' },
+  { code: 'contacts', label: 'Family Contacts & Emergency', category: 'family' },
   { code: 'memories', label: 'Memories', category: 'family' },
-  { code: 'checkin', label: 'Check-In', category: 'family' },
-  { code: 'pickup_authorization', label: 'Pickup Authorization', category: 'family' },
-  { code: 'emergency_info', label: 'Emergency Info', category: 'family' },
   { code: 'school', label: 'School & Kita', category: 'family' },
 
   { code: 'shopping', label: 'Shopping', category: 'life' },
@@ -176,12 +172,20 @@ const sidebarCategories = [
 
 const favoritePreferenceKey = 'famioo_favorite_modules_v1'
 const moduleCodes = new Set<ModuleCode>(sidebarModuleItems.map((item) => item.code))
+const mergedFavoriteCodes: Partial<Record<ModuleCode, ModuleCode>> = {
+  emergency_info: 'contacts',
+  pickup_authorization: 'contacts',
+  checkin: 'location',
+  calendar_context: 'calendar',
+}
 
 function validFavoriteModules(value: unknown): ModuleCode[] {
   if (!Array.isArray(value)) return []
-  return [...new Set(value.filter((code): code is ModuleCode => (
-    typeof code === 'string' && moduleCodes.has(code as ModuleCode)
-  )))]
+  const normalized = value
+    .filter((code): code is ModuleCode => typeof code === 'string')
+    .map(code => mergedFavoriteCodes[code] ?? code)
+    .filter((code) => moduleCodes.has(code))
+  return [...new Set(normalized)]
 }
 
 function readFavoriteModules(userId: string, cloudValue: unknown): ModuleCode[] {
