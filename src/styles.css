@@ -23830,3 +23830,50 @@ html[data-famioo-theme="dark"] .travel-traffic-result{background:#131313;border-
   .side-nav .sidebar-favorites { padding: 4px 0; }
   .app-sidebar.collapsed .side-nav .sidebar-favorites { border: 0; padding: 4px 0; }
 }
+
+
+/* Combined family modules retain the original page contents and records but
+   present a single navigable module with accessible, horizontally scrollable
+   sub-tabs on narrow screens. */
+.family-module-hub { min-width: 0; }
+.family-module-tabs {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 10px 14px 9px;
+  border-bottom: 1px solid #ece3ef;
+  scrollbar-width: thin;
+}
+.family-module-tabs button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 8px 13px;
+  border: 1px solid #e7dce9;
+  border-radius: 999px;
+  color: #695676;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.family-module-tabs button:hover,
+.family-module-tabs button:focus-visible { border-color: #c8b0d1; background: #f9f4fb; }
+.family-module-tabs button.active { color: #fff; background: #744889; border-color: #744889; }
+.family-module-tabs button:focus-visible { outline: 2px solid #b98ace; outline-offset: 2px; }
+.family-module-hub > .page { padding-top: 14px; }
+@media (max-width: 700px) {
+  .family-module-tabs { padding: 9px 12px; gap: 6px; }
+  .family-module-tabs button { min-height: 40px; padding-inline: 11px; }
+  .family-module-hub > .page { padding-top: 10px; }
+}
