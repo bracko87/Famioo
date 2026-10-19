@@ -24237,10 +24237,14 @@ body:has(.modal-backdrop > .modal-card) { overflow:hidden!important; }
   }
 }
 
-/* iOS Safari auto-zooms focused controls whose computed font is below 16px.
-   Preserve the mobile chat sheet and accessible user zoom settings. */
-@media (max-width: 760px) {
-  .messenger-compose-row textarea {
-    font-size: 16px;
+/* iPhone Safari zooms the visual viewport when a focused text control is
+   rendered below 16px. Override the 11px desktop Messenger composer font for
+   both the full Messenger page and the quick-chat drawer on touch-sized layouts.
+   This does not disable user pinch-zoom or change the viewport meta setting. */
+@media (max-width: 900px) {
+  .messenger-compose-row textarea,
+  .mobile-messenger-drawer .messenger-compose-row textarea {
+    font-size: 16px !important;
+    -webkit-text-size-adjust: 100%;
   }
 }
