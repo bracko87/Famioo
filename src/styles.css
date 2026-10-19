@@ -24236,3 +24236,11 @@ body:has(.modal-backdrop > .modal-card) { overflow:hidden!important; }
     grid-column:2 / -1;
   }
 }
+
+/* iOS Safari auto-zooms focused controls whose computed font is below 16px.
+   Preserve the mobile chat sheet and accessible user zoom settings. */
+@media (max-width: 760px) {
+  .messenger-compose-row textarea {
+    font-size: 16px;
+  }
+}
