@@ -24166,3 +24166,48 @@ body:has(.modal-backdrop > .modal-card) { overflow:hidden!important; }
     min-height:42px;
   }
 }
+
+
+/* Premium discovery and per-module information are browsable without checkout. */
+.premium-catalogue-page,.premium-module-detail-page { display:grid;align-content:start;gap:20px; }
+.premium-catalogue-heading { display:grid;gap:8px; }
+.premium-catalogue-heading h1 { font-size:clamp(24px,3vw,34px);margin:0; }
+.premium-catalogue-heading p { margin:0;max-width:700px; }
+.premium-catalogue-status { width:fit-content;display:flex;align-items:center;gap:7px;padding:10px 12px;border:1px solid #eadfea;border-radius:12px;background:#fbf7fc;color:#795481;font-size:12px; }
+.premium-module-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:14px; }
+.premium-module-card { min-height:220px;position:relative;overflow:hidden;border-radius:18px;background:linear-gradient(130deg,#6d348d,#b96094);color:#fff;box-shadow:0 12px 30px rgba(77,45,91,.12); }
+.premium-module-card-photo { position:absolute;inset:0;background-size:cover;background-position:center;opacity:.5; }
+.premium-module-card-content { position:relative;z-index:1;height:100%;padding:19px;display:flex;flex-direction:column;gap:8px; }
+.premium-module-card-content .eyebrow { color:rgba(255,255,255,.78); }
+.premium-module-card h2 { margin:0;color:#fff;font-size:21px; }
+.premium-module-card p { color:rgba(255,255,255,.92);font-size:12px;line-height:1.5;margin:0; }
+.premium-module-learn { display:inline-flex;align-items:center;justify-content:center;gap:8px;width:fit-content;min-height:36px;margin-top:auto;padding:9px 12px;border-radius:10px;border:1px solid #dfcfe5;color:#713e8c;background:#fff;text-decoration:none;font-size:12px;font-weight:700; }
+.premium-module-learn:hover { background:#f6eaf9; }
+.premium-catalogue-empty { padding:28px;border:1px solid var(--line);border-radius:18px;background:#fff;display:grid;justify-items:start;gap:8px; }
+.premium-catalogue-empty h2,.premium-catalogue-empty p { margin:0; }
+.premium-detail-back { display:inline-flex;align-items:center;gap:6px;width:fit-content;text-decoration:none;color:#774895;font-weight:700;font-size:12px; }
+.premium-detail-hero { position:relative;overflow:hidden;min-height:260px;display:flex;align-items:end;border-radius:20px;padding:clamp(20px,4vw,35px);background:linear-gradient(125deg,#74398f,#b96196);color:white; }
+.premium-detail-hero-image { position:absolute;inset:0;background-size:cover;background-position:center;opacity:.3; }
+.premium-detail-hero-copy { position:relative;z-index:1;display:grid;gap:11px;max-width:610px; }
+.premium-detail-hero-copy .eyebrow { color:rgba(255,255,255,.8); }
+.premium-detail-hero h1 { color:white;margin:0;font-size:clamp(26px,4vw,40px); }
+.premium-detail-hero p { color:rgba(255,255,255,.94);margin:0; }
+.premium-detail-tag { width:fit-content;padding:7px 10px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);border-radius:9px;font-size:12px; }
+.premium-detail-section { display:grid;gap:12px;padding:23px;border:1px solid var(--line);border-radius:18px;background:white; }
+.premium-detail-section h2 { margin:0; }
+.premium-detail-section p { margin:0; }
+.premium-detail-section small { color:var(--muted);line-height:1.5; }
+.premium-feature-list { padding:0;margin:0;list-style:none;display:grid;gap:10px; }
+.premium-feature-list li { display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.5; }
+.premium-feature-list li svg { flex:0 0 auto;color:#8f50aa;margin-top:1px; }
+.premium-detail-purchase { grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:20px; }
+.premium-detail-purchase > div { display:grid;gap:11px; }
+.premium-purchase-note { display:flex;align-items:center;gap:8px;font-size:12px;color:#80628f!important; }
+@media(max-width:700px) {
+  .premium-catalogue-page,.premium-module-detail-page { padding:16px 12px 100px; }
+  .premium-module-grid { grid-template-columns:1fr; }
+  .premium-module-card { min-height:185px; }
+  .premium-detail-hero { min-height:245px;padding:20px; }
+  .premium-detail-section { padding:18px; }
+  .premium-detail-purchase { grid-template-columns:1fr; }
+}
