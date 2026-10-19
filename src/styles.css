@@ -23969,6 +23969,9 @@ html[data-famioo-theme="dark"] .travel-traffic-result{background:#131313;border-
 .module-availability-heading span, .module-availability-hint { color: var(--muted); font-size: 11px; }
 .module-availability-hint { margin: 0 0 8px; line-height: 1.5; }
 
+/* Prevent scroll chaining to the app behind any regular modal dialog. */
+body:has(.modal-backdrop > .modal-card) { overflow:hidden!important; }
+
 /* Famioo dialogs: consistent centered inset layout. Supersedes older bottom
    sheets/top-aligned overrides without affecting the document scanner. */
 .modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) {
@@ -24022,11 +24025,11 @@ html[data-famioo-theme="dark"] .travel-traffic-result{background:#131313;border-
   position:sticky!important;
   z-index:8;
   flex:0 0 auto!important;
-  top:calc(-1 * var(--dialog-inset))!important;
+  top:calc(0px - var(--dialog-inset))!important;
   box-sizing:border-box!important;
-  width:calc(100% + 2 * var(--dialog-inset))!important;
+  width:calc(100% + var(--dialog-inset) + var(--dialog-inset))!important;
   max-width:none!important;
-  margin:calc(-1 * var(--dialog-inset)) calc(-1 * var(--dialog-inset)) 4px!important;
+  margin:calc(0px - var(--dialog-inset)) calc(0px - var(--dialog-inset)) 4px!important;
   padding:17px var(--dialog-inset) 14px!important;
   background:#fff!important;
   border-bottom:1px solid #eee8f1;
@@ -24036,11 +24039,11 @@ html[data-famioo-theme="dark"] .travel-traffic-result{background:#131313;border-
   position:sticky!important;
   z-index:8;
   flex:0 0 auto;
-  bottom:calc(-1 * var(--dialog-inset))!important;
+  bottom:calc(0px - var(--dialog-inset))!important;
   box-sizing:border-box!important;
-  width:calc(100% + 2 * var(--dialog-inset))!important;
+  width:calc(100% + var(--dialog-inset) + var(--dialog-inset))!important;
   max-width:none!important;
-  margin:10px calc(-1 * var(--dialog-inset)) calc(-1 * var(--dialog-inset))!important;
+  margin:10px calc(0px - var(--dialog-inset)) calc(0px - var(--dialog-inset))!important;
   padding:12px var(--dialog-inset)!important;
   border-top:1px solid #eee8f1;
   background:#fff!important;
@@ -24065,10 +24068,10 @@ html[data-famioo-theme="dark"] .travel-traffic-result{background:#131313;border-
   }
   .modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) > .modal-card > .primary-button:last-child {
     position:sticky!important;
-    bottom:calc(-1 * var(--dialog-inset))!important;
-    width:calc(100% + 2 * var(--dialog-inset))!important;
+    bottom:calc(0px - var(--dialog-inset))!important;
+    width:calc(100% + var(--dialog-inset) + var(--dialog-inset))!important;
     max-width:none!important;
-    margin:9px calc(-1 * var(--dialog-inset)) calc(-1 * var(--dialog-inset))!important;
+    margin:9px calc(0px - var(--dialog-inset)) calc(0px - var(--dialog-inset))!important;
     padding:12px var(--dialog-inset)!important;
     border-radius:0 0 19px 19px!important;
   }
