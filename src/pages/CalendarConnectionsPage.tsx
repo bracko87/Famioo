@@ -532,7 +532,9 @@ export function CalendarConnectionsPage(){
         <div>
           <div className="page-label">WORK CALENDAR</div>
           <h1>Bring work time into Famioo</h1>
-          <p>No company login is required. Import a screenshot, a local .ics file, or pasted appointment text and review it before it reaches the family calendar.</p>
+          <p>{hasAiAssistant
+            ? 'No company login is required. Import screenshots, local .ics files or pasted appointment text, and review appointments before adding them.'
+            : 'No company login is required. Import a local .ics calendar file or create a separate Work calendar manually. Choose which appointments appear in your family calendar.'}</p>
         </div>
         <Link className="secondary-button compact" to="/app/calendar">Back to Calendar</Link>
       </div>
