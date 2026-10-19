@@ -10,6 +10,9 @@ import {
   ShieldAlert,
   Smartphone,
   UserCheck,
+  Users,
+  Plus,
+  Pencil,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -53,6 +56,14 @@ type HouseholdUser={
   status:string
 }
 
+type EmergencyContact={
+  id:string
+  display_name:string
+  phone:string|null
+  secondary_phone:string|null
+  is_emergency:boolean
+}
+
 type CallApi={
   start:(alertId:string,recipientUserId:string)=>Promise<void>
 }
@@ -90,12 +101,18 @@ export function SafetyPage(){
   const [locationStatus,setLocationStatus]=useState('')
   const [sending,setSending]=useState(false)
   const [actingAlertId,setActingAlertId]=useState('')
-  const [holdProgress,setHoldProgress]=useState(0)
   const [isMobile,setIsMobile]=useState(()=>window.matchMedia('(max-width: 900px)').matches)
+  const [emergencyContacts,setEmergencyContacts]=useState<EmergencyContact[]>([])
+  const [phoneEditor,setPhoneEditor]=useState('')
+  const [phoneDraft,setPhoneDraft]=useState('')
+  const [phoneSaving,setPhoneSaving]=useState(false)
+  const [emergencyDraftOpen,setEmergencyDraftOpen]=useState(false)
+  const [emergencyName,setEmergencyName]=useState('')
+  const [emergencyPhone,setEmergencyPhone]=useState('')
+  const [emergencySaving,setEmergencySaving]=useState(false)
+  const [setupOpen,setSetupOpen]=useState(true)
 
-  const holdStartedAtRef=useRef(0)
-  const holdFrameRef=useRef(0)
-  const holdTriggeredRef=useRef(false)
+  const sendingRef=useRef(false)
   const callApiRef=useRef<CallApi|null>(null)
 
   const profileById=useMemo(
@@ -128,11 +145,16 @@ export function SafetyPage(){
   )
 
   const missingPhoneContacts=adultContacts.filter((member)=>!member.phone)
+  const otherRecipients=adultContacts.filter((member)=>member.user_id!==user.id)
+  const dialableEmergencyContacts=emergencyContacts.filter((contact)=>Boolean(contact.phone||contact.secondary_phone))
+  const setupReady=otherRecipients.length>0
+    && missingPhoneContacts.length===0
+    && dialableEmergencyContacts.length>0
 
   const load=useCallback(async (foreground=false)=>{
     if(foreground) setLoading(true)
 
-    const [alertsResult,responsesResult,usersResult]=await Promise.all([
+    const [alertsResult,responsesResult,usersResult,contactsResult]=await Promise.all([
       supabase
         .from('safety_alerts')
         .select('id,household_id,triggered_by_user_id,triggered_by_profile_id,status,triggered_at,latitude,longitude,accuracy_m,location_captured_at,resolved_by_user_id,resolved_at,resolution_note')
@@ -145,6 +167,7 @@ export function SafetyPage(){
         .eq('household_id',household.id)
         .order('responded_at',{ascending:true}),
       supabase.rpc('household_users_v1',{p_household_id:household.id}),
+      supabase.rpc('family_contacts_v1',{p_household_id:household.id}),
     ])
 
     if(alertsResult.error){
@@ -159,6 +182,12 @@ export function SafetyPage(){
 
     if(!usersResult.error){
       setHouseholdUsers((usersResult.data??[]) as HouseholdUser[])
+    }
+
+    if(!contactsResult.error){
+      setEmergencyContacts(((contactsResult.data??[]) as EmergencyContact[]).filter((contact)=>contact.is_emergency))
+    } else if(foreground){
+      setError((current)=>current||'Could not load emergency-service contacts: '+contactsResult.error.message)
     }
 
     if(foreground) setLoading(false)
@@ -182,7 +211,6 @@ export function SafetyPage(){
     return ()=>{
       window.clearInterval(timer)
       window.removeEventListener('focus',onFocus)
-      if(holdFrameRef.current) cancelAnimationFrame(holdFrameRef.current)
     }
   },[load])
 
@@ -251,8 +279,10 @@ export function SafetyPage(){
   }
 
   async function sendSos(){
-    if(!isMobile||sending||myActiveAlert) return
+    if(!isMobile||sendingRef.current||myActiveAlert) return
 
+    // Ref guards against duplicate rapid taps before React has rendered.
+    sendingRef.current=true
     setSending(true)
     setError('')
     setMessage('')
@@ -260,6 +290,7 @@ export function SafetyPage(){
 
     const result=await triggerAlert()
 
+    sendingRef.current=false
     setSending(false)
 
     if(result.error){
@@ -267,7 +298,7 @@ export function SafetyPage(){
       return
     }
 
-    setMessage('SOS sent. Your family has been alerted. Choose a call or message option below while Famioo adds your location.')
+    setMessage('SOS recorded. Other household members can see this alert in Famioo; push delivery depends on their device settings and connection. Call emergency services directly if needed.')
     try{
       navigator.vibrate?.([250,120,250,120,450])
     }catch{
@@ -278,42 +309,52 @@ export function SafetyPage(){
     requestLocation()
   }
 
-  function cancelHold(){
-    if(holdFrameRef.current){
-      cancelAnimationFrame(holdFrameRef.current)
-      holdFrameRef.current=0
-    }
-    holdStartedAtRef.current=0
-    holdTriggeredRef.current=false
-    setHoldProgress(0)
-  }
-
-  function holdFrame(now:number){
-    if(!holdStartedAtRef.current) return
-
-    const elapsed=now-holdStartedAtRef.current
-    const progress=Math.min(100,(elapsed/2000)*100)
-    setHoldProgress(progress)
-
-    if(progress>=100){
-      holdTriggeredRef.current=true
-      holdFrameRef.current=0
-      void sendSos()
+  async function savePhone(event:React.FormEvent<HTMLFormElement>,profileId:string){
+    event.preventDefault()
+    const phone=phoneDraft.trim()
+    if(!phone || !/^\+?[0-9 ()/.-]{6,32}$/.test(phone)){
+      setError('Enter a valid phone number with at least 6 digits/characters.')
       return
     }
-
-    holdFrameRef.current=requestAnimationFrame(holdFrame)
+    setPhoneSaving(true)
+    setError('')
+    const result=await supabase.rpc('set_household_profile_phone_v1',{
+      p_household_id:household.id,
+      p_profile_id:profileId,
+      p_phone:phone,
+    })
+    setPhoneSaving(false)
+    if(result.error){ setError(result.error.message); return }
+    setPhoneEditor('')
+    setPhoneDraft('')
+    setMessage('Household phone number saved.')
+    await load(false)
   }
 
-  function startHold(){
-    if(!isMobile||sending||myActiveAlert) return
-    cancelHold()
-    holdStartedAtRef.current=performance.now()
-    holdFrameRef.current=requestAnimationFrame(holdFrame)
-  }
-
-  function releaseHold(){
-    if(!holdTriggeredRef.current) cancelHold()
+  async function saveEmergencyNumber(event:React.FormEvent<HTMLFormElement>){
+    event.preventDefault()
+    const name=emergencyName.trim()
+    const phone=emergencyPhone.trim()
+    if(!name || !/^[+0-9][0-9 ()/.-]{1,63}$/.test(phone)){
+      setError('Enter a service name and valid telephone number.')
+      return
+    }
+    setEmergencySaving(true)
+    setError('')
+    const result=await supabase.rpc('save_family_contact_v1',{
+      p_household_id:household.id,
+      p_contact_type:'emergency',
+      p_display_name:name,
+      p_phone:phone,
+      p_is_emergency:true,
+    })
+    setEmergencySaving(false)
+    if(result.error){ setError(result.error.message); return }
+    setEmergencyName('')
+    setEmergencyPhone('')
+    setEmergencyDraftOpen(false)
+    setMessage('Emergency-service contact saved to the shared directory.')
+    await load(false)
   }
 
   async function respond(alertId:string){
@@ -425,19 +466,86 @@ export function SafetyPage(){
         </span>
       </div>
 
-      {missingPhoneContacts.length>0&&(
-        <div className="safety-contact-warning">
-          <Smartphone size={17}/>
-          <span>
-            <strong>Complete family phone numbers</strong>
-            <small>
-              Missing: {missingPhoneContacts.map((member)=>member.display_name).join(', ')}.
-              Internet call remains available, but adding mobile numbers enables one-tap call and SMS.
-            </small>
+      <section className="safety-setup-panel" aria-label="Family Safety setup">
+        <header className="safety-setup-head">
+          <div>
+            <span className="eyebrow">BEFORE REGULAR USE</span>
+            <h2><Users size={19}/> Family Safety setup</h2>
+            <p>Prepare everyone who should receive a family SOS and the phone numbers you might need to call.</p>
+          </div>
+          <span className={setupReady?'safety-setup-status ready':'safety-setup-status'}>
+            {loading?'Checking…':setupReady?'Contacts prepared':'Setup incomplete'}
           </span>
-          <Link to="/app/settings?tab=users">Update contacts →</Link>
+        </header>
+        <button type="button" className="safety-setup-toggle" onClick={()=>setSetupOpen(v=>!v)} aria-expanded={setupOpen}>
+          {setupOpen?'Hide contact setup':'Review or edit emergency setup'}
+        </button>
+        {setupOpen&&(
+          <div className="safety-setup-content">
+            <div className="safety-setup-group">
+              <div className="safety-section-head"><h3>1. Household phone numbers</h3><small>{adultContacts.length-missingPhoneContacts.length}/{adultContacts.length} saved</small></div>
+              {adultContacts.length===0&&<p>Household members are loading or have not been linked to a login yet.</p>}
+              {adultContacts.map((member)=>(
+                <div className="safety-setup-member" key={member.profile_id}>
+                  <div><strong>{member.display_name}</strong><small>{member.phone||'Phone number missing'} · {member.user_id===user.id?'Your account':'Household member'}</small></div>
+                  {phoneEditor===member.profile_id?(
+                    <form onSubmit={e=>void savePhone(e,member.profile_id)} className="safety-setup-inline-form">
+                      <input type="tel" autoComplete="tel" value={phoneDraft} onChange={e=>setPhoneDraft(e.target.value)} placeholder="+49…" aria-label={'Phone number for '+member.display_name} required maxLength={32}/>
+                      <button type="submit" className="primary-button compact" disabled={phoneSaving}>{phoneSaving?'Saving…':'Save'}</button>
+                      <button type="button" className="secondary-button compact" onClick={()=>setPhoneEditor('')}>Cancel</button>
+                    </form>
+                  ):(
+                    <button type="button" className="secondary-button compact" onClick={()=>{setPhoneEditor(member.profile_id);setPhoneDraft(member.phone??'')}}>
+                      <Pencil size={13}/>{member.phone?'Edit':'Add phone'}
+                    </button>
+                  )}
+                </div>
+              ))}
+              <small>Only household members with a Famioo login can receive in-app alerts. Phone numbers enable carrier calls/SMS; they do not enable push by themselves.</small>
+            </div>
+            <div className="safety-setup-group">
+              <div className="safety-section-head"><h3>2. Emergency services and trusted contacts</h3><small>{dialableEmergencyContacts.length} call-ready</small></div>
+              <p>Save the correct police, ambulance, fire or local emergency service numbers for your region. Verify each number yourself.</p>
+              {emergencyContacts.map(contact=>(
+                <div className="safety-emergency-number" key={contact.id}>
+                  <strong>{contact.display_name}</strong>
+                  {contact.phone||contact.secondary_phone?(
+                    <a className="safety-action-button call" href={`tel:${contact.phone||contact.secondary_phone}`}><Phone size={15}/> Call {contact.phone||contact.secondary_phone}</a>
+                  ):<small>No phone number saved</small>}
+                </div>
+              ))}
+              {emergencyDraftOpen?(
+                <form className="safety-setup-new-service" onSubmit={e=>void saveEmergencyNumber(e)}>
+                  <label>Service name<input value={emergencyName} maxLength={160} onChange={e=>setEmergencyName(e.target.value)} placeholder="Police, ambulance, trusted contact…" required/></label>
+                  <label>Phone number<input type="tel" value={emergencyPhone} maxLength={64} onChange={e=>setEmergencyPhone(e.target.value)} placeholder="Your local service number" required/></label>
+                  <div className="safety-setup-buttons"><button className="primary-button compact" type="submit" disabled={emergencySaving}>{emergencySaving?'Saving…':'Save number'}</button><button type="button" className="secondary-button compact" onClick={()=>setEmergencyDraftOpen(false)}>Cancel</button></div>
+                </form>
+              ):<button type="button" className="secondary-button compact" onClick={()=>setEmergencyDraftOpen(true)}><Plus size={14}/>Add emergency number</button>}
+              <Link to="/app/contacts?tab=directory" className="safety-directory-link">Manage all emergency contacts in Family Contacts →</Link>
+            </div>
+            <div className="safety-setup-group">
+              <h3>3. Test each recipient phone</h3>
+              <p>Each household member needs their own Famioo login and must enable push on their device. Run a notification test on every phone before relying on alerts.</p>
+              <Link to="/app/settings?tab=notifications-security" className="safety-directory-link">Open notification setup and send a test →</Link>
+            </div>
+          </div>
+        )}
+        {!setupReady&&!loading&&(
+          <p className="safety-setup-warning">Finish the preparation above before relying on Famioo for routine family safety. An urgent SOS remains available even if setup is incomplete.</p>
+        )}
+      </section>
+
+      <section className="safety-emergency-shortcuts" aria-label="Call emergency services">
+        <div>
+          <strong><PhoneCall size={16}/> Need emergency services?</strong>
+          <small>Call directly using your phone. Famioo cannot automatically contact police or an ambulance.</small>
         </div>
-      )}
+        {dialableEmergencyContacts.length>0?dialableEmergencyContacts.map(contact=>(
+          <a key={contact.id} href={`tel:${contact.phone||contact.secondary_phone}`} className="safety-action-button call">
+            <Phone size={14}/>{contact.display_name}
+          </a>
+        )):<span className="safety-setup-call-note">No service number saved — use your phone’s emergency dialer now if needed.</span>}
+      </section>
 
       {error&&<div className="notice error">{error}</div>}
       {message&&<div className="notice">{message}</div>}
@@ -453,14 +561,14 @@ export function SafetyPage(){
               {myActiveAlert
                 ?'Your family has been alerted'
                 :isMobile
-                  ?'Hold to send SOS'
+                  ?'Tap to send SOS'
                   :'SOS triggering is available on mobile only'}
             </h2>
             <p>
               {myActiveAlert
-                ?'Keep this alert active until you or an adult family member confirms that the situation is safe.'
+                ?'Keep this alert active until you or an adult family member confirms that the situation is safe. If activated accidentally, resolve the alert immediately.'
                 :isMobile
-                  ?'Press and hold for 2 seconds. Famioo alerts your family immediately, then adds your current location and opens call/message options.'
+                  ?'Tap once to send an immediate in-app family alert. Location is requested afterward. Use a phone call for emergency services.'
                   :'Desktop can monitor active alerts, locations, responses and communication. Use the Famioo mobile app/PWA to trigger a new SOS.'}
             </p>
           </div>
@@ -480,30 +588,15 @@ export function SafetyPage(){
           <>
             <button
               type="button"
-              className="safety-hold-button"
+              className="safety-hold-button safety-tap-button"
               disabled={sending}
-              onPointerDown={startHold}
-              onPointerUp={releaseHold}
-              onPointerCancel={releaseHold}
-              onPointerLeave={releaseHold}
-              onKeyDown={(event)=>{
-                if((event.key==='Enter'||event.key===' ')&&!holdStartedAtRef.current){
-                  event.preventDefault()
-                  startHold()
-                }
-              }}
-              onKeyUp={(event)=>{
-                if(event.key==='Enter'||event.key===' '){
-                  event.preventDefault()
-                  releaseHold()
-                }
-              }}
+              onClick={()=>void sendSos()}
+              aria-label="Send family SOS now"
             >
-              <span className="safety-hold-fill" style={{width:`${holdProgress}%`}}/>
               <ShieldAlert size={24}/>
               <span>
-                <strong>{sending?'Sending SOS…':'HOLD FOR SOS'}</strong>
-                <small>{sending?'Alerting your household':'Hold for 2 seconds'}</small>
+                <strong>{sending?'SENDING SOS…':'SEND FAMILY SOS NOW'}</strong>
+                <small>{sending?'Recording the alert':'Tap once to alert your household'}</small>
               </span>
             </button>
 
