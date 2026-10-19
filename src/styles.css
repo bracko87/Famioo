@@ -23960,3 +23960,11 @@ html[data-famioo-theme="dark"] .travel-traffic-result{background:#131313;border-
 /* Cross-module links that require a second paid module stay visibly locked. */
 .module-connection-locked,
 .module-connection-locked:disabled { opacity: .5; filter: grayscale(1); cursor: not-allowed; }
+
+/* Clear Free / optional premium tiers on the Modules settings page. */
+.module-availability-group { margin-top: 18px; }
+.module-availability-group.optional { padding-top: 20px; border-top: 2px solid var(--line); }
+.module-availability-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; padding-bottom: 8px; }
+.module-availability-heading h3 { margin: 0; font-size: 14px; }
+.module-availability-heading span, .module-availability-hint { color: var(--muted); font-size: 11px; }
+.module-availability-hint { margin: 0 0 8px; line-height: 1.5; }

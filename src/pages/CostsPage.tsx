@@ -92,7 +92,6 @@ export function CostsPage() {
   const access = modules.find((module) => module.code === 'costs')
   const canWrite = Boolean(access?.can_write)
   const assistantConnection = moduleConnectionState(modules,'costs','assistant')
-  const hasAiAssistant=assistantConnection==='active'
   const mondayFirst = household.week_starts_on === 1
 
   const [costs, setCosts] = useState<HouseholdCost[]>([])
