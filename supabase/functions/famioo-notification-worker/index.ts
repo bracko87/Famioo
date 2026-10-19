@@ -96,7 +96,7 @@ async function sendPushes() {
               : item.notification_type.startsWith('location_')
                 ? 'famioo-location-'+item.entity_id
                 : item.notification_type==='messenger_message'
-                  ? 'famioo-messenger-'+item.entity_id
+                  ? 'famioo-messenger-'+item.id
                   : 'famioo-'+item.id,
             url:item.notification_type.startsWith('safety_')
               ? '/app/safety'
