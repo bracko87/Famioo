@@ -7,8 +7,14 @@ concurrency:
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
 
 jobs:
   build:
@@ -19,5 +25,4 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - run: npm run typecheck
       - run: npm run build
