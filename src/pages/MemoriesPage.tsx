@@ -15,6 +15,7 @@ import {
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
+import { optimizeMemoryPhoto } from '../lib/photoOptimization'
 
 type AlbumType='birthday'|'trip'|'holiday'|'school'|'family'|'other'
 type Album={
@@ -111,13 +112,43 @@ export function MemoriesPage(){
   const [error,setError]=useState('')
   const [message,setMessage]=useState('')
 
-  const visibleAlbums=albums.filter(album=>showArchived?Boolean(album.archived_at):!album.archived_at)
+  const visibleAlbums=useMemo(
+    ()=>albums.filter(album=>showArchived?Boolean(album.archived_at):!album.archived_at),
+    [albums,showArchived],
+  )
   const selected=visibleAlbums.find(album=>album.id===selectedId)??visibleAlbums[0]??null
-  const selectedPhotos=photos.filter(photo=>photo.album_id===selected?.id)
+  const selectedPhotos=useMemo(
+    ()=>photos.filter(photo=>photo.album_id===selected?.id),
+    [photos,selected?.id],
+  )
   const photoFileIds=new Set(selectedPhotos.map(photo=>photo.file_id))
   const availableExistingPhotos=files.filter(file=>file.mime_type?.startsWith('image/')&&!photoFileIds.has(file.id))
   const fileById=useMemo(()=>new Map(files.map(file=>[file.id,file])),[files])
   const eventById=useMemo(()=>new Map(events.map(event=>[event.id,event])),[events])
+
+  // Do not request a signed URL for every household image on every visit.
+  // Only covers and photos in the open album need URLs, and off-screen images
+  // will use native browser lazy loading.
+  useEffect(()=>{
+    let cancelled=false
+    const neededIds=new Set<string>()
+    for(const album of visibleAlbums)if(album.cover_file_id)neededIds.add(album.cover_file_id)
+    for(const photo of selectedPhotos)neededIds.add(photo.file_id)
+    const required=[...neededIds]
+      .filter(id=>urls[id]===undefined)
+      .map(id=>fileById.get(id))
+      .filter((file):file is FileRow=>Boolean(file))
+
+    if(!required.length)return
+    void Promise.all(required.map(async file=>{
+      const result=await supabase.storage.from('famioo-files').createSignedUrl(file.storage_path,21600)
+      return [file.id,result.data?.signedUrl??''] as const
+    })).then(signed=>{
+      if(cancelled)return
+      setUrls(current=>({...current,...Object.fromEntries(signed)}))
+    })
+    return ()=>{cancelled=true}
+  },[visibleAlbums,selectedPhotos,fileById,urls])
 
   async function load(foreground=false){
     if(foreground)setBusy(true)
@@ -148,12 +179,6 @@ export function MemoriesPage(){
     setEvents((eventResult.data??[]) as CalendarEvent[])
     setSelectedId(current=>albumRows.some(album=>album.id===current)?current:(albumRows.find(album=>!album.archived_at)?.id??albumRows[0]?.id??''))
 
-    const imageRows=fileRows.filter(file=>file.mime_type?.startsWith('image/'))
-    const signed=await Promise.all(imageRows.map(async file=>{
-      const result=await supabase.storage.from('famioo-files').createSignedUrl(file.storage_path,3600)
-      return [file.id,result.data?.signedUrl??''] as const
-    }))
-    setUrls(Object.fromEntries(signed))
     if(foreground)setBusy(false)
   }
 
@@ -195,9 +220,10 @@ export function MemoriesPage(){
     if(!file.type.startsWith('image/')){setError('Choose an image file.');return}
     if(file.size>50*1024*1024){setError('Photos can be up to 50 MB each.');return}
     setBusy(true);setError('');setMessage('')
+    const optimized=await optimizeMemoryPhoto(file)
     const reserve=await supabase.rpc('reserve_household_file_v1',{
       p_household_id:household.id,p_title:file.name.replace(/\.[^.]+$/,'')||'Memory photo',
-      p_file_name:file.name,p_mime_type:file.type,p_file_size:file.size,
+      p_file_name:optimized.name,p_mime_type:optimized.type,p_file_size:optimized.size,
       p_category:'photo',p_notes:'Family memory: '+selected.title,
     })
     if(reserve.error){setBusy(false);setError(reserve.error.message);return}
@@ -206,7 +232,7 @@ export function MemoriesPage(){
     const storagePath=reservation?.storage_path as string|undefined
     if(!fileId||!storagePath){setBusy(false);setError('Could not reserve photo storage.');return}
 
-    const upload=await supabase.storage.from('famioo-files').upload(storagePath,file,{upsert:false,contentType:file.type})
+    const upload=await supabase.storage.from('famioo-files').upload(storagePath,optimized,{upsert:false,contentType:optimized.type})
     if(upload.error){
       await supabase.rpc('cancel_household_file_v1',{p_household_id:household.id,p_file_id:fileId})
       setBusy(false);setError(upload.error.message);return
@@ -291,7 +317,7 @@ export function MemoriesPage(){
           const cover=album.cover_file_id?urls[album.cover_file_id]:null
           const count=photos.filter(photo=>photo.album_id===album.id).length
           return <button className={selected?.id===album.id?'memory-album-chip active':'memory-album-chip'} onClick={()=>setSelectedId(album.id)} key={album.id}>
-            <span className="memory-chip-cover">{cover?<img src={cover} alt=""/>:<b>{albumEmoji(album.album_type)}</b>}</span>
+            <span className="memory-chip-cover">{cover?<img src={cover} alt="" loading="lazy" decoding="async"/>:<b>{albumEmoji(album.album_type)}</b>}</span>
             <span><small>{albumTypeLabel(album.album_type).toUpperCase()}</small><strong>{album.title}</strong><em>{count} photo{count===1?'':'s'}{album.memory_date?' · '+fmtDate(album.memory_date):''}</em></span>
           </button>
         })}
@@ -320,7 +346,7 @@ export function MemoriesPage(){
             const file=fileById.get(photo.file_id)
             const url=urls[photo.file_id]
             return <article className="memory-photo-card" key={photo.id}>
-              {url?<a href={url} target="_blank" rel="noreferrer"><img src={url} alt={photo.caption||file?.title||'Family memory'}/></a>:<div className="memory-photo-placeholder"><Images size={24}/></div>}
+              {url?<a href={url} target="_blank" rel="noreferrer"><img src={url} alt={photo.caption||file?.title||'Family memory'} loading="lazy" decoding="async"/></a>:<div className="memory-photo-placeholder"><Images size={24}/></div>}
               <div><span><strong>{photo.caption||file?.title||'Family photo'}</strong><small>{photo.taken_date?fmtDate(photo.taken_date):file?.file_name||''}</small></span>{canWrite&&!selected.archived_at&&<button onClick={()=>void removePhoto(photo)} title="Remove from album"><Trash2 size={13}/></button>}</div>
             </article>
           })}
