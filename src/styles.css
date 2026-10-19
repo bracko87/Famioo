@@ -24248,3 +24248,61 @@ body:has(.modal-backdrop > .modal-card) { overflow:hidden!important; }
     -webkit-text-size-adjust: 100%;
   }
 }
+
+
+/* Family Safety: clearly separate setup from the urgent one-tap alert.
+   Unconfigured contacts never block an emergency alert or the phone dialer. */
+.safety-setup-panel {
+  margin-bottom:14px;
+  padding:15px;
+  display:grid;
+  gap:10px;
+  border:1px solid #d9cce1;
+  border-radius:17px;
+  background:linear-gradient(130deg,#fff,#faf6fc);
+}
+.safety-setup-head {display:flex;align-items:start;justify-content:space-between;gap:12px;}
+.safety-setup-head>div {min-width:0;display:grid;gap:6px;}
+.safety-setup-head .eyebrow {margin:0;}
+.safety-setup-head h2 {font-size:19px;margin:0;display:flex;align-items:center;gap:7px;}
+.safety-setup-head p,.safety-setup-group p {margin:0;color:#796f7e;font-size:12px;line-height:1.5;}
+.safety-setup-status {flex:0 0 auto;padding:7px 9px;border-radius:999px;background:#fff0e7;color:#9f663e;font-size:11px;font-weight:700;}
+.safety-setup-status.ready {background:#e6f5eb;color:#357a53;}
+.safety-setup-toggle {width:fit-content;padding:7px 0;border:0;background:none;color:#82528f;font-size:12px;font-weight:700;cursor:pointer;}
+.safety-setup-content {display:grid;gap:12px;}
+.safety-setup-group {display:grid;gap:10px;padding:13px;border:1px solid #ece5ef;border-radius:13px;background:#fff;min-width:0;}
+.safety-setup-group h3 {margin:0;font-size:14px;color:#51475c;}
+.safety-setup-group .safety-section-head {margin:0;align-items:center;}
+.safety-setup-group .safety-section-head small,.safety-setup-group>small {font-size:11px;color:#897c92;line-height:1.5;}
+.safety-setup-member {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:9px;padding:9px;border-radius:10px;background:#faf8fc;}
+.safety-setup-member>div {display:grid;gap:3px;min-width:0;}
+.safety-setup-member strong,.safety-emergency-number strong {font-size:12px;color:#615467;}
+.safety-setup-member small {font-size:11px;color:#97879c;}
+.safety-setup-inline-form {display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;}
+.safety-setup-inline-form input {width:min(210px,100%);min-width:0;min-height:38px;font-size:16px;}
+.safety-setup-new-service {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.safety-setup-new-service label {display:grid;gap:5px;min-width:0;}
+.safety-setup-new-service input {min-width:0;font-size:16px;}
+.safety-setup-buttons {grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.safety-emergency-number {display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:9px;border:1px solid #eee8f0;border-radius:10px;}
+.safety-directory-link {width:fit-content;font-size:12px;color:#7c508c;font-weight:700;text-decoration:underline;}
+.safety-setup-warning {padding:10px;margin:0;background:#fff5ed;border-radius:10px;color:#98613a;font-size:12px;line-height:1.5;}
+.safety-emergency-shortcuts {display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;margin-bottom:14px;border:1px solid #e6cbd1;border-radius:13px;background:#fff8f8;}
+.safety-emergency-shortcuts>div {flex:1 1 220px;display:grid;gap:5px;}
+.safety-emergency-shortcuts strong {display:flex;align-items:center;gap:6px;font-size:13px;color:#993f52;}
+.safety-emergency-shortcuts small,.safety-setup-call-note {font-size:11px;color:#957c86;line-height:1.45;}
+.safety-tap-button {touch-action:manipulation;}
+.family-sos-live-banner {position:fixed;z-index:120;top:76px;left:50%;transform:translateX(-50%);width:min(780px,calc(100vw - 28px));display:flex;align-items:center;gap:12px;padding:13px 15px;border:2px solid #fff;border-radius:15px;color:#fff;background:linear-gradient(120deg,#a5264b,#db4a68);box-shadow:0 13px 45px rgba(82,21,41,.36);}
+.family-sos-live-banner>svg {flex:0 0 auto;}
+.family-sos-live-banner>div {min-width:0;flex:1;display:grid;gap:3px;}
+.family-sos-live-banner strong {font-size:14px;color:#fff;}
+.family-sos-live-banner span {font-size:11px;color:#ffe1e7;line-height:1.35;}
+.family-sos-live-banner>a {display:flex;align-items:center;gap:6px;flex:0 0 auto;min-height:38px;padding:9px 12px;border-radius:9px;background:#fff;color:#a52950;text-decoration:none;font-size:12px;font-weight:800;}
+@media(max-width:700px) {
+  .safety-setup-head {display:grid;}
+  .safety-setup-status {width:fit-content;}
+  .safety-setup-new-service {grid-template-columns:1fr;}
+  .safety-emergency-shortcuts .safety-action-button {width:100%;justify-content:center;}
+  .family-sos-live-banner {top:calc(8px + env(safe-area-inset-top,0px));align-items:start;flex-wrap:wrap;}
+  .family-sos-live-banner>a {margin-left:34px;}
+}

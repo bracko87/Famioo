@@ -14,7 +14,7 @@ import {
   Plus,
   Pencil,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import {
   SafetyInternetCall,
@@ -309,7 +309,7 @@ export function SafetyPage(){
     requestLocation()
   }
 
-  async function savePhone(event:React.FormEvent<HTMLFormElement>,profileId:string){
+  async function savePhone(event:FormEvent<HTMLFormElement>,profileId:string){
     event.preventDefault()
     const phone=phoneDraft.trim()
     if(!phone || !/^\+?[0-9 ()/.-]{6,32}$/.test(phone)){
@@ -331,7 +331,7 @@ export function SafetyPage(){
     await load(false)
   }
 
-  async function saveEmergencyNumber(event:React.FormEvent<HTMLFormElement>){
+  async function saveEmergencyNumber(event:FormEvent<HTMLFormElement>){
     event.preventDefault()
     const name=emergencyName.trim()
     const phone=emergencyPhone.trim()

@@ -52,6 +52,7 @@ import { Select } from './ui/Select'
 import { MobileAssistantQuick } from './MobileAssistantQuick'
 import { MobileMessengerQuick } from './MobileMessengerQuick'
 import { LocationSharingAgent } from './LocationSharingAgent'
+import { SafetyAlertBanner } from './SafetyAlertBanner'
 
 const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>> = {
   calendar: CalendarDays,
@@ -449,6 +450,7 @@ export function AppShell() {
   return (
     <div className={sidebarCollapsed ? 'app-layout sidebar-collapsed' : 'app-layout'}>
       <LocationSharingAgent />
+      <SafetyAlertBanner />
       <aside className={[
         'app-sidebar',
         mobileMenu ? 'open' : '',
