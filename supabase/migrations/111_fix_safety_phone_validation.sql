@@ -64,25 +64,7 @@ begin
 
   if v_phone is not null and (
     length(v_phone) not between 6 and 32
-    or v_phone !~ '^[+]?[0-9 ()/.-]+
-  ) then
-    raise exception 'Use a valid phone number';
-  end if;
-
-  update public.family_profiles
-  set contact_phone=v_phone,
-      updated_at=now()
-  where household_id=p_household_id
-    and id=p_profile_id;
-
-  return true;
-end;
-$$;
-
-revoke all on function public.set_household_profile_phone_v1(uuid,uuid,text)
-from public,anon;
-grant execute on function public.set_household_profile_phone_v1(uuid,uuid,text)
-to authenticated;
+    or v_phone !~ '^[+]?[0-9 ()/.-]+$'
   ) then
     raise exception 'Use a valid phone number';
   end if;
