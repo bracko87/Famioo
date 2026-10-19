@@ -57,10 +57,20 @@ live database permission test are claimed.
 
 **Blockers before using Alexa outside a controlled private experiment:**
 
-- **Idempotency/replay protection** for `task_add` and `shopping_add`:
-  Amazon and networks may retry commands. Store one-use request IDs and
-  perform atomic duplicate prevention across concurrent Edge requests.
-  A simple in-memory cache is not sufficient.
+- **Idempotency/replay protection is implemented in `staging`**, but
+  migration 113 and the new Edge Function must be deployed and tested before
+  it can protect the live application. Each task/shopping request must carry
+  `request_id` (16–160 safe characters; Alexa's `request.requestId` is suitable).
+  Retry the **same** request with the **same** ID and slot values; each new
+  utterance gets a **new** ID. The transaction and result receipt prevent
+  concurrent retries from creating duplicate data.
+  - Migration: `supabase/migrations/113_voice_command_idempotency.sql`
+  - Simulator: “Retry previous write (no duplicate)” replays the exact
+    previous write, including its ID and payload.
+  - Reusing an ID for a different command or data returns HTTP 409.
+  - Original response is stored per household/request ID for future replays.
+  - Receipt cleanup/retention and production concurrency validation remain
+    required before an Alexa public release.
 - **Request throttling and abuse controls** with backend state and observable
   logs to limit stolen-token and high-volume requests.
 - **Amazon Skill and OAuth account linking** do not exist yet. A long-lived
@@ -77,9 +87,38 @@ live database permission test are claimed.
   privileged actions stay outside the initial Skill. Consider per-voice
   speaker restrictions only after realistic tests of identity limitations.
 
+## Idempotency validation (migration 113)
+
+This is a **migration + Edge deployment pair**. Do not deploy the Edge
+mutation changes without migration 113 or new task/shopping commands will
+fail (unavailable RPC). Apply earlier prerequisites (099 and 112) first.
+
+1. In the Voice Integration simulator, enable `task_add`, create a test task,
+   press **Retry previous write (no duplicate)** and verify that only **one**
+   task exists. The second response should include `replayed:true` and the
+   original `task_id`.
+2. Repeat with `shopping_add`, including an empty shopping-list directory.
+   Only one new item (and one new default list, if applicable) should exist.
+3. Press **Run voice test** again (new ID) to confirm that a deliberate second
+   spoken command can create another task or item.
+4. Attempt the same `request_id` with changed title or intent via a controlled
+   development call: expect HTTP 409 and zero additional writes.
+5. Send at least two **concurrent** identical requests and confirm one write
+   and two successful responses referencing the same record. Test both intents.
+6. Send a mutation *without* a request ID; expect HTTP 400 and no new record.
+7. Disable voice action or revoke linked owner/admin access. New requests and
+   replays must be rejected, even if a valid idempotency receipt already exists.
+8. Confirm `anon` and ordinary `authenticated` JWTs cannot invoke
+   `voice_create_once_v1` or read `voice_command_receipts` directly.
+9. Verify a database failure rolls back both new records and the receipt,
+   making a legitimate retry possible after the error is corrected.
+10. Inspect idempotency receipt growth after testing. Plan a controlled cleanup
+    policy no earlier than 30 days after creation; no automatic purge is
+    included in this migration.
+
 ## Release verification checklist
 
-- [ ] Deploy database migration 099 (if not applied) and 112 in order to
+- [ ] Deploy database migrations 099 (if not applied), 112 and 113 in order to
   the **Famioo** Supabase project; confirm RLS and grants on settings.
 - [ ] Deploy updated `famioo-voice-command` Edge Function into a controlled
   development/test environment (do not expose the shared token publicly).
@@ -94,5 +133,6 @@ live database permission test are claimed.
   wildcard list names do not mutate data.
 - [ ] Household-only calendar queries never return private events.
 - [ ] Backend returns generic failure to Alexa, without DB error details.
-- [ ] Add idempotency and load/rate-limit tests before claiming launch-ready.
+- [ ] Run the idempotency/concurrency tests above and add request rate-limiting
+  tests before claiming launch-ready.
 - [ ] Run `npm run build` and controlled PR checks before a manual merge.

@@ -24321,3 +24321,26 @@ body:has(.modal-backdrop > .modal-card) { overflow:hidden!important; }
   font-size:12px;
   line-height:1.45;
 }
+
+/* Keep the two developer-test Alexa commands aligned across mobile and desktop. */
+.voice-test-actions {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:9px;
+}
+.voice-test-actions .secondary-button {
+  max-width:100%;
+  white-space:normal;
+  text-align:center;
+}
+@media(max-width:700px) {
+  .voice-test-actions {
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+  }
+  .voice-test-actions .secondary-button {
+    width:100%;
+    justify-content:center;
+  }
+}
