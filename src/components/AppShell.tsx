@@ -40,9 +40,10 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ComponentType, type DragEvent } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
+import { isFreePlanAccount, isPaidPage } from '../lib/accountPlan'
 import type { ModuleCode } from '../lib/types'
 import { Brand } from './Brand'
 import { FooterWeather } from './FooterWeather'
@@ -214,6 +215,7 @@ export function AppShell() {
   const location = useLocation()
   const navigate = useNavigate()
   const { household, households, modules, profiles, user, switchHousehold } = useHousehold()
+  const freeAccount = isFreePlanAccount(user)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
@@ -671,11 +673,12 @@ export function AppShell() {
               ? <img className="header-profile-image" src={profileAvatarUrl} alt="" />
               : <span>{profileMark}</span>}
             <strong>{profileName}</strong>
+            {freeAccount && <small className="free-account-label" title="Individual Free plan; household subscription is unchanged">Free plan</small>}
           </div>
         </div>
       </header>
 
-      <main className="app-content"><Outlet /></main>
+      <main className="app-content">{freeAccount && isPaidPage(location.pathname) ? <Navigate to="/app" replace /> : <Outlet />}</main>
 
       <footer className="app-footer">
         <FooterWeather />
