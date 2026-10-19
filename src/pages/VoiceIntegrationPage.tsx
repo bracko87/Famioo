@@ -88,6 +88,9 @@ export function VoiceIntegrationPage(){
   }
 
   useEffect(()=>{void load()},[household.id,canConfigure])
+  // A test command belongs to one household. Never reuse its request ID
+  // after switching household context.
+  useEffect(()=>{setLastWrite(null);setResult('')},[household.id])
 
   function toggleAction(action:VoiceAction,value:boolean){
     setAllowed(current=>value
