@@ -112,9 +112,15 @@ export function MemoriesPage(){
   const [error,setError]=useState('')
   const [message,setMessage]=useState('')
 
-  const visibleAlbums=albums.filter(album=>showArchived?Boolean(album.archived_at):!album.archived_at)
+  const visibleAlbums=useMemo(
+    ()=>albums.filter(album=>showArchived?Boolean(album.archived_at):!album.archived_at),
+    [albums,showArchived],
+  )
   const selected=visibleAlbums.find(album=>album.id===selectedId)??visibleAlbums[0]??null
-  const selectedPhotos=photos.filter(photo=>photo.album_id===selected?.id)
+  const selectedPhotos=useMemo(
+    ()=>photos.filter(photo=>photo.album_id===selected?.id),
+    [photos,selected?.id],
+  )
   const photoFileIds=new Set(selectedPhotos.map(photo=>photo.file_id))
   const availableExistingPhotos=files.filter(file=>file.mime_type?.startsWith('image/')&&!photoFileIds.has(file.id))
   const fileById=useMemo(()=>new Map(files.map(file=>[file.id,file])),[files])
