@@ -8,6 +8,7 @@ import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
 import { firstName } from '../lib/personName'
+import { moduleConnectionState } from '../lib/moduleAccess'
 import { supabase } from '../lib/supabase'
 import type { EventCategory } from '../lib/types'
 
@@ -137,8 +138,8 @@ export function TasksPage() {
   const { household, modules, profiles } = useHousehold()
   const navigate = useNavigate()
   const canWrite = Boolean(modules.find((module) => module.code === 'tasks')?.can_write)
-  const costsEnabled = Boolean(modules.find((module) => module.code === 'costs')?.enabled)
-  const projectsWritable = Boolean(modules.find((module) => module.code === 'projects')?.enabled && modules.find((module) => module.code === 'projects')?.can_write)
+  const costsEnabled = moduleConnectionState(modules, 'tasks', 'costs') === 'active'
+  const projectsWritable = moduleConnectionState(modules, 'tasks', 'projects') === 'active' && Boolean(modules.find((module) => module.code === 'projects')?.can_write)
 
   const [tasks, setTasks] = useState<Task[]>([])
   const [categories, setCategories] = useState<EventCategory[]>([])

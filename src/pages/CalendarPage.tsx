@@ -1,8 +1,9 @@
 import { Archive, CalendarSync, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, EyeOff, FolderKanban, LockKeyhole, Pencil, Plus, Search, Settings2, Trash2, WalletCards, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
+import { moduleConnectionState } from '../lib/moduleAccess'
 import { supabase } from '../lib/supabase'
 import type { CalendarOccurrence, CalendarRow, EventCategory } from '../lib/types'
 import { Select } from '../components/ui/Select'
@@ -11,7 +12,6 @@ import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { DatePicker } from '../components/ui/DatePicker'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
-import { EventContextPanel } from '../components/calendar/EventContextPanel'
 import { firstName } from '../lib/personName'
 
 type CalendarView = 'day' | 'week' | 'month' | 'upcoming'
@@ -238,11 +238,24 @@ export function CalendarPage() {
   const checklistAccess = modules.find((module) => module.code === 'checklists')
   const costsAccess = modules.find((module) => module.code === 'costs')
   const projectsAccess = modules.find((module) => module.code === 'projects')
-  const canWriteChecklists = Boolean(checklistAccess?.enabled && checklistAccess?.can_write)
-  const canWriteCosts = Boolean(costsAccess?.enabled && costsAccess?.can_write)
-  const canWriteProjects = Boolean(projectsAccess?.enabled && projectsAccess?.can_write)
+  const canWriteChecklists = Boolean(checklistAccess?.can_write && moduleConnectionState(modules, 'calendar', 'checklists') === 'active')
+  const canWriteCosts = Boolean(costsAccess?.can_write && moduleConnectionState(modules, 'calendar', 'costs') === 'active')
+  const canWriteProjects = Boolean(projectsAccess?.can_write && moduleConnectionState(modules, 'calendar', 'projects') === 'active')
 
-  const [view, setView] = useState<CalendarView>('month')
+  const [view, setView] = useState<CalendarView>('week')
+
+  // A bottom-tab tap resets to the current week even if Calendar stays mounted.
+  useEffect(() => {
+    const openCurrentWeek = () => {
+      setView('week')
+      setAnchor(new Date())
+    }
+    if (new URLSearchParams(routeLocation.search).get('view') === 'week') {
+      openCurrentWeek()
+    }
+    window.addEventListener('famioo:calendar-week-shortcut', openCurrentWeek)
+    return () => window.removeEventListener('famioo:calendar-week-shortcut', openCurrentWeek)
+  }, [routeLocation.key, routeLocation.search])
   const [anchor, setAnchor] = useState(() => new Date())
   const [events, setEvents] = useState<CalendarOccurrence[]>([])
   const [calendars, setCalendars] = useState<CalendarRow[]>([])
@@ -1225,10 +1238,10 @@ export function CalendarPage() {
           Today
         </button>
 
-        <button className="secondary-button compact" onClick={() => routeNavigate('/app/calendar/connections')}>
+        <Link className="secondary-button compact" to="/app/calendar/connections" aria-label="Open Work Calendar import">
           <CalendarSync size={15}/>
           Work import
-        </button>
+        </Link>
 
         {canWrite ? (
           <button className="primary-button compact" onClick={() => openComposer(dateKey(new Date()))}>
@@ -1304,10 +1317,10 @@ export function CalendarPage() {
         )}
 
         <div className="mobile-calendar-secondary-row">
-          <button className="secondary-button compact" onClick={() => routeNavigate('/app/calendar/connections')}>
+          <Link className="secondary-button compact" to="/app/calendar/connections" aria-label="Open Work Calendar import">
             <CalendarSync size={15}/>
             Work import
-          </button>
+          </Link>
           {canWrite && (
             <button type="button" className="secondary-button compact" onClick={()=>setCalendarManagerOpen(true)}>
               <Settings2 size={14}/>
@@ -1816,7 +1829,7 @@ export function CalendarPage() {
 
             {editingEventId && (
               <div className="event-module-connections">
-                {projectsAccess?.enabled && (
+                {moduleConnectionState(modules, 'calendar', 'projects') === 'active' && (
                   <section className="event-connection-card">
                     <div className="event-connection-head">
                       <span><FolderKanban size={15} /><strong>Projects & Chores</strong></span>
@@ -1855,7 +1868,7 @@ export function CalendarPage() {
                   </section>
                 )}
 
-                {checklistAccess?.enabled && (
+                {moduleConnectionState(modules, 'calendar', 'checklists') === 'active' && (
                   <details className="event-linked-details">
                     <summary>
                       <span><ClipboardCheck size={15} />Checklists</span>
@@ -1883,7 +1896,7 @@ export function CalendarPage() {
                   </details>
                 )}
 
-                {costsAccess?.enabled && (
+                {moduleConnectionState(modules, 'calendar', 'costs') === 'active' && (
                   <details className="event-linked-details">
                     <summary>
                       <span><WalletCards size={15} />Household costs</span>
@@ -1944,10 +1957,6 @@ export function CalendarPage() {
                   ))}
                 </div>
               </fieldset>
-            )}
-
-            {editingEventId && (
-              <EventContextPanel eventId={editingEventId} />
             )}
 
             {!editingEventId && (

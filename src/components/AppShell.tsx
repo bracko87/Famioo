@@ -9,6 +9,7 @@ import {
   CheckSquare,
   ClipboardList,
   ContactRound,
+  Gem,
   FileText,
   FolderKanban,
   GraduationCap,
@@ -40,9 +41,10 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ComponentType, type DragEvent } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
+import { requiredModuleForPath } from '../lib/moduleAccess'
 import type { ModuleCode } from '../lib/types'
 import { Brand } from './Brand'
 import { FooterWeather } from './FooterWeather'
@@ -131,20 +133,16 @@ type SidebarModuleItem = {
 const sidebarModuleItems: SidebarModuleItem[] = [
   { code: 'calendar', label: 'Calendar', category: 'plan' },
   { code: 'calendar_connections', label: 'Calendar connections', category: 'plan' },
-  { code: 'calendar_context', label: 'Calendar comments & photos', category: 'plan' },
   { code: 'tasks', label: 'Tasks', category: 'plan' },
   { code: 'checklists', label: 'Checklists', category: 'plan' },
   { code: 'memo', label: 'Memo / Someday', category: 'plan' },
   { code: 'inbox_scan', label: 'Inbox / Scan', category: 'plan' },
 
   { code: 'safety', label: 'Family Safety', category: 'family' },
-  { code: 'location', label: 'Family Location', category: 'family' },
+  { code: 'location', label: 'Family Location & Check-In', category: 'family' },
   { code: 'messenger', label: 'Family Messenger', category: 'family' },
-  { code: 'contacts', label: 'Family Contacts', category: 'family' },
+  { code: 'contacts', label: 'Family Contacts & Emergency', category: 'family' },
   { code: 'memories', label: 'Memories', category: 'family' },
-  { code: 'checkin', label: 'Check-In', category: 'family' },
-  { code: 'pickup_authorization', label: 'Pickup Authorization', category: 'family' },
-  { code: 'emergency_info', label: 'Emergency Info', category: 'family' },
   { code: 'school', label: 'School & Kita', category: 'family' },
 
   { code: 'shopping', label: 'Shopping', category: 'life' },
@@ -176,12 +174,20 @@ const sidebarCategories = [
 
 const favoritePreferenceKey = 'famioo_favorite_modules_v1'
 const moduleCodes = new Set<ModuleCode>(sidebarModuleItems.map((item) => item.code))
+const mergedFavoriteCodes: Partial<Record<ModuleCode, ModuleCode>> = {
+  emergency_info: 'contacts',
+  pickup_authorization: 'contacts',
+  checkin: 'location',
+  calendar_context: 'calendar',
+}
 
 function validFavoriteModules(value: unknown): ModuleCode[] {
   if (!Array.isArray(value)) return []
-  return [...new Set(value.filter((code): code is ModuleCode => (
-    typeof code === 'string' && moduleCodes.has(code as ModuleCode)
-  )))]
+  const normalized = value
+    .filter((code): code is ModuleCode => typeof code === 'string')
+    .map(code => mergedFavoriteCodes[code] ?? code)
+    .filter((code) => moduleCodes.has(code))
+  return [...new Set(normalized)]
 }
 
 function readFavoriteModules(userId: string, cloudValue: unknown): ModuleCode[] {
@@ -671,7 +677,12 @@ export function AppShell() {
         </div>
       </header>
 
-      <main className="app-content"><Outlet /></main>
+      <main className="app-content">{(() => {
+        const requiredModule = requiredModuleForPath(location.pathname)
+        return !requiredModule || modules.some((module) => module.code === requiredModule && module.enabled)
+          ? <Outlet />
+          : <Navigate to="/app" replace />
+      })()}</main>
 
       <footer className="app-footer">
         <FooterWeather />
@@ -690,8 +701,8 @@ export function AppShell() {
 
       <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
         <NavLink to="/app" end><Home size={19} /><span>Home</span></NavLink>
-        <NavLink to="/app/calendar"><CalendarDays size={19} /><span>Calendar</span></NavLink>
-        <NavLink to="/app/tasks"><ClipboardList size={19} /><span>Tasks</span></NavLink>
+        <NavLink to="/app/calendar?view=week" onClick={() => window.dispatchEvent(new Event('famioo:calendar-week-shortcut'))}><CalendarDays size={19} /><span>Calendar</span></NavLink>
+        <NavLink className="mobile-premium-nav" to="/app/premium" aria-label="Explore Premium modules"><Gem size={21} /><span>Premium</span></NavLink>
         <NavLink to="/app/settings"><Settings size={19} /><span>Settings</span></NavLink>
         <button type="button" className="mobile-signout-tab" onClick={() => void supabase.auth.signOut()} aria-label="Sign out of Famioo">
           <LogOut size={19} />

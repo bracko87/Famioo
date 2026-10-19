@@ -5,6 +5,7 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Select } from '../components/ui/Select'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
+import { moduleConnectionState } from '../lib/moduleAccess'
 import { supabase } from '../lib/supabase'
 import type { CalendarRow } from '../lib/types'
 
@@ -119,9 +120,8 @@ async function imageFileToDataUrl(file:File){
 export function CalendarConnectionsPage(){
   const { household,modules,profiles,user }=useHousehold()
   const calendarAccess=modules.find((module)=>module.code==='calendar')
-  const assistantAccess=modules.find((module)=>module.code==='assistant')
   const canWrite=Boolean(calendarAccess?.enabled&&calendarAccess?.can_write)
-  const hasAiAssistant=Boolean(assistantAccess?.enabled)
+  const hasAiAssistant=moduleConnectionState(modules,'calendar_connections','assistant')==='active'
   const [calendars,setCalendars]=useState<CalendarRow[]>([])
   const [connections,setConnections]=useState<Connection[]>([])
   const [workCategoryId,setWorkCategoryId]=useState<string|null>(null)
@@ -532,7 +532,9 @@ export function CalendarConnectionsPage(){
         <div>
           <div className="page-label">WORK CALENDAR</div>
           <h1>Bring work time into Famioo</h1>
-          <p>No company login is required. Import a screenshot, a local .ics file, or pasted appointment text and review it before it reaches the family calendar.</p>
+          <p>{hasAiAssistant
+            ? 'No company login is required. Import screenshots, local .ics files or pasted appointment text, and review appointments before adding them.'
+            : 'No company login is required. Import a local .ics calendar file or create a separate Work calendar manually. Choose which appointments appear in your family calendar.'}</p>
         </div>
         <Link className="secondary-button compact" to="/app/calendar">Back to Calendar</Link>
       </div>
@@ -541,7 +543,7 @@ export function CalendarConnectionsPage(){
       {message&&<div className="notice success">{message}</div>}
 
       <section className="calendar-provider-grid work-calendar-methods">
-        <article className={'calendar-provider-card ready '+(!hasAiAssistant?'ai-locked':'')}>
+        {hasAiAssistant && <article className="calendar-provider-card ready">
           <span className="calendar-provider-icon screenshot"><ImageIcon size={20}/></span>
           <div>
             <span className="eyebrow">AI-ASSISTED IMPORT</span>
@@ -560,22 +562,24 @@ export function CalendarConnectionsPage(){
               <Sparkles size={14}/>Get AI Assistant
             </Link>
           )}
-        </article>
+        </article>}
 
         <article className="calendar-provider-card ready local-file">
           <span className="calendar-provider-icon file"><FileUp size={20}/></span>
           <div>
-            <span className="eyebrow">NO AI NEEDED</span>
             <h2>Local .ics file</h2>
             <p>Import a calendar file exported from Outlook or another calendar app. No AI, public calendar link or company OAuth permission is needed.</p>
           </div>
-          <span className="calendar-provider-status connected"><Check size={12}/>Included with Calendar</span>
+          <div className="calendar-provider-status-row">
+            <span className="calendar-provider-status connected"><Check size={12}/>Included with Calendar</span>
+            <span className="calendar-provider-status no-ai-required">No AI needed</span>
+          </div>
           <button type="button" className="primary-button compact" disabled={!canWrite} onClick={()=>fileRef.current?.scrollIntoView({behavior:'smooth',block:'center'})}>
             Import .ics file
           </button>
         </article>
 
-        <article className={'calendar-provider-card ready '+(!hasAiAssistant?'ai-locked':'')}>
+        {hasAiAssistant && <article className="calendar-provider-card ready">
           <span className="calendar-provider-icon paste"><FileText size={20}/></span>
           <div>
             <span className="eyebrow">AI-ASSISTED IMPORT</span>
@@ -594,16 +598,18 @@ export function CalendarConnectionsPage(){
               <Sparkles size={14}/>Get AI Assistant
             </Link>
           )}
-        </article>
+        </article>}
 
         <article className="calendar-provider-card ready manual-work-calendar">
           <span className="calendar-provider-icon manual"><CalendarSync size={20}/></span>
           <div>
-            <span className="eyebrow">NO AI NEEDED</span>
             <h2>Manual Work Calendar</h2>
             <p>Create a separate Work calendar and enter appointments yourself. Work and Family stay separate but can be viewed together in the same Calendar.</p>
           </div>
-          <span className="calendar-provider-status connected"><Check size={12}/>{workCalendar?'Work Calendar ready':'Included with Calendar'}</span>
+          <div className="calendar-provider-status-row">
+            <span className="calendar-provider-status connected"><Check size={12}/>{workCalendar?'Work Calendar ready':'Included with Calendar'}</span>
+            <span className="calendar-provider-status no-ai-required">No AI needed</span>
+          </div>
           {workCalendar ? (
             <Link className="primary-button compact" to="/app/calendar">Open Work Calendar</Link>
           ) : (
@@ -619,7 +625,7 @@ export function CalendarConnectionsPage(){
           <div>
             <span className="eyebrow">IMPORT SETTINGS</span>
             <h2>Choose the destination and privacy level</h2>
-            <p>Busy only is the default for company appointments. Screenshot and pasted-text extraction require AI Assistant; .ics and manual Work Calendar do not.</p>
+            <p>Busy only is the default for company appointments. Manual Work Calendar and .ics file imports remain available.</p>
           </div>
         </header>
 
@@ -661,7 +667,7 @@ export function CalendarConnectionsPage(){
         </div>
       </section>
 
-      <section className={'work-import-card list-card '+(!hasAiAssistant?'ai-locked-panel':'')} ref={screenshotRef}>
+      {hasAiAssistant && <section className="work-import-card list-card" ref={screenshotRef}>
         <header>
           <div>
             <span className="eyebrow">SCREENSHOT IMPORT · AI ASSISTANT</span>
@@ -716,9 +722,9 @@ export function CalendarConnectionsPage(){
             {extracting==='image'?'Reading screenshot…':'Detect calendar events'}
           </button>
         </div>
-      </section>
+      </section>}
 
-      <section className={'work-import-card list-card '+(!hasAiAssistant?'ai-locked-panel':'')} ref={pasteRef}>
+      {hasAiAssistant && <section className="work-import-card list-card" ref={pasteRef}>
         <header>
           <div>
             <span className="eyebrow">PASTE APPOINTMENT · AI ASSISTANT</span>
@@ -753,7 +759,7 @@ export function CalendarConnectionsPage(){
             {extracting==='text'?'Reading appointment…':'Create event draft'}
           </button>
         </div>
-      </section>
+      </section>}
 
       {drafts.length>0&&(
         <section className="work-calendar-review list-card">

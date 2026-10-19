@@ -24,6 +24,7 @@ import { LifeAdminPage } from './pages/LifeAdminPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { ProjectsArchivePage } from './pages/ProjectsArchivePage'
 import { SettingsPage } from './pages/SettingsPage'
+import { PremiumModuleDetailsPage, PremiumModulesPage } from './pages/PremiumModulesPage'
 import { MealsPage } from './pages/MealsPage'
 import { RecipeDetailPage } from './pages/RecipeDetailPage'
 import { FilesPage } from './pages/FilesPage'
@@ -31,18 +32,15 @@ import { VaccinationPage } from './pages/VaccinationPage'
 import { TicketWalletPage } from './pages/TicketWalletPage'
 import { AssistantPage } from './pages/AssistantPage'
 import { SafetyPage } from './pages/SafetyPage'
-import { LocationPage } from './pages/LocationPage'
+import { FamilyLocationHubPage } from './pages/FamilyLocationHubPage'
 import { MessengerPage } from './pages/MessengerPage'
-import { ContactsPage } from './pages/ContactsPage'
+import { FamilyContactsHubPage } from './pages/FamilyContactsHubPage'
 import { MemoPage } from './pages/MemoPage'
 import { TravelPage } from './pages/TravelPage'
 import { VehiclesPage } from './pages/VehiclesPage'
 import { PetsPage } from './pages/PetsPage'
 import { InboxScanPage } from './pages/InboxScanPage'
-import { EmergencyPage } from './pages/EmergencyPage'
 import { MemoriesPage } from './pages/MemoriesPage'
-import { CheckInPage } from './pages/CheckInPage'
-import { PickupAuthorizationPage } from './pages/PickupAuthorizationPage'
 import { HomeRemotePage } from './pages/HomeRemotePage'
 import { VoiceIntegrationPage } from './pages/VoiceIntegrationPage'
 import { BrandMark } from './components/Brand'
@@ -278,22 +276,24 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Route path="checklists" element={<ChecklistsPage />} />
           <Route path="checklists/archive" element={<ChecklistArchivePage />} />
           <Route path="safety" element={<SafetyPage />} />
-          <Route path="location" element={<LocationPage />} />
+          <Route path="location" element={<FamilyLocationHubPage />} />
           <Route path="messenger" element={<MessengerPage />} />
-          <Route path="contacts" element={<ContactsPage />} />
+          <Route path="contacts" element={<FamilyContactsHubPage />} />
           <Route path="memo" element={<MemoPage />} />
           <Route path="rewards" element={<Navigate to="/app/projects?tab=rewards" replace />} />
           <Route path="travel" element={<TravelPage />} />
           <Route path="vehicles" element={<VehiclesPage />} />
           <Route path="pets" element={<PetsPage />} />
           <Route path="inbox" element={<InboxScanPage />} />
-          <Route path="emergency" element={<EmergencyPage />} />
+          <Route path="emergency" element={<Navigate to="/app/contacts?tab=emergency" replace />} />
           <Route path="memories" element={<MemoriesPage />} />
-          <Route path="check-in" element={<CheckInPage />} />
-          <Route path="pickup-authorization" element={<PickupAuthorizationPage />} />
+          <Route path="check-in" element={<Navigate to="/app/location?tab=checkin" replace />} />
+          <Route path="pickup-authorization" element={<Navigate to="/app/contacts?tab=pickups" replace />} />
           <Route path="home-remote" element={<HomeRemotePage />} />
           <Route path="voice" element={<VoiceIntegrationPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="premium" element={<PremiumModulesPage />} />
+          <Route path="premium/module/:code" element={<PremiumModuleDetailsPage />} />
 
           <Route path="shopping" element={<ShoppingPage />} />
           <Route path="costs" element={<CostsPage />} />

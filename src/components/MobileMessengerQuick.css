@@ -96,3 +96,10 @@
   .mobile-messenger-body .messenger-conversations{height:100%}
   .mobile-messenger-body .messenger-thread-list{flex:1}
 }
+
+/* No paid AI tab: keep Chat and SOS as one tightly stacked pair. */
+@media (max-width: 700px) {
+  .mobile-messenger-tab.no-ai-gap {
+    bottom: calc(172px + env(safe-area-inset-bottom, 0px));
+  }
+}

@@ -66,6 +66,7 @@ self.addEventListener('push', (event) => {
   }
 
   const safetyAlert = String(payload.tag || '').startsWith('famioo-safety-')
+  const messengerAlert = String(payload.tag || '').startsWith('famioo-messenger-')
 
   event.waitUntil(
     self.registration.showNotification(payload.title || 'Famioo', {
@@ -76,7 +77,9 @@ self.addEventListener('push', (event) => {
       data: { url: payload.url || '/app' },
       renotify: safetyAlert,
       requireInteraction: safetyAlert,
-      silent: false,
+      // Messenger notifications are intentionally silent until a future
+      // user-controlled sound setting is introduced. Safety alerts are unchanged.
+      silent: messengerAlert,
       vibrate: safetyAlert ? [300, 150, 300, 150, 450] : undefined,
     }),
   )

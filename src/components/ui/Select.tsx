@@ -45,8 +45,12 @@ export function Select({
   useEffect(() => {
     if (open) {
       requestAnimationFrame(() => {
-        const selectedNode = menuRef.current?.querySelector<HTMLElement>('[data-selected="true"]')
-        selectedNode?.scrollIntoView({ block: 'center' })
+        const menu = menuRef.current
+        const selectedNode = menu?.querySelector<HTMLElement>('[data-selected="true"]')
+        if (menu && selectedNode) {
+          // Keep selection scrolling inside the popup, never the page behind it.
+          menu.scrollTop = selectedNode.offsetTop - menu.offsetTop - (menu.clientHeight - selectedNode.clientHeight) / 2
+        }
       })
     }
   }, [open, value])
@@ -130,7 +134,7 @@ export function Select({
         <div className="mobile-select-backdrop" role="presentation" onMouseDown={(event) => {
           if (event.currentTarget === event.target) setOpen(false)
         }}>
-          <section className="mobile-select-sheet" aria-label={ariaLabel ?? 'Choose option'}>
+          <section className="mobile-select-sheet" role="dialog" aria-modal="true" aria-label={ariaLabel ?? 'Choose option'}>
             <header>
               <div>
                 <span className="eyebrow">CHOOSE</span>

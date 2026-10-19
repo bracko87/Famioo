@@ -276,22 +276,29 @@ export function HomePage() {
     tasks: `${taskCount} open`,
     checklists: `${checklistCount} active`,
     safety: 'SOS ready · household safety',
-    location: 'Family map & safe places',
+    location: 'Family map, safe places & check-ins',
     messenger: 'Private family chat',
-    contacts: 'People & important services',
+    contacts: 'Family directory, emergency details & pickups',
     memo: 'Ideas, places & someday notes',
     shopping: `${shoppingCount} active lists`,
     costs: new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR' }).format(costMonthTotal) + ' this month',
   }
 
-  const enabledModules = modules.filter((module) => module.enabled && module.code !== 'messenger')
+  // Legacy sub-modules stay in the database so old records/permissions survive,
+  // but users see only the combined modules in the home module catalogue.
+  const mergedHiddenCodes = new Set<ModuleCode>([
+    'emergency_info', 'pickup_authorization', 'checkin', 'calendar_context', 'rewards',
+  ])
+  const enabledModules = modules.filter((module) =>
+    module.enabled && module.code !== 'messenger' && !mergedHiddenCodes.has(module.code)
+  )
 
   return (
     <div className="page home-page">
       <div className="page-label">HOME</div>
 
       <div className="home-mobile-promo-wrap">
-        <PromoCarousel modules={modules} />
+        <PromoCarousel modules={modules.filter(module => !mergedHiddenCodes.has(module.code))} />
       </div>
 
       <section className="home-module-area" aria-label="Enabled modules">
@@ -307,7 +314,7 @@ export function HomePage() {
               >
                 <span className="module-banner-icon"><Icon size={20} /></span>
                 <span className="module-banner-copy">
-                  <small>{module.name.toUpperCase()}</small>
+                  <small>{(module.code === 'contacts' ? 'Family Contacts & Emergency' : module.code === 'location' ? 'Family Location & Check-In' : module.name).toUpperCase()}</small>
                   <strong>{metricByCode[module.code] ?? module.description}</strong>
                   <em>
                     {module.access_level === 'read'

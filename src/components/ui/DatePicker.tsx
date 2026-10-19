@@ -78,11 +78,27 @@ export function DatePicker({
   className = '',
 }: DatePickerProps) {
   const [open, setOpen] = useState(false)
+  const [mobile, setMobile] = useState(false)
   const selected = parseIso(value)
   const [cursor, setCursor] = useState(() => monthStart(selected ?? new Date()))
   const rootRef = useRef<HTMLDivElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
   const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 })
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 700px)')
+    const update = () => setMobile(media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  useEffect(() => {
+    if (!open || !mobile) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previous }
+  }, [open, mobile])
 
   useEffect(() => {
     if (selected) setCursor(monthStart(selected))
@@ -175,12 +191,23 @@ export function DatePicker({
       </button>
 
       {open && typeof document !== 'undefined' && createPortal(
+        <>
+        {mobile && (
+          <div
+            className="date-picker-dialog-backdrop"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.currentTarget === event.target) setOpen(false)
+            }}
+          />
+        )}
         <div
           className="date-picker-popover date-picker-popover-portal"
           role="dialog"
+          aria-modal={mobile || undefined}
           aria-label={ariaLabel}
           ref={popoverRef}
-          style={{ top: popoverPosition.top, left: popoverPosition.left }}
+          style={mobile ? undefined : { top: popoverPosition.top, left: popoverPosition.left }}
         >
           <header className="date-picker-head">
             <button type="button" className="date-picker-nav" onClick={() => setCursor((current) => addMonths(current, -1))} aria-label="Previous month">
@@ -242,7 +269,8 @@ export function DatePicker({
               Clear
             </button>
           </footer>
-        </div>,
+        </div>
+        </>,
         document.body,
       )}
     </div>

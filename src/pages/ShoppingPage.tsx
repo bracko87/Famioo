@@ -6,6 +6,7 @@ import { DatePicker } from '../components/ui/DatePicker'
 import { PrivacyNotice } from '../components/PrivacyNotice'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
+import { moduleConnectionState } from '../lib/moduleAccess'
 import { supabase } from '../lib/supabase'
 import type { CalendarOccurrence, EventCategory } from '../lib/types'
 
@@ -112,10 +113,10 @@ function moneyValue(value: number, currency = 'EUR') {
 export function ShoppingPage() {
   const { household, modules } = useHousehold()
   const access = modules.find((module) => module.code === 'shopping')
-  const assistantAccess = modules.find((module) => module.code === 'assistant')
   const canWrite = Boolean(access?.can_write)
   const canSyncTasks = Boolean(modules.find((module) => module.code === 'tasks')?.can_write)
-  const hasAiAssistant = Boolean(assistantAccess?.enabled)
+  const assistantConnection = moduleConnectionState(modules, 'shopping', 'assistant')
+  const hasAiAssistant = assistantConnection === 'active'
 
   const [lists, setLists] = useState<ShoppingList[]>([])
   const [items, setItems] = useState<ShoppingItem[]>([])
@@ -1217,9 +1218,15 @@ export function ShoppingPage() {
             </section>
             <div className="compare-optional-ai">
               <p>Optional AI analysis</p>
-              {hasAiAssistant?<button type="button" className="secondary-button shopping-compare-ai" onClick={askAssistantAboutShopping}>
-                <Sparkles size={15}/>Ask AI to explain these results
-              </button>:<small>AI insights are available when Famioo Assistant is enabled.</small>}
+              {assistantConnection === 'active' ? (
+                <button type="button" className="secondary-button shopping-compare-ai" onClick={askAssistantAboutShopping}>
+                  <Sparkles size={15}/>Ask AI to explain these results
+                </button>
+              ) : assistantConnection === 'locked' ? (
+                <button type="button" className="secondary-button shopping-compare-ai module-connection-locked" disabled title="AI Assistant is not purchased">
+                  <Sparkles size={15}/>AI Assistant not unlocked
+                </button>
+              ) : null}
             </div>
           </aside>
         </>

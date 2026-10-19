@@ -1,5 +1,6 @@
 import type { User } from '@supabase/supabase-js'
 import { supabase } from './supabase'
+import { limitModulesForFreeAccount } from './accountPlan'
 import type {
   FamilyProfile,
   Household,
@@ -99,7 +100,7 @@ export async function loadModules(householdId: string): Promise<ModuleAccess[]> 
       .map((row) => [row.module_code, row.access_level as ModulePermission]),
   )
 
-  return (modulesResult.data ?? []).map((row) => {
+  const mapped: ModuleAccess[] = (modulesResult.data ?? []).map((row) => {
     const entitled = row.is_core || Boolean(entitlement.get(row.code))
     const accessLevel: ModulePermission = currentRole === 'owner'
       ? 'full'
@@ -117,4 +118,5 @@ export async function loadModules(householdId: string): Promise<ModuleAccess[]> 
       can_write: entitled && accessLevel === 'full',
     }
   })
+  return authData.user ? limitModulesForFreeAccount(mapped, authData.user) : mapped
 }
