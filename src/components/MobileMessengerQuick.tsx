@@ -13,6 +13,8 @@ type ThreadSummary={
 export function MobileMessengerQuick(){
   const {household,modules}=useHousehold()
   const enabled=modules.some(module=>module.code==='messenger'&&module.enabled)
+  const compactWithSafety = !modules.some(module=>module.code==='assistant'&&module.enabled)
+    && modules.some(module=>module.code==='safety'&&module.enabled)
   const [open,setOpen]=useState(false)
   const [initialThreadId,setInitialThreadId]=useState('')
   const [threads,setThreads]=useState<ThreadSummary[]>([])
@@ -73,7 +75,7 @@ export function MobileMessengerQuick(){
   return <>
     <button
       type="button"
-      className={open?'mobile-messenger-tab active':'mobile-messenger-tab'}
+      className={(open?'mobile-messenger-tab active':'mobile-messenger-tab')+(compactWithSafety?' no-ai-gap':'')}
       onClick={()=>setOpen(current=>!current)}
       aria-label={open?'Close Family Messenger':'Open Family Messenger'}
       aria-expanded={open}
