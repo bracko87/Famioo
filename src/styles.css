@@ -23892,3 +23892,67 @@ html[data-famioo-theme="dark"] .travel-traffic-result{background:#131313;border-
   vertical-align: middle;
 }
 .free-storage-note { margin-top: 8px; color: #65566a; font-size: 12px; line-height: 1.45; }
+
+/* Mobile Premium destination replaces the old central Tasks shortcut.
+   Keep the full five-slot bottom bar, with one intentional focal icon. */
+@media (max-width: 900px) {
+  .mobile-bottom-nav a.mobile-premium-nav {
+    color: #84468e;
+    font-weight: 700;
+    background: transparent;
+  }
+  .mobile-bottom-nav a.mobile-premium-nav svg {
+    width: 34px;
+    height: 34px;
+    padding: 7px;
+    border-radius: 13px;
+    color: white;
+    background: linear-gradient(135deg, #7041b6 0%, #b356a7 74%, #ce85ac 100%);
+    box-shadow: 0 4px 11px rgba(111, 56, 145, .2);
+    stroke-width: 2;
+  }
+  .mobile-bottom-nav a.mobile-premium-nav.active svg {
+    box-shadow: 0 2px 12px rgba(111, 56, 145, .32);
+  }
+}
+
+.premium-placeholder-page {
+  min-height: 65vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.premium-placeholder-card {
+  width: min(520px, 100%);
+  margin: 20px auto;
+  padding: clamp(24px, 5vw, 40px);
+  border: 1px solid #ece2ee;
+  border-radius: 22px;
+  background: linear-gradient(155deg, #fcf7fd, #fff 70%);
+  box-shadow: 0 14px 35px rgba(66, 33, 84, .07);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+.premium-placeholder-icon {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 17px;
+  background: linear-gradient(135deg,#7041b6,#b856a7);
+  color: white;
+}
+.premium-placeholder-card h1 { margin: 0; font-size: clamp(24px, 5vw, 31px); }
+.premium-placeholder-card p { margin: 0; color: #776b7d; line-height: 1.6; }
+.premium-placeholder-status {
+  padding: 7px 13px;
+  border: 1px solid #e4d6e9;
+  border-radius: 999px;
+  background: #f7eff8;
+  color: #744c87;
+  font-size: 12px;
+  font-weight: 750;
+}
+.premium-placeholder-card small { color: #8a7c90; line-height: 1.5; }
