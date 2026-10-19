@@ -11,7 +11,6 @@ import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { DatePicker } from '../components/ui/DatePicker'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
-import { EventContextPanel } from '../components/calendar/EventContextPanel'
 import { firstName } from '../lib/personName'
 
 type CalendarView = 'day' | 'week' | 'month' | 'upcoming'
@@ -242,13 +241,13 @@ export function CalendarPage() {
   const canWriteCosts = Boolean(costsAccess?.enabled && costsAccess?.can_write)
   const canWriteProjects = Boolean(projectsAccess?.enabled && projectsAccess?.can_write)
 
-  const [view, setView] = useState<CalendarView>('month')
+  const [view, setView] = useState<CalendarView>('week')
 
-  // The mobile Calendar navigation explicitly opens the full month. Listening
-  // to location.key also handles tapping Calendar while already on this route.
+  // The bottom Calendar shortcut opens the current week, including when the
+  // user taps it again from another view within the same calendar route.
   useEffect(() => {
-    if (new URLSearchParams(routeLocation.search).get('view') === 'month') {
-      setView('month')
+    if (new URLSearchParams(routeLocation.search).get('view') === 'week') {
+      setView('week')
       setAnchor(new Date())
     }
   }, [routeLocation.key, routeLocation.search])
@@ -1953,10 +1952,6 @@ export function CalendarPage() {
                   ))}
                 </div>
               </fieldset>
-            )}
-
-            {editingEventId && (
-              <EventContextPanel eventId={editingEventId} />
             )}
 
             {!editingEventId && (
