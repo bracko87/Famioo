@@ -24150,3 +24150,19 @@ body:has(.modal-backdrop > .modal-card) { overflow:hidden!important; }
     max-height:calc(100dvh - 32px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;
   }
 }
+
+/* Slightly enlarge only the mobile calendar date chooser while retaining the
+   inset, centered popup agreed for Famioo's other dialogs. */
+@media (max-width:700px) {
+  .date-picker-popover-portal {
+    width:min(390px,calc(100vw - 28px))!important;
+    padding:16px!important;
+  }
+  .date-picker-popover-portal .date-picker-grid button {
+    min-height:44px;
+    font-size:12px;
+  }
+  .date-picker-popover-portal .date-picker-head {
+    min-height:42px;
+  }
+}

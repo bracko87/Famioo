@@ -1,6 +1,6 @@
 import { Archive, CalendarSync, ChevronDown, ChevronLeft, ChevronRight, ClipboardCheck, Eye, EyeOff, FolderKanban, LockKeyhole, Pencil, Plus, Search, Settings2, Trash2, WalletCards, X } from 'lucide-react'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
 import { moduleConnectionState } from '../lib/moduleAccess'
@@ -1238,10 +1238,10 @@ export function CalendarPage() {
           Today
         </button>
 
-        <button className="secondary-button compact" onClick={() => routeNavigate('/app/calendar/connections')}>
+        <Link className="secondary-button compact" to="/app/calendar/connections" aria-label="Open Work Calendar import">
           <CalendarSync size={15}/>
           Work import
-        </button>
+        </Link>
 
         {canWrite ? (
           <button className="primary-button compact" onClick={() => openComposer(dateKey(new Date()))}>
@@ -1317,10 +1317,10 @@ export function CalendarPage() {
         )}
 
         <div className="mobile-calendar-secondary-row">
-          <button className="secondary-button compact" onClick={() => routeNavigate('/app/calendar/connections')}>
+          <Link className="secondary-button compact" to="/app/calendar/connections" aria-label="Open Work Calendar import">
             <CalendarSync size={15}/>
             Work import
-          </button>
+          </Link>
           {canWrite && (
             <button type="button" className="secondary-button compact" onClick={()=>setCalendarManagerOpen(true)}>
               <Settings2 size={14}/>

@@ -4,7 +4,7 @@ import type { ModuleAccess, ModuleCode } from './types'
 /** Routes for which the current user must actually have module access.
  * Home, Settings and Premium catalogue remain available to everyone. */
 const MODULE_ROUTES: ReadonlyArray<readonly [string, ModuleCode]> = [
-  ['/app/calendar/connections', 'calendar_connections'],
+  ['/app/calendar/connections', 'calendar'],
   ['/app/calendar', 'calendar'],
   ['/app/tasks', 'tasks'],
   ['/app/checklists', 'checklists'],
