@@ -4,7 +4,7 @@ This document is a permanent release requirement for the future native Famioo mo
 
 The current Famioo PWA remains the product foundation. When Famioo is packaged/published as Android and iOS apps, the native applications must add the device-level capabilities that a browser/PWA cannot reliably provide.
 
-Last updated: 2026-10-09
+Last updated: 2026-10-19
 
 ## Mandatory release rule
 
@@ -27,7 +27,7 @@ Android and iOS must both be implemented and tested. Passing on one platform doe
 The following functionality is already part of the shared Famioo application/backend and should be reused by the native apps:
 
 - Family Safety / SOS module
-- mobile-only hold-to-SOS trigger
+- mobile-only one-tap Family SOS trigger
 - household safety alerts
 - optional current-location capture
 - active-alert map
