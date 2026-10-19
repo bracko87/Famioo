@@ -24211,3 +24211,28 @@ body:has(.modal-backdrop > .modal-card) { overflow:hidden!important; }
   .premium-detail-section { padding:18px; }
   .premium-detail-purchase { grid-template-columns:1fr; }
 }
+
+
+/* Work Import: keep the non-AI label in the status row, never above the title. */
+.work-calendar-methods .calendar-provider-status-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:6px 9px;
+  width:100%;
+  min-width:0;
+}
+.work-calendar-methods .calendar-provider-status-row .calendar-provider-status {
+  flex:0 0 auto;
+  max-width:100%;
+}
+.work-calendar-methods .calendar-provider-status.no-ai-required {
+  color:#477764;
+  background:#e9f4ef;
+}
+@media(max-width:700px) {
+  .work-calendar-methods .calendar-provider-status-row {
+    grid-column:2 / -1;
+  }
+}

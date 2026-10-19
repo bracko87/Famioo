@@ -567,11 +567,13 @@ export function CalendarConnectionsPage(){
         <article className="calendar-provider-card ready local-file">
           <span className="calendar-provider-icon file"><FileUp size={20}/></span>
           <div>
-            <span className="eyebrow">NO AI NEEDED</span>
             <h2>Local .ics file</h2>
             <p>Import a calendar file exported from Outlook or another calendar app. No AI, public calendar link or company OAuth permission is needed.</p>
           </div>
-          <span className="calendar-provider-status connected"><Check size={12}/>Included with Calendar</span>
+          <div className="calendar-provider-status-row">
+            <span className="calendar-provider-status connected"><Check size={12}/>Included with Calendar</span>
+            <span className="calendar-provider-status no-ai-required">No AI needed</span>
+          </div>
           <button type="button" className="primary-button compact" disabled={!canWrite} onClick={()=>fileRef.current?.scrollIntoView({behavior:'smooth',block:'center'})}>
             Import .ics file
           </button>
@@ -601,11 +603,13 @@ export function CalendarConnectionsPage(){
         <article className="calendar-provider-card ready manual-work-calendar">
           <span className="calendar-provider-icon manual"><CalendarSync size={20}/></span>
           <div>
-            <span className="eyebrow">NO AI NEEDED</span>
             <h2>Manual Work Calendar</h2>
             <p>Create a separate Work calendar and enter appointments yourself. Work and Family stay separate but can be viewed together in the same Calendar.</p>
           </div>
-          <span className="calendar-provider-status connected"><Check size={12}/>{workCalendar?'Work Calendar ready':'Included with Calendar'}</span>
+          <div className="calendar-provider-status-row">
+            <span className="calendar-provider-status connected"><Check size={12}/>{workCalendar?'Work Calendar ready':'Included with Calendar'}</span>
+            <span className="calendar-provider-status no-ai-required">No AI needed</span>
+          </div>
           {workCalendar ? (
             <Link className="primary-button compact" to="/app/calendar">Open Work Calendar</Link>
           ) : (
