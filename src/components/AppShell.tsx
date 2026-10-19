@@ -9,6 +9,7 @@ import {
   CheckSquare,
   ClipboardList,
   ContactRound,
+  Gem,
   FileText,
   FolderKanban,
   GraduationCap,
@@ -673,7 +674,6 @@ export function AppShell() {
               ? <img className="header-profile-image" src={profileAvatarUrl} alt="" />
               : <span>{profileMark}</span>}
             <strong>{profileName}</strong>
-            {freeAccount && <small className="free-account-label" title="Individual Free plan; household subscription is unchanged">Free plan</small>}
           </div>
         </div>
       </header>
@@ -697,8 +697,8 @@ export function AppShell() {
 
       <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
         <NavLink to="/app" end><Home size={19} /><span>Home</span></NavLink>
-        <NavLink to="/app/calendar"><CalendarDays size={19} /><span>Calendar</span></NavLink>
-        <NavLink to="/app/tasks"><ClipboardList size={19} /><span>Tasks</span></NavLink>
+        <NavLink to="/app/calendar?view=month"><CalendarDays size={19} /><span>Calendar</span></NavLink>
+        <NavLink className="mobile-premium-nav" to="/app/premium" aria-label="Explore Premium modules"><Gem size={21} /><span>Premium</span></NavLink>
         <NavLink to="/app/settings"><Settings size={19} /><span>Settings</span></NavLink>
         <button type="button" className="mobile-signout-tab" onClick={() => void supabase.auth.signOut()} aria-label="Sign out of Famioo">
           <LogOut size={19} />
