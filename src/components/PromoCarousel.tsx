@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useHousehold } from '../context/HouseholdContext'
-import { isFreePlanAccount } from '../lib/accountPlan'
 import type { ModuleAccess, ModuleCode } from '../lib/types'
 
 type PromoSlide = {
@@ -79,21 +77,17 @@ const routeByModule: Record<ModuleCode, string> = {
 }
 
 export function PromoCarousel({ modules }: { modules: ModuleAccess[] }) {
-  const { user } = useHousehold()
   const [index, setIndex] = useState(0)
   const modulesByCode = useMemo(
     () => new Map(modules.map((module) => [module.code, module])),
     [modules],
   )
-  const individualFree = isFreePlanAccount(user)
-  // A stable primitive key prevents resets when Home re-renders with a new
-  // modules array containing the same access values.
+  // Only show modules unlocked for this user; locked modules belong in Premium.
   const enabledCodesKey = modules.filter(module => module.enabled).map(module => module.code).sort().join('|')
   const slides = useMemo(() => {
-    if (!individualFree) return promoSlides
     const enabled = new Set(enabledCodesKey.split('|'))
     return promoSlides.filter(slide => enabled.has(slide.code))
-  }, [individualFree, enabledCodesKey])
+  }, [enabledCodesKey])
 
   useEffect(() => {
     if (!slides.length) return

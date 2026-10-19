@@ -44,7 +44,7 @@ import { useEffect, useMemo, useRef, useState, type ComponentType, type DragEven
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
-import { isFreePlanAccount, isPaidPage } from '../lib/accountPlan'
+import { requiredModuleForPath } from '../lib/moduleAccess'
 import type { ModuleCode } from '../lib/types'
 import { Brand } from './Brand'
 import { FooterWeather } from './FooterWeather'
@@ -216,7 +216,6 @@ export function AppShell() {
   const location = useLocation()
   const navigate = useNavigate()
   const { household, households, modules, profiles, user, switchHousehold } = useHousehold()
-  const freeAccount = isFreePlanAccount(user)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
@@ -678,7 +677,12 @@ export function AppShell() {
         </div>
       </header>
 
-      <main className="app-content">{freeAccount && isPaidPage(location.pathname) ? <Navigate to="/app" replace /> : <Outlet />}</main>
+      <main className="app-content">{(() => {
+        const requiredModule = requiredModuleForPath(location.pathname)
+        return !requiredModule || modules.some((module) => module.code === requiredModule && module.enabled)
+          ? <Outlet />
+          : <Navigate to="/app" replace />
+      })()}</main>
 
       <footer className="app-footer">
         <FooterWeather />
@@ -697,7 +701,7 @@ export function AppShell() {
 
       <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
         <NavLink to="/app" end><Home size={19} /><span>Home</span></NavLink>
-        <NavLink to="/app/calendar?view=week"><CalendarDays size={19} /><span>Calendar</span></NavLink>
+        <NavLink to="/app/calendar?view=week" onClick={() => window.dispatchEvent(new Event('famioo:calendar-week-shortcut'))}><CalendarDays size={19} /><span>Calendar</span></NavLink>
         <NavLink className="mobile-premium-nav" to="/app/premium" aria-label="Explore Premium modules"><Gem size={21} /><span>Premium</span></NavLink>
         <NavLink to="/app/settings"><Settings size={19} /><span>Settings</span></NavLink>
         <button type="button" className="mobile-signout-tab" onClick={() => void supabase.auth.signOut()} aria-label="Sign out of Famioo">

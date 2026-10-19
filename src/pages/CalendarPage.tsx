@@ -243,13 +243,17 @@ export function CalendarPage() {
 
   const [view, setView] = useState<CalendarView>('week')
 
-  // The bottom Calendar shortcut opens the current week, including when the
-  // user taps it again from another view within the same calendar route.
+  // A bottom-tab tap resets to the current week even if Calendar stays mounted.
   useEffect(() => {
-    if (new URLSearchParams(routeLocation.search).get('view') === 'week') {
+    const openCurrentWeek = () => {
       setView('week')
       setAnchor(new Date())
     }
+    if (new URLSearchParams(routeLocation.search).get('view') === 'week') {
+      openCurrentWeek()
+    }
+    window.addEventListener('famioo:calendar-week-shortcut', openCurrentWeek)
+    return () => window.removeEventListener('famioo:calendar-week-shortcut', openCurrentWeek)
   }, [routeLocation.key, routeLocation.search])
   const [anchor, setAnchor] = useState(() => new Date())
   const [events, setEvents] = useState<CalendarOccurrence[]>([])

@@ -541,7 +541,7 @@ export function CalendarConnectionsPage(){
       {message&&<div className="notice success">{message}</div>}
 
       <section className="calendar-provider-grid work-calendar-methods">
-        <article className={'calendar-provider-card ready '+(!hasAiAssistant?'ai-locked':'')}>
+        {hasAiAssistant && <article className="calendar-provider-card ready">
           <span className="calendar-provider-icon screenshot"><ImageIcon size={20}/></span>
           <div>
             <span className="eyebrow">AI-ASSISTED IMPORT</span>
@@ -560,7 +560,7 @@ export function CalendarConnectionsPage(){
               <Sparkles size={14}/>Get AI Assistant
             </Link>
           )}
-        </article>
+        </article>}
 
         <article className="calendar-provider-card ready local-file">
           <span className="calendar-provider-icon file"><FileUp size={20}/></span>
@@ -575,7 +575,7 @@ export function CalendarConnectionsPage(){
           </button>
         </article>
 
-        <article className={'calendar-provider-card ready '+(!hasAiAssistant?'ai-locked':'')}>
+        {hasAiAssistant && <article className="calendar-provider-card ready">
           <span className="calendar-provider-icon paste"><FileText size={20}/></span>
           <div>
             <span className="eyebrow">AI-ASSISTED IMPORT</span>
@@ -594,7 +594,7 @@ export function CalendarConnectionsPage(){
               <Sparkles size={14}/>Get AI Assistant
             </Link>
           )}
-        </article>
+        </article>}
 
         <article className="calendar-provider-card ready manual-work-calendar">
           <span className="calendar-provider-icon manual"><CalendarSync size={20}/></span>
@@ -619,7 +619,7 @@ export function CalendarConnectionsPage(){
           <div>
             <span className="eyebrow">IMPORT SETTINGS</span>
             <h2>Choose the destination and privacy level</h2>
-            <p>Busy only is the default for company appointments. Screenshot and pasted-text extraction require AI Assistant; .ics and manual Work Calendar do not.</p>
+            <p>Busy only is the default for company appointments. Manual Work Calendar and .ics file imports remain available.</p>
           </div>
         </header>
 
@@ -661,7 +661,7 @@ export function CalendarConnectionsPage(){
         </div>
       </section>
 
-      <section className={'work-import-card list-card '+(!hasAiAssistant?'ai-locked-panel':'')} ref={screenshotRef}>
+      {hasAiAssistant && <section className="work-import-card list-card" ref={screenshotRef}>
         <header>
           <div>
             <span className="eyebrow">SCREENSHOT IMPORT · AI ASSISTANT</span>
@@ -716,9 +716,9 @@ export function CalendarConnectionsPage(){
             {extracting==='image'?'Reading screenshot…':'Detect calendar events'}
           </button>
         </div>
-      </section>
+      </section>}
 
-      <section className={'work-import-card list-card '+(!hasAiAssistant?'ai-locked-panel':'')} ref={pasteRef}>
+      {hasAiAssistant && <section className="work-import-card list-card" ref={pasteRef}>
         <header>
           <div>
             <span className="eyebrow">PASTE APPOINTMENT · AI ASSISTANT</span>
@@ -753,7 +753,7 @@ export function CalendarConnectionsPage(){
             {extracting==='text'?'Reading appointment…':'Create event draft'}
           </button>
         </div>
-      </section>
+      </section>}
 
       {drafts.length>0&&(
         <section className="work-calendar-review list-card">
