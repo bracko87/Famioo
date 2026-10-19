@@ -26,6 +26,19 @@ recipient existed. Migration 110 sends notification rows to every other
 active household login, retaining the existing duplicate-safe source_key.
 Never confuse a queued notification with a received device push.
 
+## Phone-number save dependency
+
+Apply `supabase/migrations/111_fix_safety_phone_validation.sql` to the Famioo
+Supabase backend. Migration 081 accidentally used a double backslash in the
+PostgreSQL phone regex. The updated check constraint and save RPC accept
+international `+country code` phone numbers consistently with the frontend.
+
+Test saving a valid number in Safety, then confirm the **same** number appears
+in Family Contacts → Contacts → household members. Verify saving a malformed
+number is rejected and saving someone else's number is limited by the original
+ownership/admin permission checks. A Netlify deployment does not run this
+migration by itself.
+
 ## Required device tests
 
 - [ ] Set up a household with at least two **different** user logins on two phones

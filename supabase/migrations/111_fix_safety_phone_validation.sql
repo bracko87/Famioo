@@ -7,6 +7,9 @@
 -- cannot repair an existing PostgreSQL check constraint.
 
 alter table public.family_profiles
+  add column if not exists contact_phone text;
+
+alter table public.family_profiles
   drop constraint if exists family_profiles_contact_phone_check;
 
 alter table public.family_profiles
