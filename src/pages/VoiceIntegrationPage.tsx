@@ -15,6 +15,11 @@ import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
 
 type VoiceAction='calendar_query'|'shopping_add'|'task_add'|'reminders_query'
+type VoiceCommandRequest={
+  intent:VoiceAction
+  slots:Record<string,unknown>
+  request_id?:string
+}
 type SettingsRow={
   household_id:string
   provider:'alexa'
@@ -53,6 +58,7 @@ export function VoiceIntegrationPage(){
   const [token,setToken]=useState('')
   const [saving,setSaving]=useState(false)
   const [testing,setTesting]=useState(false)
+  const [lastWrite,setLastWrite]=useState<VoiceCommandRequest|null>(null)
   const [intent,setIntent]=useState<VoiceAction>('calendar_query')
   const [date,setDate]=useState(todayKey())
   const [itemText,setItemText]=useState('')
@@ -128,10 +134,19 @@ export function VoiceIntegrationPage(){
     return {title:taskTitle.trim(),due_date:date||null}
   },[date,intent,itemText,quantity,taskTitle])
 
-  async function testVoice(){
+  async function testVoice(replayLast=false){
+    if(replayLast&&!lastWrite)return
+    const isWrite=intent==='shopping_add'||intent==='task_add'
+    // A new utterance gets a NEW ID. A network retry must keep the original ID
+    // and identical slot values; the backend returns the saved result.
+    const request:VoiceCommandRequest=replayLast&&lastWrite
+      ?lastWrite
+      :{intent,slots,...(isWrite?{request_id:crypto.randomUUID()}:{})}
+    if(!replayLast&&isWrite)setLastWrite(request)
+
     setTesting(true);setError('');setResult('')
     const response=await supabase.functions.invoke('famioo-voice-command',{
-      body:{household_id:household.id,intent,slots},
+      body:{household_id:household.id,...request},
     })
     setTesting(false)
     if(response.error||response.data?.error){
@@ -139,7 +154,10 @@ export function VoiceIntegrationPage(){
       await load()
       return
     }
-    setResult(String(response.data?.speech||'Voice action completed.'))
+    const speech=String(response.data?.speech||'Voice action completed.')
+    setResult(response.data?.replayed===true
+      ?speech+' — Retried request: no second task or shopping item was created.'
+      :speech)
     await load()
   }
 
@@ -192,7 +210,10 @@ export function VoiceIntegrationPage(){
         {intent==='shopping_add'&&<><label><span>Item</span><input value={itemText} onChange={event=>setItemText(event.target.value)} placeholder="Milk"/></label><label><span>Quantity</span><input value={quantity} onChange={event=>setQuantity(event.target.value)} placeholder="2"/></label></>}
         {intent==='task_add'&&<label className="voice-test-wide"><span>Task</span><input value={taskTitle} onChange={event=>setTaskTitle(event.target.value)} placeholder="Take bins outside"/></label>}
       </div>
-      <button className="secondary-button compact" disabled={testing||!enabled||!allowed.includes(intent)||(intent==='shopping_add'&&!itemText.trim())||(intent==='task_add'&&!taskTitle.trim())} onClick={()=>void testVoice()}><AudioLines size={13}/>{testing?'Testing…':'Run voice test'}</button>
+      <div className="voice-test-actions">
+        <button className="secondary-button compact" disabled={testing||!enabled||!allowed.includes(intent)||(intent==='shopping_add'&&!itemText.trim())||(intent==='task_add'&&!taskTitle.trim())} onClick={()=>void testVoice()}><AudioLines size={13}/>{testing?'Testing…':'Run voice test'}</button>
+        {lastWrite&&<button type="button" className="secondary-button compact" disabled={testing||!enabled||!allowed.includes(lastWrite.intent)} onClick={()=>void testVoice(true)} title="Send the exact previous write request again, including its request ID."><RotateCcw size={13}/>Retry previous write (no duplicate)</button>}
+      </div>
       {result&&<div className="voice-test-result"><Sparkles size={15}/><span>{result}</span></div>}
     </section>
 
