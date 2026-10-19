@@ -2,6 +2,8 @@ import { useHousehold } from '../../context/HouseholdContext'
 
 export function ModulesSettings() {
   const { modules } = useHousehold()
+  const mergedHidden = new Set(['emergency_info', 'pickup_authorization', 'checkin', 'calendar_context', 'rewards'])
+  const listedModules = modules.filter(module => !mergedHidden.has(module.code))
 
   return (
     <section className="settings-card">
@@ -14,10 +16,10 @@ export function ModulesSettings() {
       </div>
 
       <div className="settings-module-list">
-        {modules.map((module) => (
+        {listedModules.map((module) => (
           <div key={module.code}>
             <span>
-              <strong>{module.name}</strong>
+              <strong>{module.code === 'contacts' ? 'Family Contacts & Emergency' : module.code === 'location' ? 'Family Location & Check-In' : module.name}</strong>
               <small>{module.description}</small>
             </span>
             <span className="module-status-group">
@@ -35,7 +37,7 @@ export function ModulesSettings() {
         <div className="pricing-model-grid">
           <article>
             <strong>Free core</strong>
-            <p>Calendar, Tasks, Checklists and Files are included free. Files includes 1 GB shared household storage.</p>
+            <p>Our planned free package includes Calendar, Calendar Connections, Tasks, Checklists, Family Safety, Family Contacts & Emergency (including Pickups), Family Messenger, Memories (100 MB), Files (1 GB shared storage), and separately activated Alexa / Voice. Access changes will be rolled out with the purchase system.</p>
           </article>
           <article>
             <strong>Optional modules</strong>
