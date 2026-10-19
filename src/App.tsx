@@ -24,6 +24,7 @@ import { LifeAdminPage } from './pages/LifeAdminPage'
 import { ProjectsPage } from './pages/ProjectsPage'
 import { ProjectsArchivePage } from './pages/ProjectsArchivePage'
 import { SettingsPage } from './pages/SettingsPage'
+import { PremiumModulesPage } from './pages/PremiumModulesPage'
 import { MealsPage } from './pages/MealsPage'
 import { RecipeDetailPage } from './pages/RecipeDetailPage'
 import { FilesPage } from './pages/FilesPage'
@@ -291,6 +292,7 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Route path="home-remote" element={<HomeRemotePage />} />
           <Route path="voice" element={<VoiceIntegrationPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="premium" element={<PremiumModulesPage />} />
 
           <Route path="shopping" element={<ShoppingPage />} />
           <Route path="costs" element={<CostsPage />} />
