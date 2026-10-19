@@ -88,7 +88,7 @@ begin
   if found then
     if v_prior.intent <> p_intent or v_prior.payload <> p_payload then
       raise exception 'Voice request ID conflicts with a different command'
-        using errcode='22023';
+        using errcode='23505';
     end if;
     return v_prior.response || '{"replayed":true}'::jsonb;
   end if;

@@ -83,6 +83,14 @@ Deno.serve(async req=>{
   if(typeof intent!=="string"||!supported.has(intent))return json({error:"Unsupported voice intent."},400)
   if(body.slots!==undefined&&!isRecord(body.slots))return json({error:"Invalid voice action parameters."},400)
   const slots=isRecord(body.slots)?body.slots:{}
+  // Alexa's request.requestId stays identical across a retry of one utterance.
+  // Mutations without a stable identifier must not reach the database.
+  const mutating=intent==="task_add"||intent==="shopping_add"
+  const requestId=typeof body.request_id==="string"?body.request_id:""
+  if(mutating&&(
+    requestId.length<16||requestId.length>160||
+    !/^[A-Za-z0-9][A-Za-z0-9_.:-]+$/.test(requestId)
+  ))return json({error:"A valid request ID is required for voice changes."},400)
 
   const supabaseUrl=Deno.env.get("SUPABASE_URL")??""
   const clientKey=publishableKey()
@@ -189,25 +197,20 @@ Deno.serve(async req=>{
       if(!itemText)return json({error:"Shopping item must contain 1–160 valid characters."},400)
       if(quantity===null||requestedList===null)return json({error:"Shopping details are invalid or too long."},400)
 
-      let listQuery=admin.from("shopping_lists").select("id,title").eq("household_id",householdId).eq("status","active").is("archived_at",null)
-      if(requestedList)listQuery=listQuery.eq("title",requestedList)
-      const existing=await listQuery.order("created_at",{ascending:false}).limit(1).maybeSingle()
-      let list=existing.data
-      if(!list){
-        const created=await admin.from("shopping_lists").insert({
-          household_id:householdId,title:requestedList||"Shopping",created_by_user_id:settings.linked_by_user_id,
-        }).select("id,title").single()
-        if(created.error)throw created.error
-        list=created.data
+      const inserted=await admin.rpc("voice_create_once_v1",{
+        p_household_id:householdId,
+        p_request_id:requestId,
+        p_intent:intent,
+        p_payload:{item_text:itemText,quantity:quantity||null,list_title:requestedList||null},
+        p_actor_user_id:settings.linked_by_user_id,
+      })
+      if(inserted.error){
+        if(inserted.error.code==="23505")return json({error:"This request ID has already been used for a different command."},409)
+        throw inserted.error
       }
-      const inserted=await admin.from("shopping_items").insert({
-        household_id:householdId,shopping_list_id:list.id,item_text:itemText,quantity:quantity||null,
-        created_by_user_id:settings.linked_by_user_id,
-      }).select("id").single()
-      if(inserted.error)throw inserted.error
-      const speech="Added "+itemText+(quantity?" ("+quantity+")":"")+" to "+list.title+"."
-      await log(true,speech)
-      return json({ok:true,intent,item_id:inserted.data.id,list_id:list.id,speech})
+      await log(true,inserted.data?.replayed===true?"Repeated shopping request (no duplicate)":String(inserted.data?.speech||"Shopping item added"))
+      return json(inserted.data)
+
     }
 
     if(intent==="task_add"){
@@ -216,14 +219,20 @@ Deno.serve(async req=>{
       const dueDate=dateSlot(slots,"due_date","")
       if(!title)return json({error:"Task title must contain 1–160 valid characters."},400)
       if(dueDate===null)return json({error:"Choose a valid task due date."},400)
-      const inserted=await admin.from("tasks").insert({
-        household_id:householdId,title,status:"open",priority:"normal",due_date:dueDate,
-        created_by_user_id:settings.linked_by_user_id,
-      }).select("id").single()
-      if(inserted.error)throw inserted.error
-      const speech="Created task: "+title+(dueDate?" for "+dueDate:"")+"."
-      await log(true,speech)
-      return json({ok:true,intent,task_id:inserted.data.id,speech})
+      const inserted=await admin.rpc("voice_create_once_v1",{
+        p_household_id:householdId,
+        p_request_id:requestId,
+        p_intent:intent,
+        p_payload:{title,due_date:dueDate||null},
+        p_actor_user_id:settings.linked_by_user_id,
+      })
+      if(inserted.error){
+        if(inserted.error.code==="23505")return json({error:"This request ID has already been used for a different command."},409)
+        throw inserted.error
+      }
+      await log(true,inserted.data?.replayed===true?"Repeated task request (no duplicate)":String(inserted.data?.speech||"Task created"))
+      return json(inserted.data)
+
     }
 
     if(intent==="reminders_query"){
