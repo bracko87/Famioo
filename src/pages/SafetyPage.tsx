@@ -105,6 +105,7 @@ export function SafetyPage(){
   const [emergencyContacts,setEmergencyContacts]=useState<EmergencyContact[]>([])
   const [phoneEditor,setPhoneEditor]=useState('')
   const [phoneDraft,setPhoneDraft]=useState('')
+  const [phoneError,setPhoneError]=useState('')
   const [phoneSaving,setPhoneSaving]=useState(false)
   const [emergencyDraftOpen,setEmergencyDraftOpen]=useState(false)
   const [emergencyName,setEmergencyName]=useState('')
@@ -312,11 +313,12 @@ export function SafetyPage(){
   async function savePhone(event:FormEvent<HTMLFormElement>,profileId:string){
     event.preventDefault()
     const phone=phoneDraft.trim()
-    if(!phone || !/^\+?[0-9 ()/.-]{6,32}$/.test(phone)){
-      setError('Enter a valid phone number with at least 6 digits/characters.')
+    if(phone.length<6 || phone.length>32 || !/^[+]?[0-9 ()/.-]+$/.test(phone)){
+      setPhoneError('Enter a valid phone number (6–32 characters, optional + country code).')
       return
     }
     setPhoneSaving(true)
+    setPhoneError('')
     setError('')
     const result=await supabase.rpc('set_household_profile_phone_v1',{
       p_household_id:household.id,
@@ -324,7 +326,14 @@ export function SafetyPage(){
       p_phone:phone,
     })
     setPhoneSaving(false)
-    if(result.error){ setError(result.error.message); return }
+    if(result.error){
+      setPhoneError(
+        result.error.code==='PGRST202'
+          ? 'The phone-saving database function is unavailable. Apply Famioo migration 081, then migration 111.'
+          : result.error.message
+      )
+      return
+    }
     setPhoneEditor('')
     setPhoneDraft('')
     setMessage('Household phone number saved.')
@@ -490,12 +499,13 @@ export function SafetyPage(){
                   <div><strong>{member.display_name}</strong><small>{member.phone||'Phone number missing'} · {member.user_id===user.id?'Your account':'Household member'}</small></div>
                   {phoneEditor===member.profile_id?(
                     <form onSubmit={e=>void savePhone(e,member.profile_id)} className="safety-setup-inline-form">
-                      <input type="tel" autoComplete="tel" value={phoneDraft} onChange={e=>setPhoneDraft(e.target.value)} placeholder="+49…" aria-label={'Phone number for '+member.display_name} required maxLength={32}/>
+                      <input type="tel" autoComplete="tel" value={phoneDraft} onChange={e=>{setPhoneDraft(e.target.value);setPhoneError('')}} placeholder="+49…" aria-label={'Phone number for '+member.display_name} required maxLength={32}/>
                       <button type="submit" className="primary-button compact" disabled={phoneSaving}>{phoneSaving?'Saving…':'Save'}</button>
-                      <button type="button" className="secondary-button compact" onClick={()=>setPhoneEditor('')}>Cancel</button>
+                      <button type="button" className="secondary-button compact" onClick={()=>{setPhoneEditor('');setPhoneError('')}}>Cancel</button>
+                      {phoneError&&<span role="alert" className="safety-setup-field-error">{phoneError}</span>}
                     </form>
                   ):(
-                    <button type="button" className="secondary-button compact" onClick={()=>{setPhoneEditor(member.profile_id);setPhoneDraft(member.phone??'')}}>
+                    <button type="button" className="secondary-button compact" onClick={()=>{setPhoneEditor(member.profile_id);setPhoneDraft(member.phone??'');setPhoneError('')}}>
                       <Pencil size={13}/>{member.phone?'Edit':'Add phone'}
                     </button>
                   )}

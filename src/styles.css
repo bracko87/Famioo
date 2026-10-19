@@ -24306,3 +24306,18 @@ body:has(.modal-backdrop > .modal-card) { overflow:hidden!important; }
   .family-sos-live-banner {top:calc(8px + env(safe-area-inset-top,0px));align-items:start;flex-wrap:wrap;}
   .family-sos-live-banner>a {margin-left:34px;}
 }
+
+
+/* Show the error beside the exact household phone input that failed. */
+.safety-setup-field-error {
+  display:block;
+  flex-basis:100%;
+  width:100%;
+  padding:8px 10px;
+  border-radius:9px;
+  background:#fff0f2;
+  border:1px solid #eebfc9;
+  color:#a13b50;
+  font-size:12px;
+  line-height:1.45;
+}
