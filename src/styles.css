@@ -23968,3 +23968,182 @@ html[data-famioo-theme="dark"] .travel-traffic-result{background:#131313;border-
 .module-availability-heading h3 { margin: 0; font-size: 14px; }
 .module-availability-heading span, .module-availability-hint { color: var(--muted); font-size: 11px; }
 .module-availability-hint { margin: 0 0 8px; line-height: 1.5; }
+
+/* Famioo dialogs: consistent centered inset layout. Supersedes older bottom
+   sheets/top-aligned overrides without affecting the document scanner. */
+.modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) {
+  position:fixed!important;
+  inset:0!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  place-items:center!important;
+  padding:max(20px,env(safe-area-inset-top,0px)) 14px max(20px,env(safe-area-inset-bottom,0px))!important;
+  overflow:hidden!important;
+  overscroll-behavior:contain;
+}
+.modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) > .modal-card {
+  --dialog-inset:20px;
+  box-sizing:border-box!important;
+  flex:0 1 auto!important;
+  display:flex!important;
+  flex-direction:column!important;
+  width:min(620px,calc(100vw - 28px))!important;
+  max-width:calc(100vw - 28px)!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:min(860px,calc(100dvh - 48px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)))!important;
+  margin:0!important;
+  padding:var(--dialog-inset)!important;
+  border-radius:19px!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+}
+.modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) > .modal-card:is(.event-composer,.task-composer,.checklist-composer) {
+  width:min(760px,calc(100vw - 28px))!important;
+}
+.modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) > .modal-card:has(> form) {
+  overflow:hidden!important;
+}
+.modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) > .modal-card > form {
+  flex:1 1 auto!important;
+  min-height:0!important;
+  padding:2px 0 0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) > .modal-card > header {
+  position:sticky!important;
+  z-index:8;
+  flex:0 0 auto!important;
+  top:calc(-1 * var(--dialog-inset))!important;
+  box-sizing:border-box!important;
+  width:calc(100% + 2 * var(--dialog-inset))!important;
+  max-width:none!important;
+  margin:calc(-1 * var(--dialog-inset)) calc(-1 * var(--dialog-inset)) 4px!important;
+  padding:17px var(--dialog-inset) 14px!important;
+  background:#fff!important;
+  border-bottom:1px solid #eee8f1;
+  border-radius:19px 19px 0 0;
+}
+.modal-backdrop:has(> form.modal-card.event-composer):not(.document-scanner-backdrop) > form.event-composer > .event-composer-actions {
+  position:sticky!important;
+  z-index:8;
+  flex:0 0 auto;
+  bottom:calc(-1 * var(--dialog-inset))!important;
+  box-sizing:border-box!important;
+  width:calc(100% + 2 * var(--dialog-inset))!important;
+  max-width:none!important;
+  margin:10px calc(-1 * var(--dialog-inset)) calc(-1 * var(--dialog-inset))!important;
+  padding:12px var(--dialog-inset)!important;
+  border-top:1px solid #eee8f1;
+  background:#fff!important;
+}
+.modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) > .modal-card > form > footer {
+  position:sticky!important;
+  bottom:0!important;
+  z-index:6;
+  margin:10px 0 0!important;
+  padding:12px 0 5px!important;
+  max-width:none!important;
+  background:#fff!important;
+  border-top:1px solid #eee8f1;
+}
+@media(max-width:700px) {
+  .modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) > .modal-card {
+    --dialog-inset:16px;
+    width:calc(100vw - 28px)!important;
+    max-height:calc(100dvh - 44px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;
+    padding:var(--dialog-inset)!important;
+    border-radius:19px!important;
+  }
+  .modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop) > .modal-card > .primary-button:last-child {
+    position:sticky!important;
+    bottom:calc(-1 * var(--dialog-inset))!important;
+    width:calc(100% + 2 * var(--dialog-inset))!important;
+    max-width:none!important;
+    margin:9px calc(-1 * var(--dialog-inset)) calc(-1 * var(--dialog-inset))!important;
+    padding:12px var(--dialog-inset)!important;
+    border-radius:0 0 19px 19px!important;
+  }
+
+  /* Choice sheets and date pickers float in the viewport center. */
+  .mobile-select-backdrop {
+    position:fixed!important;
+    inset:0!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    box-sizing:border-box;
+    padding:max(18px,env(safe-area-inset-top,0px)) 14px max(18px,env(safe-area-inset-bottom,0px))!important;
+    overflow:hidden!important;
+    overscroll-behavior:contain;
+  }
+  .mobile-select-sheet {
+    display:flex;
+    flex-direction:column;
+    box-sizing:border-box;
+    width:min(470px,100%)!important;
+    max-width:calc(100vw - 28px)!important;
+    height:auto;
+    max-height:min(74dvh,660px)!important;
+    margin:0!important;
+    padding:16px!important;
+    border-radius:19px!important;
+    overflow:hidden;
+    background:#fff;
+    box-shadow:0 18px 60px rgba(37,21,44,.24);
+  }
+  .mobile-select-sheet > header {
+    flex:0 0 auto;
+    width:100%;
+    margin:0;
+    padding:0 0 12px;
+  }
+  .mobile-select-menu.custom-select-menu {
+    flex:1 1 auto;
+    min-height:0;
+    max-height:none!important;
+    overflow-y:auto!important;
+    overflow-x:hidden;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  .date-picker-dialog-backdrop {
+    position:fixed;
+    z-index:6199;
+    inset:0;
+    background:rgba(25,14,31,.42);
+    backdrop-filter:blur(3px);
+    -webkit-backdrop-filter:blur(3px);
+  }
+  .date-picker-popover-portal {
+    box-sizing:border-box;
+    position:fixed!important;
+    z-index:6200!important;
+    top:50%!important;
+    left:50%!important;
+    right:auto!important;
+    bottom:auto!important;
+    transform:translate(-50%,-50%);
+    width:min(335px,calc(100vw - 28px))!important;
+    max-width:calc(100vw - 28px)!important;
+    max-height:calc(100dvh - 44px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;
+    padding:13px!important;
+    border-radius:19px!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+}
+@media(max-height:480px) {
+  .mobile-select-sheet {
+    max-height:calc(100dvh - 32px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;
+  }
+}
