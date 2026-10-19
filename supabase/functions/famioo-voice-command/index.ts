@@ -40,20 +40,49 @@ function timeLabel(value:string|null,date:string|null,timeZone:string){
   return new Intl.DateTimeFormat("en",{timeZone,hour:"numeric",minute:"2-digit"}).format(new Date(value))
 }
 
+
+/** External Alexa inputs need the same validation as direct app requests. */
+const supported=new Set(["calendar_query","shopping_add","task_add","reminders_query"])
+function isRecord(value:unknown):value is Record<string,unknown>{
+  return value!==null&&typeof value==="object"&&!Array.isArray(value)
+}
+function textSlot(slots:Record<string,unknown>,key:string,max:number):string|null{
+  const value=slots[key]
+  if(value===null||value===undefined||value==="")return ""
+  if(typeof value!=="string"||value.length>max||/[\u0000-\u001f\u007f]/.test(value))return null
+  return value.trim()
+}
+function validDate(value:string):boolean{
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false
+  const [year,month,day]=value.split("-").map(Number)
+  const d=new Date(Date.UTC(year,month-1,day))
+  return d.getUTCFullYear()===year&&d.getUTCMonth()+1===month&&d.getUTCDate()===day
+}
+function dateSlot(slots:Record<string,unknown>,key:string,fallback:string):string|null{
+  const value=slots[key]
+  if(value===undefined||value===null||value==="")return fallback
+  return typeof value==="string"&&validDate(value)?value:null
+}
+
 Deno.serve(async req=>{
   if(req.method==="OPTIONS")return new Response("ok",{headers:cors})
   if(req.method!=="POST")return json({error:"Method not allowed."},405)
 
-  let body:{
-    household_id?:string
-    intent?:string
-    slots?:Record<string,unknown>
-  }
-  try{body=await req.json()}catch{return json({error:"Invalid request."},400)}
+  const declaredSize=Number(req.headers.get("content-length")||"0")
+  if(declaredSize>4096)return json({error:"Voice request is too large."},413)
+  let body:Record<string,unknown>
+  try{
+    const raw=await req.text()
+    if(raw.length>4096)return json({error:"Voice request is too large."},413)
+    const parsed:unknown=JSON.parse(raw)
+    if(!isRecord(parsed))return json({error:"Invalid voice request."},400)
+    body=parsed
+  }catch{return json({error:"Invalid voice request."},400)}
 
-  const intent=String(body.intent??"")
-  const supported=new Set(["calendar_query","shopping_add","task_add","reminders_query"])
-  if(!supported.has(intent))return json({error:"Unsupported voice intent."},400)
+  const intent=body.intent
+  if(typeof intent!=="string"||!supported.has(intent))return json({error:"Unsupported voice intent."},400)
+  if(body.slots!==undefined&&!isRecord(body.slots))return json({error:"Invalid voice action parameters."},400)
+  const slots=isRecord(body.slots)?body.slots:{}
 
   const supabaseUrl=Deno.env.get("SUPABASE_URL")??""
   const clientKey=publishableKey()
@@ -83,7 +112,7 @@ Deno.serve(async req=>{
     })
     const userResult=await userClient.auth.getUser(bearer)
     if(userResult.error||!userResult.data.user)return json({error:"Authentication required."},401)
-    householdId=String(body.household_id??"")
+    householdId=typeof body.household_id==="string"?body.household_id:""
     if(!householdId)return json({error:"Household is required."},400)
     const member=await userClient.from("household_members").select("role,status")
       .eq("household_id",householdId).eq("user_id",userResult.data.user.id).maybeSingle()
@@ -97,6 +126,17 @@ Deno.serve(async req=>{
   }
 
   if(!settings||settings.enabled!==true)return json({error:"Alexa / Voice Integration is not enabled."},403)
+
+  // Token possession is not permanent permission: reject requests if the
+  // account that linked Alexa is removed, inactive or no longer an owner/admin.
+  const authorized=await admin.from("household_members").select("user_id")
+    .eq("household_id",householdId)
+    .eq("user_id",settings.linked_by_user_id)
+    .eq("status","active")
+    .in("role",["owner","admin"])
+    .maybeSingle()
+  if(authorized.error||!authorized.data)return json({error:"Voice integration authorization is no longer valid."},403)
+
   const allowed=Array.isArray(settings.allowed_actions)?settings.allowed_actions.map(String):[]
   if(!allowed.includes(intent))return json({error:"This voice action is disabled in Famioo settings."},403)
 
@@ -122,13 +162,15 @@ Deno.serve(async req=>{
     })
   }
 
-  const slots=body.slots??{}
   const today=todayInZone(timezone)
   try{
+    if(!(await moduleEnabled("voice_integration"))){
+      return json({error:"Alexa / Voice Integration is not available to this household."},403)
+    }
     if(intent==="calendar_query"){
       if(!(await moduleEnabled("calendar"))){await log(false,"Calendar disabled");return json({error:"Calendar is not enabled."},403)}
-      const dateRaw=String(slots.date??today)
-      const date=/^\d{4}-\d{2}-\d{2}$/.test(dateRaw)?dateRaw:today
+      const date=dateSlot(slots,"date",today)
+      if(!date)return json({error:"Choose a valid date."},400)
       const result=await admin.rpc("voice_calendar_household_events_v1",{p_household_id:householdId,p_range_start:date,p_range_end:date})
       if(result.error)throw result.error
       const events=(result.data??[]).slice(0,12)
@@ -141,13 +183,14 @@ Deno.serve(async req=>{
 
     if(intent==="shopping_add"){
       if(!(await moduleEnabled("shopping"))){await log(false,"Shopping disabled");return json({error:"Shopping is not enabled."},403)}
-      const itemText=String(slots.item_text??"").trim()
-      const quantity=String(slots.quantity??"").trim()
-      if(!itemText)return json({error:"Shopping item is required."},400)
+      const itemText=textSlot(slots,"item_text",160)
+      const quantity=textSlot(slots,"quantity",80)
+      const requestedList=textSlot(slots,"list_title",120)
+      if(!itemText)return json({error:"Shopping item must contain 1–160 valid characters."},400)
+      if(quantity===null||requestedList===null)return json({error:"Shopping details are invalid or too long."},400)
 
       let listQuery=admin.from("shopping_lists").select("id,title").eq("household_id",householdId).eq("status","active").is("archived_at",null)
-      const requestedList=String(slots.list_title??"").trim()
-      if(requestedList)listQuery=listQuery.ilike("title",requestedList)
+      if(requestedList)listQuery=listQuery.eq("title",requestedList)
       const existing=await listQuery.order("created_at",{ascending:false}).limit(1).maybeSingle()
       let list=existing.data
       if(!list){
@@ -169,10 +212,10 @@ Deno.serve(async req=>{
 
     if(intent==="task_add"){
       if(!(await moduleEnabled("tasks"))){await log(false,"Tasks disabled");return json({error:"Tasks is not enabled."},403)}
-      const title=String(slots.title??"").trim()
-      const dueRaw=String(slots.due_date??"").trim()
-      const dueDate=/^\d{4}-\d{2}-\d{2}$/.test(dueRaw)?dueRaw:null
-      if(!title)return json({error:"Task title is required."},400)
+      const title=textSlot(slots,"title",160)
+      const dueDate=dateSlot(slots,"due_date","")
+      if(!title)return json({error:"Task title must contain 1–160 valid characters."},400)
+      if(dueDate===null)return json({error:"Choose a valid task due date."},400)
       const inserted=await admin.from("tasks").insert({
         household_id:householdId,title,status:"open",priority:"normal",due_date:dueDate,
         created_by_user_id:settings.linked_by_user_id,
@@ -185,8 +228,8 @@ Deno.serve(async req=>{
 
     if(intent==="reminders_query"){
       if(!(await moduleEnabled("tasks"))){await log(false,"Tasks disabled");return json({error:"Tasks is not enabled."},403)}
-      const dateRaw=String(slots.date??today)
-      const date=/^\d{4}-\d{2}-\d{2}$/.test(dateRaw)?dateRaw:today
+      const date=dateSlot(slots,"date",today)
+      if(!date)return json({error:"Choose a valid date."},400)
       const tasksResult=await admin.from("tasks").select("id,title,due_date")
         .eq("household_id",householdId).eq("status","open").is("archived_at",null).eq("due_date",date).limit(20)
       if(tasksResult.error)throw tasksResult.error
@@ -198,8 +241,9 @@ Deno.serve(async req=>{
 
     return json({error:"Unsupported voice intent."},400)
   }catch(error){
-    const message=error instanceof Error?error.message:"Voice action failed."
-    await log(false,message)
-    return json({error:message},500)
+    // Internal database details must not leak through an Alexa reply.
+    console.error("Voice command failed",error)
+    await log(false,"Command failed")
+    return json({error:"Voice action could not be completed. Please try again later."},500)
   }
 })
