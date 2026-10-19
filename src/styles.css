@@ -23956,3 +23956,7 @@ html[data-famioo-theme="dark"] .travel-traffic-result{background:#131313;border-
   font-weight: 750;
 }
 .premium-placeholder-card small { color: #8a7c90; line-height: 1.5; }
+
+/* Cross-module links that require a second paid module stay visibly locked. */
+.module-connection-locked,
+.module-connection-locked:disabled { opacity: .5; filter: grayscale(1); cursor: not-allowed; }

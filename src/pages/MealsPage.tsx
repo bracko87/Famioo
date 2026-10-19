@@ -19,6 +19,7 @@ import { DatePicker } from '../components/ui/DatePicker'
 import { Select } from '../components/ui/Select'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { useHousehold } from '../context/HouseholdContext'
+import { moduleConnectionState } from '../lib/moduleAccess'
 import { supabase } from '../lib/supabase'
 
 type MealsTab='plan'|'recipes'|'archive'
@@ -175,7 +176,8 @@ export function MealsPage(){
   const access=modules.find((module)=>module.code==='meals')
   const canWrite=Boolean(access?.can_write)
   const calendarWritable=Boolean(modules.find((module)=>module.code==='calendar')?.can_write)
-  const shoppingWritable=Boolean(modules.find((module)=>module.code==='shopping')?.can_write)
+  const shoppingConnection=moduleConnectionState(modules,'meals','shopping')
+  const shoppingWritable=shoppingConnection==='active' && Boolean(modules.find((module)=>module.code==='shopping')?.can_write)
 
   const [tab,setTab]=useState<MealsTab>('plan')
   const [recipes,setRecipes]=useState<Recipe[]>([])
@@ -912,9 +914,15 @@ export function MealsPage(){
 
         {!archived && (
           <footer>
-            {shoppingWritable && (
-              <button type="button" className="secondary-button compact" onClick={()=>openShoppingExport(recipe)}>
-                <ShoppingBag size={14}/>Ingredients to Shopping
+            {shoppingConnection !== 'hidden' && (
+              <button
+                type="button"
+                className={'secondary-button compact' + (shoppingConnection === 'locked' ? ' module-connection-locked' : '')}
+                disabled={!shoppingWritable}
+                title={shoppingConnection === 'locked' ? 'Shopping is not purchased' : !shoppingWritable ? 'Shopping write access required' : undefined}
+                onClick={()=>openShoppingExport(recipe)}
+              >
+                <ShoppingBag size={14}/>{shoppingConnection === 'locked' ? 'Shopping not unlocked' : 'Ingredients to Shopping'}
               </button>
             )}
             {canWrite && (

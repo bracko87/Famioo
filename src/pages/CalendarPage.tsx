@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
+import { moduleConnectionState } from '../lib/moduleAccess'
 import { supabase } from '../lib/supabase'
 import type { CalendarOccurrence, CalendarRow, EventCategory } from '../lib/types'
 import { Select } from '../components/ui/Select'
@@ -237,9 +238,9 @@ export function CalendarPage() {
   const checklistAccess = modules.find((module) => module.code === 'checklists')
   const costsAccess = modules.find((module) => module.code === 'costs')
   const projectsAccess = modules.find((module) => module.code === 'projects')
-  const canWriteChecklists = Boolean(checklistAccess?.enabled && checklistAccess?.can_write)
-  const canWriteCosts = Boolean(costsAccess?.enabled && costsAccess?.can_write)
-  const canWriteProjects = Boolean(projectsAccess?.enabled && projectsAccess?.can_write)
+  const canWriteChecklists = Boolean(checklistAccess?.can_write && moduleConnectionState(modules, 'calendar', 'checklists') === 'active')
+  const canWriteCosts = Boolean(costsAccess?.can_write && moduleConnectionState(modules, 'calendar', 'costs') === 'active')
+  const canWriteProjects = Boolean(projectsAccess?.can_write && moduleConnectionState(modules, 'calendar', 'projects') === 'active')
 
   const [view, setView] = useState<CalendarView>('week')
 
@@ -1828,7 +1829,7 @@ export function CalendarPage() {
 
             {editingEventId && (
               <div className="event-module-connections">
-                {projectsAccess?.enabled && (
+                {moduleConnectionState(modules, 'calendar', 'projects') === 'active' && (
                   <section className="event-connection-card">
                     <div className="event-connection-head">
                       <span><FolderKanban size={15} /><strong>Projects & Chores</strong></span>
@@ -1867,7 +1868,7 @@ export function CalendarPage() {
                   </section>
                 )}
 
-                {checklistAccess?.enabled && (
+                {moduleConnectionState(modules, 'calendar', 'checklists') === 'active' && (
                   <details className="event-linked-details">
                     <summary>
                       <span><ClipboardCheck size={15} />Checklists</span>
@@ -1895,7 +1896,7 @@ export function CalendarPage() {
                   </details>
                 )}
 
-                {costsAccess?.enabled && (
+                {moduleConnectionState(modules, 'calendar', 'costs') === 'active' && (
                   <details className="event-linked-details">
                     <summary>
                       <span><WalletCards size={15} />Household costs</span>

@@ -5,6 +5,7 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Select } from '../components/ui/Select'
 import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
+import { moduleConnectionState } from '../lib/moduleAccess'
 import { supabase } from '../lib/supabase'
 import type { CalendarRow } from '../lib/types'
 
@@ -119,9 +120,8 @@ async function imageFileToDataUrl(file:File){
 export function CalendarConnectionsPage(){
   const { household,modules,profiles,user }=useHousehold()
   const calendarAccess=modules.find((module)=>module.code==='calendar')
-  const assistantAccess=modules.find((module)=>module.code==='assistant')
   const canWrite=Boolean(calendarAccess?.enabled&&calendarAccess?.can_write)
-  const hasAiAssistant=Boolean(assistantAccess?.enabled)
+  const hasAiAssistant=moduleConnectionState(modules,'calendar_connections','assistant')==='active'
   const [calendars,setCalendars]=useState<CalendarRow[]>([])
   const [connections,setConnections]=useState<Connection[]>([])
   const [workCategoryId,setWorkCategoryId]=useState<string|null>(null)

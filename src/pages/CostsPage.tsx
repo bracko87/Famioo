@@ -4,6 +4,7 @@ import { DatePicker } from '../components/ui/DatePicker'
 import { Select } from '../components/ui/Select'
 import { PrivacyNotice } from '../components/PrivacyNotice'
 import { useHousehold } from '../context/HouseholdContext'
+import { moduleConnectionState } from '../lib/moduleAccess'
 import { supabase } from '../lib/supabase'
 
 type CostRange = 'week' | 'month' | 'year' | 'all'
@@ -90,7 +91,8 @@ export function CostsPage() {
   const { household, modules } = useHousehold()
   const access = modules.find((module) => module.code === 'costs')
   const canWrite = Boolean(access?.can_write)
-  const hasAiAssistant=Boolean(modules.find(module=>module.code==='assistant')?.enabled)
+  const assistantConnection = moduleConnectionState(modules,'costs','assistant')
+  const hasAiAssistant=assistantConnection==='active'
   const mondayFirst = household.week_starts_on === 1
 
   const [costs, setCosts] = useState<HouseholdCost[]>([])
@@ -819,9 +821,15 @@ export function CostsPage() {
           </section>
           <div className="compare-optional-ai">
             <p>Optional AI analysis</p>
-            {hasAiAssistant?<button type="button" className="secondary-button shopping-compare-ai" onClick={askAssistantAboutCosts}>
-              <Sparkles size={15}/>Ask AI about these filtered costs
-            </button>:<small>Enable Famioo Assistant for additional recommendations.</small>}
+            {assistantConnection === 'active' ? (
+              <button type="button" className="secondary-button shopping-compare-ai" onClick={askAssistantAboutCosts}>
+                <Sparkles size={15}/>Ask AI about these filtered costs
+              </button>
+            ) : assistantConnection === 'locked' ? (
+              <button type="button" className="secondary-button shopping-compare-ai module-connection-locked" disabled title="AI Assistant is not purchased">
+                <Sparkles size={15}/>AI Assistant not unlocked
+              </button>
+            ) : null}
           </div>
         </aside>
       </>}
