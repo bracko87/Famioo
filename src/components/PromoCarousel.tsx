@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useHousehold } from '../context/HouseholdContext'
+import { isFreePlanAccount } from '../lib/accountPlan'
 import type { ModuleAccess, ModuleCode } from '../lib/types'
 
 type PromoSlide = {
@@ -77,34 +79,43 @@ const routeByModule: Record<ModuleCode, string> = {
 }
 
 export function PromoCarousel({ modules }: { modules: ModuleAccess[] }) {
+  const { user } = useHousehold()
   const [index, setIndex] = useState(0)
-
-  useEffect(() => {
-    promoSlides.forEach((slide) => {
-      const image = new Image()
-      image.src = slide.image
-    })
-
-    const timer = window.setInterval(() => {
-      setIndex((current) => (current + 1) % promoSlides.length)
-    }, 7000)
-
-    return () => window.clearInterval(timer)
-  }, [])
-
   const modulesByCode = useMemo(
     () => new Map(modules.map((module) => [module.code, module])),
     [modules],
   )
+  const individualFree = isFreePlanAccount(user)
+  const slides = useMemo(
+    () => individualFree
+      ? promoSlides.filter(slide => Boolean(modulesByCode.get(slide.code)?.enabled))
+      : promoSlides,
+    [individualFree, modulesByCode],
+  )
+
+  useEffect(() => {
+    if (!slides.length) return
+    setIndex(0)
+    slides.forEach(slide => {
+      const image = new Image()
+      image.src = slide.image
+    })
+    const timer = window.setInterval(() => {
+      setIndex(current => (current + 1) % slides.length)
+    }, 7000)
+    return () => window.clearInterval(timer)
+  }, [slides])
+
+  if (!slides.length) return null
 
   return (
     <section className="promo-carousel" aria-label="Famioo module highlights">
       <div className="promo-stage">
-        {promoSlides.map((slide, slideIndex) => {
+        {slides.map((slide, slideIndex) => {
           const module = modulesByCode.get(slide.code)
           const relative = slideIndex === index
             ? 'active'
-            : slideIndex === (index - 1 + promoSlides.length) % promoSlides.length
+            : slideIndex === (index - 1 + slides.length) % slides.length
               ? 'previous'
               : 'inactive'
 
@@ -138,7 +149,7 @@ export function PromoCarousel({ modules }: { modules: ModuleAccess[] }) {
         })}
 
         <div className="famioo-promo-progress" aria-hidden="true">
-          {promoSlides.map((item, dotIndex) => (
+          {slides.map((item, dotIndex) => (
             <span className={dotIndex === index ? 'active' : ''} key={item.code} />
           ))}
         </div>
