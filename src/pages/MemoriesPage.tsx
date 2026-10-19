@@ -15,6 +15,7 @@ import {
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
+import { isFreePlanAccount } from '../lib/accountPlan'
 import { optimizeMemoryPhoto } from '../lib/photoOptimization'
 
 type AlbumType='birthday'|'trip'|'holiday'|'school'|'family'|'other'
@@ -93,7 +94,8 @@ function albumEmoji(type:AlbumType){
 }
 
 export function MemoriesPage(){
-  const {household,modules}=useHousehold()
+  const {household,modules,user}=useHousehold()
+  const individualFree=isFreePlanAccount(user)
   const access=modules.find(module=>module.code==='memories')
   const canWrite=Boolean(access?.enabled&&access?.can_write)
   const [albums,setAlbums]=useState<Album[]>([])
@@ -101,6 +103,7 @@ export function MemoriesPage(){
   const [files,setFiles]=useState<FileRow[]>([])
   const [events,setEvents]=useState<CalendarEvent[]>([])
   const [urls,setUrls]=useState<Record<string,string>>({})
+  const [memoriesUsage,setMemoriesUsage]=useState<{used:number;quota:number}|null>(null)
   const [selectedId,setSelectedId]=useState('')
   const [showArchived,setShowArchived]=useState(false)
   const [editorOpen,setEditorOpen]=useState(false)
@@ -153,7 +156,7 @@ export function MemoriesPage(){
   async function load(foreground=false){
     if(foreground)setBusy(true)
     setError('')
-    const [albumResult,photoResult,fileResult,eventResult]=await Promise.all([
+    const [albumResult,photoResult,fileResult,eventResult,quotaResult]=await Promise.all([
       supabase.from('family_memory_albums')
         .select('id,title,album_type,memory_date,event_id,description,cover_file_id,archived_at,created_at,updated_at')
         .eq('household_id',household.id).order('memory_date',{ascending:false}).order('created_at',{ascending:false}),
@@ -168,8 +171,13 @@ export function MemoriesPage(){
         .select('id,title,all_day,start_date,start_at,event_timezone')
         .eq('household_id',household.id).is('deleted_at',null).eq('status','active')
         .order('created_at',{ascending:false}).limit(250),
+      individualFree ? supabase.rpc('free_account_storage_usage_v1') : Promise.resolve({data:null,error:null}),
     ])
     const failure=albumResult.error||photoResult.error||fileResult.error||eventResult.error
+    if(individualFree && !quotaResult.error && quotaResult.data){
+      const quotaRow=Array.isArray(quotaResult.data)?quotaResult.data[0]:quotaResult.data
+      if(quotaRow)setMemoriesUsage({used:Number(quotaRow.memories_used_bytes),quota:Number(quotaRow.memories_quota_bytes)})
+    }
     if(failure)setError(failure.message)
     const albumRows=(albumResult.data??[]) as Album[]
     const fileRows=((fileResult.data??[]) as FileRow[]).map(file=>({...file,file_size:Number(file.file_size)}))
@@ -221,6 +229,9 @@ export function MemoriesPage(){
     if(file.size>50*1024*1024){setError('Photos can be up to 50 MB each.');return}
     setBusy(true);setError('');setMessage('')
     const optimized=await optimizeMemoryPhoto(file)
+    if(individualFree && memoriesUsage && memoriesUsage.used+optimized.size>memoriesUsage.quota){
+      setBusy(false);setError('Your Free Memories allowance is 100 MB. Upgrade to 10 GB to add more photos.');return
+    }
     const reserve=await supabase.rpc('reserve_household_file_v1',{
       p_household_id:household.id,p_title:file.name.replace(/\.[^.]+$/,'')||'Memory photo',
       p_file_name:optimized.name,p_mime_type:optimized.type,p_file_size:optimized.size,
@@ -299,7 +310,7 @@ export function MemoriesPage(){
 
   return <div className="page memories-page">
     <div className="page-heading-row memories-heading">
-      <div><span className="eyebrow">FAMILY PHOTO ALBUMS / MEMORIES</span><h1>Family memories</h1><p>Shared albums for birthdays, trips, holidays, school moments and everyday family life.</p></div>
+      <div><span className="eyebrow">FAMILY PHOTO ALBUMS / MEMORIES</span><h1>Family memories</h1><p>Shared albums for birthdays, trips, holidays, school moments and everyday family life.</p>{individualFree&&<p className="free-storage-note">{memoriesUsage?'Free plan: '+(memoriesUsage.used/(1024*1024)).toFixed(1)+' of 100 MB used':'Free plan: 100 MB photo allowance'} · 10 GB upgrade available separately for €3/month.</p>}</div>
       {canWrite&&<button className="primary-button compact" onClick={()=>openAlbumEditor()}><Plus size={14}/>New album</button>}
     </div>
 
