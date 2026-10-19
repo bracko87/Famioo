@@ -40,6 +40,8 @@ export function SafetyAlertBanner(){
           const next=(result.data?.[0]??null) as ActiveHouseholdSos|null
           setActiveAlert(previous=>previous?.id===next?.id?previous:next)
         }
+      }catch{
+        // Temporary network failure must not falsely clear an active SOS.
       }finally{fetching=false}
     }
     void refresh()

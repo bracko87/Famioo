@@ -462,7 +462,7 @@ export function SafetyPage(){
         <BellRing size={16}/>
         <span>
           <strong>Family alert only</strong>
-          <small>Famioo alerts your household. It does not automatically contact police, ambulance or other emergency services.</small>
+          <small>Famioo records an in-app household alert and queues notifications. Delivery depends on each device and its connection. Police, ambulance and other emergency services are not contacted automatically.</small>
         </span>
       </div>
 
@@ -559,7 +559,7 @@ export function SafetyPage(){
             </span>
             <h2>
               {myActiveAlert
-                ?'Your family has been alerted'
+                ?'Your family SOS is active'
                 :isMobile
                   ?'Tap to send SOS'
                   :'SOS triggering is available on mobile only'}
