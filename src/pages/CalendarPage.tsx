@@ -243,6 +243,15 @@ export function CalendarPage() {
   const canWriteProjects = Boolean(projectsAccess?.enabled && projectsAccess?.can_write)
 
   const [view, setView] = useState<CalendarView>('month')
+
+  // The mobile Calendar navigation explicitly opens the full month. Listening
+  // to location.key also handles tapping Calendar while already on this route.
+  useEffect(() => {
+    if (new URLSearchParams(routeLocation.search).get('view') === 'month') {
+      setView('month')
+      setAnchor(new Date())
+    }
+  }, [routeLocation.key, routeLocation.search])
   const [anchor, setAnchor] = useState(() => new Date())
   const [events, setEvents] = useState<CalendarOccurrence[]>([])
   const [calendars, setCalendars] = useState<CalendarRow[]>([])
