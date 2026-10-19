@@ -49,7 +49,7 @@ export function VoiceIntegrationPage(){
   const [settings,setSettings]=useState<SettingsRow|null>(null)
   const [logs,setLogs]=useState<LogRow[]>([])
   const [enabled,setEnabled]=useState(false)
-  const [allowed,setAllowed]=useState<VoiceAction[]>(['calendar_query','shopping_add','task_add','reminders_query'])
+  const [allowed,setAllowed]=useState<VoiceAction[]>([])
   const [token,setToken]=useState('')
   const [saving,setSaving]=useState(false)
   const [testing,setTesting]=useState(false)
@@ -77,7 +77,7 @@ export function VoiceIntegrationPage(){
     const row=settingsResult.data as SettingsRow|null
     setSettings(row)
     setEnabled(Boolean(row?.enabled))
-    setAllowed(row?.allowed_actions?.length?row.allowed_actions:['calendar_query','shopping_add','task_add','reminders_query'])
+    setAllowed(row?.allowed_actions??[])
     if(!logResult.error)setLogs((logResult.data??[]) as LogRow[])
   }
 
@@ -156,7 +156,7 @@ export function VoiceIntegrationPage(){
 
     <div className="voice-platform-note">
       <AudioLines size={17}/>
-      <span><strong>Famioo-side integration is ready.</strong> The command endpoint and secure token are implemented. Publishing the Amazon Alexa Skill and configuring Amazon account linking still require an Alexa Developer account and Amazon-side credentials.</span>
+      <span><strong>Private integration testing only.</strong> Famioo has a command endpoint and household permissions, but the Alexa Skill and account linking are not connected yet. Keep voice permissions disabled unless you are actively testing the integration; never share an integration token publicly.</span>
     </div>
 
     {error&&<div className="notice error">{error}</div>}
@@ -181,7 +181,7 @@ export function VoiceIntegrationPage(){
     <section className="voice-token-card">
       <header><div><span className="eyebrow">AMAZON SKILL LINK</span><h2>Integration token</h2></div><button className="secondary-button compact" disabled={saving} onClick={()=>void rotateToken()}><RotateCcw size={13}/>{settings?.token_prefix?'Rotate token':'Generate token'}</button></header>
       {token?<div className="voice-token-value"><code>{token}</code><button onClick={()=>void copyToken()} title="Copy token"><Clipboard size={15}/></button></div>:settings?.token_prefix?<div className="voice-token-existing"><KeyRound size={16}/><span><strong>{settings.token_prefix}••••••••</strong><small>Full token hidden. Rotate it if you need a new value.</small></span></div>:<p>No integration token has been generated yet.</p>}
-      <p>The Amazon Skill backend should send this token as <code>Authorization: Bearer &lt;token&gt;</code> when calling the Famioo voice endpoint. The plaintext token is shown only when generated.</p>
+      <p>Developer testing only: this secret grants the selected household voice permissions. Store it on the server, never in an Alexa client, web page or public repository. The future Alexa Skill will use proper account linking instead of asking users to manage tokens.</p>
     </section>
 
     <section className="voice-test-card">

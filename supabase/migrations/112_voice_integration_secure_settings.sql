@@ -69,7 +69,7 @@ begin
   )
   values(
     p_household_id,false,
-    array['calendar_query','shopping_add','task_add','reminders_query']::text[],
+    '{}'::text[],
     encode(digest(v_token,'sha256'),'hex'),
     left(v_token,18),
     auth.uid(),
