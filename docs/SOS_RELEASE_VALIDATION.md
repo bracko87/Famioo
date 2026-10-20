@@ -39,12 +39,51 @@ number is rejected and saving someone else's number is limited by the original
 ownership/admin permission checks. A Netlify deployment does not run this
 migration by itself.
 
+## Simplified SOS setup and contact management
+
+Once a household has **at least one saved household phone number** and at
+least one callable emergency/trusted-service contact, the three-part setup
+panel disappears from the Safety/SOS screen. It returns automatically if
+those minimum records are removed. More than one household number is strongly
+recommended, but never required to send an urgent SOS.
+
+Household numbers are managed in Family Contacts → Your Famioo household,
+with **Edit / remove number**. Clearing a number updates only the linked
+profile's `contact_phone`, not the member, their login or their ability to
+receive Famioo in-app alerts. Emergency service numbers continue to be
+managed through the shared Family Contacts directory.
+
+Push configuration and **Send test** remain accessible for every device at
+Settings → Notifications & Security, linked from Family Contacts. Contact
+readiness is **not** proof of push delivery.
+
+## Medical & Safety / Emergency Information permission fix
+
+Deploy `supabase/migrations/115_fix_emergency_guardian_contact_access.sql`
+to the Famioo Supabase project after migration 093. It repairs a 403
+`permission denied for table family_contacts` triggered by Emergency
+Information guardian RLS rules and write RPCs checking the protected
+`family_contacts` table as an unprivileged user.
+
+Migration 115 uses a narrowly scoped authenticated household-membership
+SECURITY DEFINER helper. It preserves the directory's no-direct-table-access
+policy, active household role/module checks and existing records.
+
+- [ ] Medical & Safety opens without 403 when guardian list is empty
+- [ ] Existing emergency service contacts display; contacts remain private
+- [ ] Add/edit a family emergency profile with a linked doctor contact
+- [ ] Assign, edit and remove a guardian emergency contact
+- [ ] Verify a caller from another household cannot see or assign contacts
+- [ ] Confirm direct SELECT on `public.family_contacts` remains forbidden
+
 ## Required device tests
 
 - [ ] Set up a household with at least two **different** user logins on two phones
 - [ ] Verify each phone has a current push subscription and notification permission
 - [ ] Send a test push to each device from Settings → Notifications & Security
-- [ ] Prepare adult household telephone numbers; reopen Safety and verify persistence
+- [ ] Save one phone and one emergency contact; verify SOS setup disappears, and open Family Contacts to change numbers
+- [ ] Remove a stored number in Family Contacts without removing that household member; verify SOS setup returns if fewer than one number remains
+- [ ] Prepare additional household numbers and verify all phones remain visible in Family Contacts
 - [ ] Save a local emergency service contact; dial link opens the native phone dialer
 - [ ] Test no available network / disabled location: error surfaced, no false "sent" claim
 - [ ] Test a phone without geolocation: SOS notification is still queued
