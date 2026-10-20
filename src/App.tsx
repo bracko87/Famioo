@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AudioLines, BadgeAlert, BadgeCheck, CalendarDays, CarFront, CheckCircle2, CheckSquare, ClipboardList, ContactRound, FileText, Folder, FolderKanban, GraduationCap, Images, MapPinned, MessageCircle, MessagesSquare, PawPrint, Plane, RadioTower, QrCode, Receipt, ScanLine, ShieldAlert, ShoppingBag, Sparkles, StickyNote, Syringe, Utensils, Wrench } from 'lucide-react'
+import { AudioLines, BadgeAlert, CalendarDays, CarFront, CheckCircle2, CheckSquare, ClipboardList, ContactRound, FileText, Folder, FolderKanban, GraduationCap, Images, MapPinned, MessageCircle, MessagesSquare, PawPrint, Plane, RadioTower, QrCode, Receipt, ScanLine, ShieldAlert, ShoppingBag, Sparkles, StickyNote, Syringe, Utensils, Wrench } from 'lucide-react'
 import type { Session, User } from '@supabase/supabase-js'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { supabase } from './lib/supabase'
@@ -169,7 +169,6 @@ function LoadingScreen() {
         <span className="launch-orbit launch-orbit-26" title="Calendar Comments & Photos"><MessagesSquare size={19} /></span>
         <span className="launch-orbit launch-orbit-27" title="Family Photo Albums / Memories"><Images size={19} /></span>
         <span className="launch-orbit launch-orbit-28" title="Family Check-In"><CheckCircle2 size={19} /></span>
-        <span className="launch-orbit launch-orbit-29" title="Pickup Authorization"><BadgeCheck size={19} /></span>
         <span className="launch-orbit launch-orbit-30" title="TV Remote / Home Remote"><RadioTower size={19} /></span>
         <span className="launch-orbit launch-orbit-31" title="Alexa / Voice Integration"><AudioLines size={19} /></span>
 
@@ -288,7 +287,7 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Route path="emergency" element={<Navigate to="/app/contacts?tab=emergency" replace />} />
           <Route path="memories" element={<MemoriesPage />} />
           <Route path="check-in" element={<Navigate to="/app/location?tab=checkin" replace />} />
-          <Route path="pickup-authorization" element={<Navigate to="/app/contacts?tab=pickups" replace />} />
+          <Route path="pickup-authorization" element={<Navigate to="/app/contacts" replace />} />
           <Route path="home-remote" element={<HomeRemotePage />} />
           <Route path="voice" element={<VoiceIntegrationPage />} />
           <Route path="settings" element={<SettingsPage />} />

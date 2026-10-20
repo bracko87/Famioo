@@ -1,7 +1,6 @@
 import {
   AudioLines,
   BadgeAlert,
-  BadgeCheck,
   CalendarDays,
   CarFront,
   CheckCircle2,
@@ -66,7 +65,6 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   calendar_context: MessagesSquare,
   memories: Images,
   checkin: CheckCircle2,
-  pickup_authorization: BadgeCheck,
   home_remote: RadioTower,
   voice_integration: AudioLines,
 }
@@ -101,7 +99,7 @@ const routeByModule: Record<ModuleCode, string> = {
   calendar_context: '/app/calendar',
   memories: '/app/memories',
   checkin: '/app/check-in',
-  pickup_authorization: '/app/pickup-authorization',
+  pickup_authorization: '/app/contacts',
   home_remote: '/app/home-remote',
   voice_integration: '/app/voice',
 }
@@ -278,7 +276,7 @@ export function HomePage() {
     safety: 'SOS ready · household safety',
     location: 'Family map, safe places & check-ins',
     messenger: 'Private family chat',
-    contacts: 'Family directory, emergency details & pickups',
+    contacts: 'Family contacts and emergency service numbers',
     memo: 'Ideas, places & someday notes',
     shopping: `${shoppingCount} active lists`,
     costs: new Intl.NumberFormat(undefined, { style: 'currency', currency: 'EUR' }).format(costMonthTotal) + ' this month',

@@ -58,6 +58,7 @@ type HouseholdUser={
 
 type EmergencyContact={
   id:string
+  contact_type:string
   display_name:string
   phone:string|null
   secondary_phone:string|null
@@ -187,7 +188,7 @@ export function SafetyPage(){
     }
 
     if(!contactsResult.error){
-      setEmergencyContacts(((contactsResult.data??[]) as EmergencyContact[]).filter((contact)=>contact.is_emergency))
+      setEmergencyContacts(((contactsResult.data??[]) as EmergencyContact[]).filter((contact)=>contact.contact_type==='emergency'||(contact.contact_type==='service'&&contact.is_emergency)))
     } else if(foreground){
       setError((current)=>current||'Could not load emergency-service contacts: '+contactsResult.error.message)
     }

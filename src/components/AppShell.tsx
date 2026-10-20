@@ -1,7 +1,6 @@
 import {
   BadgeAlert,
   AudioLines,
-  BadgeCheck,
   Bell,
   CalendarDays,
   CarFront,
@@ -84,7 +83,6 @@ const iconByModule: Partial<Record<ModuleCode, ComponentType<{ size?: number }>>
   calendar_context: MessagesSquare,
   memories: Images,
   checkin: CheckCircle2,
-  pickup_authorization: BadgeCheck,
   home_remote: RadioTower,
   voice_integration: AudioLines,
 }
@@ -119,7 +117,6 @@ const routeByModule: Partial<Record<ModuleCode, string>> = {
   calendar_context: '/app/calendar',
   memories: '/app/memories',
   checkin: '/app/check-in',
-  pickup_authorization: '/app/pickup-authorization',
   home_remote: '/app/home-remote',
   voice_integration: '/app/voice',
 }
@@ -177,7 +174,6 @@ const favoritePreferenceKey = 'famioo_favorite_modules_v1'
 const moduleCodes = new Set<ModuleCode>(sidebarModuleItems.map((item) => item.code))
 const mergedFavoriteCodes: Partial<Record<ModuleCode, ModuleCode>> = {
   emergency_info: 'contacts',
-  pickup_authorization: 'contacts',
   checkin: 'location',
   calendar_context: 'calendar',
 }
