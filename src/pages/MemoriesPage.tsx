@@ -223,9 +223,9 @@ export function MemoriesPage(){
       .update({archived_at:restore?null:new Date().toISOString(),updated_at:new Date().toISOString()})
       .eq('id',album.id).eq('household_id',household.id)
     if(result.error){setError(result.error.message);return}
-    setMessage(restore?'Album restored.':'Album archived.')
     setSelectedId('')
     await load(false)
+    setMessage(restore?'Album restored.':'Album archived.')
   }
 
   // Process one reservation at a time: each successful image counts toward
@@ -289,9 +289,9 @@ export function MemoriesPage(){
         }
       }
       if(selectedFiles.length>batch.length)errors.push('Choose up to 30 photos per batch.')
+      await load(false)
       if(added)setMessage(added+' photo'+(added===1?'':'s')+' added to '+album.title+'.')
       if(errors.length)setError(errors.length+' photo'+(errors.length===1?'':'s')+' could not be added. '+errors.slice(0,3).join('; ')+(errors.length>3?'; and '+(errors.length-3)+' more.':''))
-      await load(false)
     }finally{
       setBusy(false)
       setUploadProgress('')
@@ -302,19 +302,6 @@ export function MemoriesPage(){
     const selectedFiles=Array.from(event.currentTarget.files??[])
     event.currentTarget.value=''
     if(selectedFiles.length)void uploadPhotos(selectedFiles)
-  }
-
-  async function importEventPhotos(){
-    if(!selected?.event_id)return
-    setBusy(true);setError('')
-    const result=await supabase.rpc('import_event_photos_to_memory_album_v1',{
-      p_household_id:household.id,p_album_id:selected.id,
-    })
-    setBusy(false)
-    if(result.error){setError(result.error.message);return}
-    const count=Number(result.data??0)
-    setMessage(count?count+' event photo'+(count===1?'':'s')+' imported.':'All event photos are already in this album.')
-    await load(false)
   }
 
   async function downloadMemoryImage(photo:MemoryPhoto):Promise<File>{
@@ -426,7 +413,7 @@ export function MemoriesPage(){
       p_household_id:household.id,p_photo_id:photo.id,
     })
     if(result.error)setError(result.error.message)
-    else{setMessage('Photo removed from album.');await load(false)}
+    else{await load(false);setMessage('Photo removed from album.')}
   }
 
   if(busy&&albums.length===0)return <div className="page memories-page"><div className="memories-empty">Loading memories…</div></div>
@@ -434,7 +421,7 @@ export function MemoriesPage(){
   return <div className="page memories-page">
     <div className="page-heading-row memories-heading">
       <div><span className="eyebrow">FAMILY PHOTO ALBUMS / MEMORIES</span><h1>Family memories</h1><p>Shared albums for birthdays, trips, holidays, school moments and everyday family life.</p>{individualFree&&<p className="free-storage-note">{memoriesUsage?'Free plan: '+(memoriesUsage.used/(1024*1024)).toFixed(1)+' of 100 MB used':'Free plan: 100 MB photo allowance'} · 10 GB upgrade available separately for €3/month.</p>}</div>
-      {canWrite&&<button className="primary-button compact" onClick={()=>openAlbumEditor()}><Plus size={14}/>New album</button>}
+      {canWrite&&!selected&&<button className="primary-button compact" onClick={()=>openAlbumEditor()}><Plus size={14}/>New album</button>}
     </div>
 
     {error&&<div className="notice error">{error}</div>}
