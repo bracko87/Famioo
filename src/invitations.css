@@ -1,0 +1,17 @@
+.invite-welcome { max-width: 580px; margin: 9vh auto 32px; padding: 20px; }
+.invite-inbox { padding: 18px; border: 1px solid #e7d6e7; border-radius: 17px; background: #fcf9fd; color: #4b4051; display: grid; gap: 12px; }
+.invite-inbox-embedded { margin: 0 0 18px; }
+.invite-inbox > header { display:flex; gap:12px; align-items:flex-start; }
+.invite-inbox > header > svg { color:#88449f; flex-shrink:0; }
+.invite-inbox > header strong { font-size: 1.05rem; }
+.invite-inbox > header p { margin: 3px 0 0; font-size: .86rem; color: #716878; }
+.invite-offer { display:grid; gap: 13px; background:white; padding:14px; border-radius:13px; border:1px solid #e7dce9; }
+.invite-offer-title { display:flex; gap:9px; align-items:center; }
+.invite-offer-title > svg {color:#9b4a9d;flex-shrink:0;}
+.invite-offer-title > div { display:grid; gap:4px; min-width:0; }
+.invite-offer-title small {color:#74687c; overflow-wrap:anywhere;}
+.invite-password-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.invite-password-grid label { display:grid; gap:6px; min-width:0; }
+.invite-password-grid input { width:100%; min-width:0; box-sizing:border-box; font-size:16px; }
+.invite-offer .primary-button { justify-self:start; }
+@media(max-width:650px) { .invite-welcome {margin:22px 10px;} .invite-password-grid {grid-template-columns:1fr;} }

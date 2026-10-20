@@ -1,24 +1,21 @@
-# Famioo: controlled GitHub release process
+# Famioo — public development on main, deployment held separately
 
-## Normal development
+## Effective 2026-10-20
+- GitHub repository is **public** during development; all source changes go to **`main` only**. The old `staging` branch remains as an inactive backup and receives no new changes.
+- Famioo has an EXISTING Netlify-hosted website. `main` remains its Git-connected production branch. **GitHub commits and Netlify releases must be decoupled**: the owner must turn Netlify Project configuration → Developer settings → Continuous deployment → Build settings → **Stopped builds** ON before a code migration or main-only development.
+- Stopping Netlify builds leaves the last published website available but blocks new Git-connected builds and deploy previews; do not confuse this with pausing the Netlify site/account.
+- Do not reactivate builds or trigger a production deploy without explicit owner approval. Once reactivated, a subsequent commit or manual deploy can publish all accumulated `main` changes.
+- Normal development uses local `npm run build`, suitable local tests and public-repository GitHub Actions CI on `main`. The `.github/workflows/ci.yml` workflow is enabled on `main` pushes, pull requests to main, and manual dispatch. It is not a deployment authorization.
+- Standard public GitHub-hosted runners are free. Larger runners, storage, Netlify builds, and hosted services may incur costs.
 
-- Use the `staging` branch for new application changes and fixes.
-- Keep the GitHub-connected production deployment pointing to `main` in Netlify.
-- Code changes pushed to `staging` trigger GitHub Actions CI. CI also runs on `main` pushes and pull requests targeting either branch; Markdown/docs-only changes are ignored.
-- This is a working convention, **not enforced GitHub main-branch protection**. Tell every coding agent to use `staging`. An agent that pushes directly to `main` can still trigger CI and production deployment.
+## Invitation feature release gate — not automatically live
+1. Read `docs/INVITATION_FLOW.md` completely before any release.
+2. Apply and verify `supabase/migrations/116_invitation_acceptance_before_membership.sql` on the correct Famioo project, only when separately authorized.
+3. Deploy and verify updated `supabase/functions/manage-household-user/index.ts`, only when separately authorized.
+4. Configure custom Auth SMTP, trusted redirect URLs and test real invitation deliverability and acceptance of both new and existing users.
+5. Validate existing household memberships, SOS and contact behavior; obtain explicit owner authorization before enabling Netlify builds and deploying the public frontend.
 
-## Release windows
-
-- Prefer **two release reviews per day**, morning and evening Europe/Berlin. These are manual windows, not automated merges.
-- At each window, open a pull request from `staging` to `main`, review all changes, confirm the latest `staging` build and PR checks have passed, then merge once.
-- Avoid leaving a staging-to-main PR open between windows if many staging commits will be pushed; an open PR can run CI on every new commit.
-- Urgent fixes may receive an extra release once reviewed.
-- No automatic merges and no scheduled pushes are enabled.
-
-## CI and billing
-
-- As of 2026-10-20, `.github/workflows/ci.yml` runs build validation for code pushes to `staging` and `main`, and pull requests targeting either branch. It retains concurrency cancellation, a single build job and docs-only exclusions. Staging runs also consume eligible GitHub Actions minutes.
-- A build is still required for production changes. Do not bypass failed checks to save Actions minutes.
-- GitHub Actions minutes are counted against the **monthly** allowance for eligible private-repository jobs.
-- If the monthly allowance is exhausted, restore access via the account's approved billing budget or wait for the next reset before relying on CI results.
-- For enforced control of direct `main` pushes, configure GitHub branch rules/protection separately in repository settings if available for your plan.
+## Security and operational limits
+- Do not commit real family/medical data, payment information or secrets. Git history can be copied while public.
+- Don't overwrite existing backend data, migrate a different project's database, change Netlify production settings in code to bypass owner confirmation, or claim a successful frontend build verifies Auth/SMTP/RLS.
+- No automated production deployment/release is authorized merely by pushing code to `main`.

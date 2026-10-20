@@ -19,6 +19,14 @@ type HouseholdUser = {
   joined_at: string
 }
 
+type PendingInvitation = {
+  id: string
+  email: string
+  display_name: string | null
+  role: 'admin' | 'user'
+  expires_at: string
+  created_at: string
+}
 type AddMode = 'invite' | 'create'
 type IdentityType = 'email' | 'phone'
 type ProfileType = 'adult' | 'child'
@@ -26,6 +34,10 @@ type ProfileType = 'adult' | 'child'
 export function UsersSettings() {
   const { household, refresh, user } = useHousehold()
   const [users, setUsers] = useState<HouseholdUser[]>([])
+  const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([])
+  const [loadingInvitations, setLoadingInvitations] = useState(false)
+  const [invitationError, setInvitationError] = useState('')
+  const [cancellingId, setCancellingId] = useState('')
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({})
   const [profileType, setProfileType] = useState<ProfileType>('adult')
   const [mode, setMode] = useState<AddMode>('create')
@@ -77,9 +89,40 @@ export function UsersSettings() {
     await loadAvatarUrls(rows)
   }
 
+  async function loadSentInvitations() {
+    if (!isOwner) return
+    setLoadingInvitations(true)
+    const result = await supabase.functions.invoke('manage-household-user', {
+      body: { action: 'sent', household_id: household.id },
+    })
+    setLoadingInvitations(false)
+    if (result.error || result.data?.error) {
+      setInvitationError(result.data?.error ?? result.error?.message ?? 'Could not load pending invitations.')
+      return
+    }
+    setInvitationError('')
+    setPendingInvitations((result.data?.invitations ?? []) as PendingInvitation[])
+  }
+
+  async function cancelInvitation(invitation: PendingInvitation) {
+    if (!isOwner || !window.confirm('Cancel the invitation for ' + invitation.email + '?')) return
+    setCancellingId(invitation.id)
+    const result = await supabase.functions.invoke('manage-household-user', {
+      body: { action: 'revoke', household_id: household.id, invitation_id: invitation.id },
+    })
+    setCancellingId('')
+    if (result.error || result.data?.error) {
+      setMessage(result.data?.error ?? result.error?.message ?? 'Could not cancel the invitation.')
+      return
+    }
+    setMessage('Invitation cancelled. The person was not given household access.')
+    await loadSentInvitations()
+  }
+
   useEffect(() => {
     void loadUsers()
-  }, [household.id])
+    if (isOwner) void loadSentInvitations()
+  }, [household.id, isOwner])
 
   async function addUser(event: FormEvent) {
     event.preventDefault()
@@ -183,9 +226,12 @@ export function UsersSettings() {
     setDisplayName('')
     setPassword('')
     setRole('user')
-    setMessage(mode === 'invite' ? 'Invitation email sent.' : 'User created successfully.')
+    setMessage(mode === 'invite'
+      ? (result.data?.message ?? 'Invitation created. Awaiting recipient acceptance.')
+      : 'User created successfully.')
 
     await loadUsers()
+    if (mode === 'invite') await loadSentInvitations()
     await refresh()
   }
 
@@ -321,7 +367,7 @@ export function UsersSettings() {
 
   const identityHint = useMemo(() => {
     if (profileType === 'child') return 'Children are participant profiles only and do not receive sign-in access.'
-    if (mode === 'invite') return 'Invitation requires an email address.'
+    if (mode === 'invite') return 'New accounts receive an Auth invitation email (custom SMTP required). Existing Famioo users receive an in-app invitation on their next sign-in. No household access is granted until acceptance.'
     return identityType === 'email'
       ? 'This adult will sign in with email and password.'
       : 'This adult will sign in with phone number and password.'
@@ -335,6 +381,7 @@ export function UsersSettings() {
             <span className="eyebrow">USERS</span>
             <h2>Household people</h2>
             <p>Adults can have app access. Child profiles are participants only and do not receive login credentials.</p>
+            <p>Active users below have household access. New invitations remain separate and pending until the recipient signs in and accepts.</p>
           </div>
           <span className="user-count">{users.length}</span>
         </div>
@@ -459,7 +506,7 @@ export function UsersSettings() {
 
                 <span>
                   <em className={member.role === 'profile' ? 'status-badge profile' : 'status-badge active'}>
-                    {member.role === 'profile' ? 'Participant only' : member.status}
+                    {member.role === 'profile' ? 'Participant only' : member.status === 'active' ? 'Access granted' : member.status}
                   </em>
                 </span>
 
@@ -485,6 +532,40 @@ export function UsersSettings() {
           })}
         </div>
       </section>
+
+      {isOwner && (
+        <section className="settings-card" aria-label="Pending household invitations">
+          <div className="settings-section-head">
+            <div>
+              <span className="eyebrow">AWAITING ACCEPTANCE</span>
+              <h2>Pending invitations</h2>
+              <p>Only recipients can accept. These entries do not grant household access or confirm email delivery.</p>
+            </div>
+          </div>
+          {invitationError && <div className="notice error">{invitationError}</div>}
+          {loadingInvitations ? <p>Checking pending invitations…</p>
+            : pendingInvitations.length ? (
+              <div className="users-table">
+                {pendingInvitations.map(invitation => (
+                  <div className="users-table-row" key={invitation.id}>
+                    <span className="user-cell"><Mail size={19}/><strong>{invitation.display_name || invitation.email}</strong></span>
+                    <span className="user-contact-cell">{invitation.email}</span>
+                    <span>{invitation.role === 'admin' ? 'Admin' : 'User'}</span>
+                    <span className="status-badge profile">Pending</span>
+                    <span className="user-actions-cell">
+                      <button type="button" className="secondary-button compact"
+                        disabled={cancellingId === invitation.id}
+                        onClick={() => void cancelInvitation(invitation)}>
+                        {cancellingId === invitation.id ? 'Cancelling…' : 'Cancel'}
+                      </button>
+                    </span>
+                    <small>Expires {new Date(invitation.expires_at).toLocaleDateString()}</small>
+                  </div>
+                ))}
+              </div>
+            ) : <p>No pending invitations.</p>}
+        </section>
+      )}
 
       {isOwner && (
         <section className="settings-card add-user-card">

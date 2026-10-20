@@ -9,6 +9,7 @@ import { HouseholdContext } from './context/HouseholdContext'
 import { AppShell } from './components/AppShell'
 import { AuthPage } from './pages/AuthPage'
 import { OnboardingPage } from './pages/OnboardingPage'
+import { InvitationsInbox } from './components/InvitationsInbox'
 import { HomePage } from './pages/HomePage'
 import { CalendarPage } from './pages/CalendarPage'
 import { CalendarConnectionsPage } from './pages/CalendarConnectionsPage'
@@ -248,7 +249,7 @@ function AuthenticatedApp({ user }: { user: User }) {
   }
 
   if (!households.length) {
-    return <OnboardingPage user={user} onCreated={() => loadContext()} />
+    return <InvitationsInbox onAccepted={() => loadContext()} fallback={<OnboardingPage user={user} onCreated={() => loadContext()} />} />
   }
 
   const household = households.find((item) => item.id === householdId) ?? households[0]
