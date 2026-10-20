@@ -15,6 +15,9 @@ export function useMobileKeyboardViewport<T extends HTMLElement>(active:boolean)
   useEffect(()=>{
     if(!active||!window.visualViewport)return
     const vv=window.visualViewport
+    // Some installed iOS PWAs resize window.innerHeight together with the
+    // keyboard. The initial visual viewport height provides a second signal.
+    const initialHeight=vv.height
 
     function update(){
       const overlay=ref.current
@@ -24,8 +27,9 @@ export function useMobileKeyboardViewport<T extends HTMLElement>(active:boolean)
         &&overlay.contains(focus)
         &&focus.matches('input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea, select')
       const hiddenByKeyboard=Math.max(0,window.innerHeight-vv.height-vv.offsetTop)
+      const shrunkenSinceOpening=Math.max(0,initialHeight-vv.height)
       const mobile=window.matchMedia('(max-width: 900px)').matches
-      const keyboardOpen=mobile&&editFocused&&hiddenByKeyboard>120
+      const keyboardOpen=mobile&&editFocused&&(hiddenByKeyboard>120||shrunkenSinceOpening>120)
 
       if(!keyboardOpen){
         overlay.removeAttribute('data-keyboard-open')
