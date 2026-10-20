@@ -132,6 +132,11 @@ export function MemoriesPage(){
     [photos,selected?.id],
   )
   const fileById=useMemo(()=>new Map(files.map(file=>[file.id,file])),[files])
+  const firstPhotoByAlbum=useMemo(()=>{
+    const ids=new Map<string,string>()
+    for(const photo of photos)if(!ids.has(photo.album_id))ids.set(photo.album_id,photo.file_id)
+    return ids
+  },[photos])
 
   // Do not request a signed URL for every household image on every visit.
   // Only covers and photos in the open album need URLs, and off-screen images
@@ -139,7 +144,10 @@ export function MemoriesPage(){
   useEffect(()=>{
     let cancelled=false
     const neededIds=new Set<string>()
-    for(const album of visibleAlbums)if(album.cover_file_id)neededIds.add(album.cover_file_id)
+    for(const album of visibleAlbums){
+      const coverId=album.cover_file_id||firstPhotoByAlbum.get(album.id)
+      if(coverId)neededIds.add(coverId)
+    }
     for(const photo of selectedPhotos)neededIds.add(photo.file_id)
     const required=[...neededIds]
       .filter(id=>urls[id]===undefined)
@@ -155,7 +163,7 @@ export function MemoriesPage(){
       setUrls(current=>({...current,...Object.fromEntries(signed)}))
     })
     return ()=>{cancelled=true}
-  },[visibleAlbums,selectedPhotos,fileById,urls])
+  },[visibleAlbums,selectedPhotos,fileById,firstPhotoByAlbum,urls])
 
   async function load(foreground=false){
     if(foreground)setBusy(true)
