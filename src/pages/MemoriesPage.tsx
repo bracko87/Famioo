@@ -1,13 +1,12 @@
 import {
   Archive,
   CalendarDays,
-  Camera,
-  ImagePlus,
+  ArrowLeft,
+  MessageCircle,
+  Share2,
   Images,
-  Link2,
   Plus,
   RotateCcw,
-  Sparkles,
   Trash2,
   Upload,
   X,
@@ -110,10 +109,9 @@ export function MemoriesPage(){
   const [editorOpen,setEditorOpen]=useState(false)
   const editorViewportRef=useMobileKeyboardViewport<HTMLDivElement>(editorOpen)
   const [draft,setDraft]=useState<AlbumDraft>(emptyAlbum)
-  const [caption,setCaption]=useState('')
-  const [takenDate,setTakenDate]=useState('')
-  const [existingFileId,setExistingFileId]=useState('')
   const [busy,setBusy]=useState(false)
+  const [uploadProgress,setUploadProgress]=useState('')
+  const [sharingPhotoId,setSharingPhotoId]=useState('')
   const [error,setError]=useState('')
   const [message,setMessage]=useState('')
 
@@ -121,15 +119,12 @@ export function MemoriesPage(){
     ()=>albums.filter(album=>showArchived?Boolean(album.archived_at):!album.archived_at),
     [albums,showArchived],
   )
-  const selected=visibleAlbums.find(album=>album.id===selectedId)??visibleAlbums[0]??null
+  const selected=visibleAlbums.find(album=>album.id===selectedId)??null
   const selectedPhotos=useMemo(
     ()=>photos.filter(photo=>photo.album_id===selected?.id),
     [photos,selected?.id],
   )
-  const photoFileIds=new Set(selectedPhotos.map(photo=>photo.file_id))
-  const availableExistingPhotos=files.filter(file=>file.mime_type?.startsWith('image/')&&!photoFileIds.has(file.id))
   const fileById=useMemo(()=>new Map(files.map(file=>[file.id,file])),[files])
-  const eventById=useMemo(()=>new Map(events.map(event=>[event.id,event])),[events])
 
   // Do not request a signed URL for every household image on every visit.
   // Only covers and photos in the open album need URLs, and off-screen images
@@ -187,7 +182,7 @@ export function MemoriesPage(){
     setPhotos(((photoResult.data??[]) as MemoryPhoto[]).map(photo=>({...photo,sort_order:Number(photo.sort_order)})))
     setFiles(fileRows)
     setEvents((eventResult.data??[]) as CalendarEvent[])
-    setSelectedId(current=>albumRows.some(album=>album.id===current)?current:(albumRows.find(album=>!album.archived_at)?.id??albumRows[0]?.id??''))
+    setSelectedId(current=>albumRows.some(album=>album.id===current)?current:'')
 
     if(foreground)setBusy(false)
   }
@@ -222,67 +217,84 @@ export function MemoriesPage(){
       .eq('id',album.id).eq('household_id',household.id)
     if(result.error){setError(result.error.message);return}
     setMessage(restore?'Album restored.':'Album archived.')
+    setSelectedId('')
     await load(false)
   }
 
-  async function uploadPhoto(file:File){
-    if(!selected||!canWrite)return
-    if(!file.type.startsWith('image/')){setError('Choose an image file.');return}
-    if(file.size>50*1024*1024){setError('Photos can be up to 50 MB each.');return}
-    setBusy(true);setError('');setMessage('')
-    const optimized=await optimizeMemoryPhoto(file)
-    if(individualFree && memoriesUsage && memoriesUsage.used+optimized.size>memoriesUsage.quota){
-      setBusy(false);setError('Your Free Memories allowance is 100 MB. Upgrade to 10 GB to add more photos.');return
+  // Process one reservation at a time: each successful image counts toward
+  // Free storage quota, and a failed photo cannot block the rest of the batch.
+  async function uploadPhotoToAlbum(file:File,album:Album,usedBytes:number):Promise<{addedBytes:number;error?:string}>{
+    if(!file.type.startsWith('image/'))return {addedBytes:0,error:'Not an image'}
+    if(file.size>50*1024*1024)return {addedBytes:0,error:'Image exceeds the 50 MB limit'}
+    let optimized:File
+    try{optimized=await optimizeMemoryPhoto(file)}catch{return {addedBytes:0,error:'Could not prepare image'}}
+    if(individualFree&&memoriesUsage&&usedBytes+optimized.size>memoriesUsage.quota){
+      return {addedBytes:0,error:'Free Memories storage limit reached'}
     }
     const reserve=await supabase.rpc('reserve_household_file_v1',{
       p_household_id:household.id,p_title:file.name.replace(/\.[^.]+$/,'')||'Memory photo',
       p_file_name:optimized.name,p_mime_type:optimized.type,p_file_size:optimized.size,
-      p_category:'photo',p_notes:'Family memory: '+selected.title,
+      p_category:'photo',p_notes:'Family memory: '+album.title,
     })
-    if(reserve.error){setBusy(false);setError(reserve.error.message);return}
+    if(reserve.error)return {addedBytes:0,error:reserve.error.message}
     const reservation=Array.isArray(reserve.data)?reserve.data[0]:reserve.data
     const fileId=reservation?.file_id as string|undefined
     const storagePath=reservation?.storage_path as string|undefined
-    if(!fileId||!storagePath){setBusy(false);setError('Could not reserve photo storage.');return}
+    if(!fileId||!storagePath)return {addedBytes:0,error:'Could not reserve photo storage'}
 
     const upload=await supabase.storage.from('famioo-files').upload(storagePath,optimized,{upsert:false,contentType:optimized.type})
     if(upload.error){
       await supabase.rpc('cancel_household_file_v1',{p_household_id:household.id,p_file_id:fileId})
-      setBusy(false);setError(upload.error.message);return
+      return {addedBytes:0,error:upload.error.message}
     }
     const complete=await supabase.rpc('complete_household_file_v1',{p_household_id:household.id,p_file_id:fileId})
     if(complete.error){
       await supabase.storage.from('famioo-files').remove([storagePath])
       await supabase.rpc('cancel_household_file_v1',{p_household_id:household.id,p_file_id:fileId})
-      setBusy(false);setError(complete.error.message);return
+      return {addedBytes:0,error:complete.error.message}
     }
     const attach=await supabase.rpc('attach_family_memory_photo_v1',{
-      p_household_id:household.id,p_album_id:selected.id,p_file_id:fileId,
-      p_caption:caption.trim()||null,p_taken_date:takenDate||selected.memory_date||null,
+      p_household_id:household.id,p_album_id:album.id,p_file_id:fileId,
+      p_caption:null,p_taken_date:album.memory_date,
     })
-    setBusy(false)
-    if(attach.error){setError(attach.error.message);return}
-    setCaption('');setTakenDate('');setMessage('Photo added to '+selected.title+'.')
-    await load(false)
+    if(attach.error)return {addedBytes:0,error:attach.error.message+' (photo saved in Files but not attached)'}
+    return {addedBytes:optimized.size}
+  }
+
+  async function uploadPhotos(selectedFiles:File[]){
+    const album=selected
+    if(!album||!canWrite||busy||!selectedFiles.length)return
+    // Prevent a massive photo-library selection from tying up mobile Safari.
+    const batch=selectedFiles.slice(0,30)
+    const errors:string[]=[]
+    let added=0
+    let usedBytes=memoriesUsage?.used??0
+    setBusy(true);setError('');setMessage('')
+    try{
+      for(let i=0;i<batch.length;i++){
+        setUploadProgress('Uploading '+(i+1)+' of '+batch.length+' photos…')
+        try{
+          const outcome=await uploadPhotoToAlbum(batch[i],album,usedBytes)
+          if(outcome.error)errors.push(batch[i].name+': '+outcome.error)
+          else {added++;usedBytes+=outcome.addedBytes}
+        }catch{
+          errors.push(batch[i].name+': unexpected upload error')
+        }
+      }
+      if(selectedFiles.length>batch.length)errors.push('Choose up to 30 photos per batch.')
+      if(added)setMessage(added+' photo'+(added===1?'':'s')+' added to '+album.title+'.')
+      if(errors.length)setError(errors.length+' photo'+(errors.length===1?'':'s')+' could not be added. '+errors.slice(0,3).join('; ')+(errors.length>3?'; and '+(errors.length-3)+' more.':''))
+      await load(false)
+    }finally{
+      setBusy(false)
+      setUploadProgress('')
+    }
   }
 
   function chooseUpload(event:ChangeEvent<HTMLInputElement>){
-    const file=event.target.files?.[0]??null
-    event.target.value=''
-    if(file)void uploadPhoto(file)
-  }
-
-  async function addExistingPhoto(){
-    if(!selected||!existingFileId)return
-    setBusy(true);setError('')
-    const result=await supabase.rpc('attach_family_memory_photo_v1',{
-      p_household_id:household.id,p_album_id:selected.id,p_file_id:existingFileId,
-      p_caption:caption.trim()||null,p_taken_date:takenDate||selected.memory_date||null,
-    })
-    setBusy(false)
-    if(result.error){setError(result.error.message);return}
-    setExistingFileId('');setCaption('');setTakenDate('');setMessage('Existing photo added to album.')
-    await load(false)
+    const selectedFiles=Array.from(event.currentTarget.files??[])
+    event.currentTarget.value=''
+    if(selectedFiles.length)void uploadPhotos(selectedFiles)
   }
 
   async function importEventPhotos(){
@@ -319,53 +331,80 @@ export function MemoriesPage(){
     {error&&<div className="notice error">{error}</div>}
     {message&&<div className="notice">{message}</div>}
 
-    <div className="memories-toolbar">
-      <button className={!showArchived?'active':''} onClick={()=>setShowArchived(false)}>Albums <span>{albums.filter(album=>!album.archived_at).length}</span></button>
-      <button className={showArchived?'active':''} onClick={()=>setShowArchived(true)}>Archive <span>{albums.filter(album=>Boolean(album.archived_at)).length}</span></button>
-    </div>
+    {!selected?<>
+      <div className="memories-toolbar">
+        <button className={!showArchived?'active':''} onClick={()=>setShowArchived(false)}>Albums <span>{albums.filter(album=>!album.archived_at).length}</span></button>
+        <button className={showArchived?'active':''} onClick={()=>setShowArchived(true)}>Archive <span>{albums.filter(album=>Boolean(album.archived_at)).length}</span></button>
+      </div>
 
-    {visibleAlbums.length===0?<div className="memories-empty"><Images size={34}/><strong>{showArchived?'No archived albums.':'No family albums yet.'}</strong><span>{showArchived?'Archived albums will appear here.':'Create an album for a birthday, trip, holiday or family moment.'}</span>{canWrite&&!showArchived&&<button className="primary-button compact" onClick={()=>openAlbumEditor()}><Plus size={14}/>Create first album</button>}</div>:<>
-      <section className="memory-album-strip">
+      {visibleAlbums.length===0?
+        <div className="memories-empty"><Images size={34}/><strong>{showArchived?'No archived albums.':'No family albums yet.'}</strong>
+          <span>{showArchived?'Archived albums will appear here.':'Create your first album to start collecting photos.'}</span>
+          {canWrite&&!showArchived&&<button className="primary-button compact" onClick={()=>openAlbumEditor()}><Plus size={14}/>Create album</button>}
+        </div>
+      :<section className="memory-album-dashboard">
         {visibleAlbums.map(album=>{
-          const cover=album.cover_file_id?urls[album.cover_file_id]:null
-          const count=photos.filter(photo=>photo.album_id===album.id).length
-          return <button className={selected?.id===album.id?'memory-album-chip active':'memory-album-chip'} onClick={()=>setSelectedId(album.id)} key={album.id}>
-            <span className="memory-chip-cover">{cover?<img src={cover} alt="" loading="lazy" decoding="async"/>:<b>{albumEmoji(album.album_type)}</b>}</span>
-            <span><small>{albumTypeLabel(album.album_type).toUpperCase()}</small><strong>{album.title}</strong><em>{count} photo{count===1?'':'s'}{album.memory_date?' · '+fmtDate(album.memory_date):''}</em></span>
+          const albumPhotos=photos.filter(photo=>photo.album_id===album.id)
+          const coverId=album.cover_file_id||albumPhotos[0]?.file_id
+          const cover=coverId?urls[coverId]:null
+          return <button type="button" className="memory-dashboard-album" onClick={()=>setSelectedId(album.id)} key={album.id}>
+            <span className="memory-dashboard-cover">{cover?<img src={cover} loading="lazy" decoding="async" alt=""/>:<b>{albumEmoji(album.album_type)}</b>}</span>
+            <span className="memory-dashboard-info">
+              <small>{albumTypeLabel(album.album_type)}{album.memory_date?' · '+fmtDate(album.memory_date):''}</small>
+              <strong>{album.title}</strong>
+              <em>{albumPhotos.length} photo{albumPhotos.length===1?'':'s'}</em>
+            </span>
           </button>
         })}
-      </section>
-
-      {selected&&<section className="memory-album-detail">
-        <header className="memory-album-hero">
-          <span className="memory-album-symbol">{albumEmoji(selected.album_type)}</span>
-          <div><span className="eyebrow">{albumTypeLabel(selected.album_type).toUpperCase()}</span><h2>{selected.title}</h2><p>{selected.description||'Family memory album'}</p><small>{selected.memory_date&&<><CalendarDays size={12}/>{fmtDate(selected.memory_date)}</>}{selected.event_id&&<><Link2 size={12}/>{eventById.get(selected.event_id)?.title||'Linked Calendar event'}</>}</small></div>
-          {canWrite&&<div className="memory-hero-actions"><button className="secondary-button compact" onClick={()=>openAlbumEditor(selected)}>Edit</button>{selected.archived_at?<button className="secondary-button compact" onClick={()=>void archiveAlbum(selected,true)}><RotateCcw size={13}/>Restore</button>:<button className="icon-button" title="Archive album" onClick={()=>void archiveAlbum(selected)}><Archive size={14}/></button>}</div>}
-        </header>
-
-        {!selected.archived_at&&canWrite&&<section className="memory-add-panel">
-          <div className="memory-add-meta"><input value={caption} onChange={event=>setCaption(event.target.value)} placeholder="Optional photo caption"/><input type="date" value={takenDate} onChange={event=>setTakenDate(event.target.value)}/></div>
-          <div className="memory-add-actions">
-            <label className="primary-button compact memory-file-button"><Camera size={14}/>Upload photo<input type="file" accept="image/*" multiple={false} onChange={chooseUpload}/></label>
-            <select value={existingFileId} onChange={event=>setExistingFileId(event.target.value)}><option value="">Choose existing Famioo photo…</option>{availableExistingPhotos.map(file=><option value={file.id} key={file.id}>{file.title}</option>)}</select>
-            <button className="secondary-button compact" disabled={!existingFileId||busy} onClick={()=>void addExistingPhoto()}><ImagePlus size={13}/>Add existing</button>
-            {selected.event_id&&<button className="secondary-button compact" disabled={busy} onClick={()=>void importEventPhotos()}><Sparkles size={13}/>Import event photos</button>}
-          </div>
-          {selected.event_id&&<p>New photos added here are also attached to the linked Calendar event.</p>}
-        </section>}
-
-        {selectedPhotos.length===0?<div className="memories-empty compact"><ImagePlus size={25}/><strong>No photos in this album yet.</strong></div>:<section className="memory-photo-grid">
-          {selectedPhotos.map(photo=>{
-            const file=fileById.get(photo.file_id)
-            const url=urls[photo.file_id]
-            return <article className="memory-photo-card" key={photo.id}>
-              {url?<a href={url} target="_blank" rel="noreferrer"><img src={url} alt={photo.caption||file?.title||'Family memory'} loading="lazy" decoding="async"/></a>:<div className="memory-photo-placeholder"><Images size={24}/></div>}
-              <div><span><strong>{photo.caption||file?.title||'Family photo'}</strong><small>{photo.taken_date?fmtDate(photo.taken_date):file?.file_name||''}</small></span>{canWrite&&!selected.archived_at&&<button onClick={()=>void removePhoto(photo)} title="Remove from album"><Trash2 size={13}/></button>}</div>
-            </article>
-          })}
-        </section>}
       </section>}
-    </>}
+    </>:<section className="memory-album-detail">
+      <div className="memory-album-navigation">
+        <button type="button" className="secondary-button compact" onClick={()=>setSelectedId('')}><ArrowLeft size={15}/>All albums</button>
+        <span>{albumTypeLabel(selected.album_type)}{selected.memory_date?' · '+fmtDate(selected.memory_date):''}</span>
+      </div>
+      <header className="memory-album-hero">
+        <span className="memory-album-symbol">{albumEmoji(selected.album_type)}</span>
+        <div><h2>{selected.title}</h2>{selectedPhotos.length>0&&selected.description&&<p>{selected.description}</p>}</div>
+        {selectedPhotos.length>0&&canWrite&&<div className="memory-hero-actions">
+          <button className="secondary-button compact" onClick={()=>openAlbumEditor(selected)}>Edit album</button>
+          {selected.archived_at
+            ?<button className="secondary-button compact" onClick={()=>void archiveAlbum(selected,true)}><RotateCcw size={13}/>Restore</button>
+            :<button className="icon-button" title="Archive album" onClick={()=>void archiveAlbum(selected)}><Archive size={14}/></button>}
+        </div>}
+      </header>
+
+      {selectedPhotos.length===0
+        ?(!selected.archived_at&&canWrite&&<div className="memory-empty-album-upload">
+          <label className="primary-button memory-batch-button">
+            <Upload size={20}/>{uploadProgress||'Upload photos'}
+            <input type="file" accept="image/*" multiple onChange={chooseUpload} disabled={busy}/>
+          </label>
+        </div>)
+        :<>
+          {!selected.archived_at&&canWrite&&<div className="memory-gallery-tools">
+            <label className="primary-button compact memory-batch-button">
+              <Plus size={15}/>{uploadProgress||'Add photos'}
+              <input type="file" accept="image/*" multiple onChange={chooseUpload} disabled={busy}/>
+            </label>
+            <span>{selectedPhotos.length} photos</span>
+          </div>}
+          <section className="memory-photo-grid">
+            {selectedPhotos.map(photo=>{
+              const file=fileById.get(photo.file_id)
+              const url=urls[photo.file_id]
+              return <article className="memory-photo-card" key={photo.id}>
+                {url?<a href={url} target="_blank" rel="noreferrer" aria-label={'View '+(photo.caption||file?.title||'photo')}><img src={url} alt={photo.caption||file?.title||'Family memory'} loading="lazy" decoding="async"/></a>:<div className="memory-photo-placeholder"><Images size={24}/></div>}
+                <div className="memory-photo-actions">
+                  <span title={photo.caption||file?.title||'Family photo'}>{photo.caption||file?.title||'Photo'}</span>
+                  <button type="button" title="Discuss in family chat" aria-label="Send photo to family chat" disabled={Boolean(sharingPhotoId)} onClick={()=>void sendPhotoToFamilyChat(photo)}><MessageCircle size={15}/></button>
+                  <button type="button" title="Share photo" aria-label="Share photo with another app" disabled={Boolean(sharingPhotoId)} onClick={()=>void sharePhoto(photo)}><Share2 size={15}/></button>
+                  {canWrite&&!selected.archived_at&&<button type="button" title="Remove from album" aria-label="Remove photo from album" disabled={Boolean(sharingPhotoId)} onClick={()=>void removePhoto(photo)}><Trash2 size={15}/></button>}
+                </div>
+              </article>
+            })}
+          </section>
+        </>}
+    </section>}
 
     {editorOpen&&<div ref={editorViewportRef} className="modal-backdrop memory-editor-backdrop" role="dialog" aria-modal="true"><section className="modal-card memory-editor">
       <header><div><span className="eyebrow">{draft.id?'EDIT ALBUM':'NEW ALBUM'}</span><h2>{draft.id?'Update memory':'Create family album'}</h2></div><button className="icon-button" onClick={()=>setEditorOpen(false)}><X size={18}/></button></header>
