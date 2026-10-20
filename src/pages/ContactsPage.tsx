@@ -464,7 +464,7 @@ export function ContactsPage(){
       <section className="contacts-sos-preparation" aria-label="Family SOS contact and notification preparation">
         <div>
           <strong>Family SOS readiness</strong>
-          <p>Keep at least one household phone number and one emergency contact saved. For a safer setup, add numbers for everyone and test notifications on every person's phone.</p>
+          <p>One saved household phone number completes SOS setup. Emergency-service numbers, additional family numbers and notification tests are recommended but optional.</p>
         </div>
         <Link className="secondary-button compact" to="/app/settings?tab=notifications-security">Enable and test notifications</Link>
       </section>

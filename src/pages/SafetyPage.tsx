@@ -150,9 +150,9 @@ export function SafetyPage(){
   const otherRecipients=adultContacts.filter((member)=>member.user_id!==user.id)
   const savedPhoneCount=adultContacts.length-missingPhoneContacts.length
   const dialableEmergencyContacts=emergencyContacts.filter((contact)=>Boolean(contact.phone||contact.secondary_phone))
-  // One saved household number + one callable emergency contact is sufficient
-  // to dismiss onboarding; more family phones are strongly recommended.
-  const setupReady=savedPhoneCount>=1&&dialableEmergencyContacts.length>=1
+  // One saved household phone number completes setup. Other family numbers,
+  // emergency-service contacts and push tests are recommended, not blockers.
+  const setupReady=savedPhoneCount>=1
 
   const load=useCallback(async (foreground=false)=>{
     if(foreground) setLoading(true)
@@ -482,11 +482,9 @@ export function SafetyPage(){
           <div>
             <span className="eyebrow">BEFORE REGULAR USE</span>
             <h2><Users size={19}/> Family Safety setup</h2>
-            <p>Prepare everyone who should receive a family SOS and the phone numbers you might need to call.</p>
+            <p>Save one household phone number to finish setup. Add more numbers and test notifications later for better protection.</p>
           </div>
-          <span className={setupReady?'safety-setup-status ready':'safety-setup-status'}>
-            {loading?'Checking…':setupReady?'Contacts prepared':'Setup incomplete'}
-          </span>
+          <span className="safety-setup-status">One phone number required</span>
         </header>
         <button type="button" className="safety-setup-toggle" onClick={()=>setSetupOpen(v=>!v)} aria-expanded={setupOpen}>
           {setupOpen?'Hide contact setup':'Review or edit emergency setup'}
@@ -519,8 +517,8 @@ export function SafetyPage(){
               {otherRecipients.length===0&&<p>No other active household login is available to receive your SOS. Invite a trusted household member.</p>}
             </div>
             <div className="safety-setup-group">
-              <div className="safety-section-head"><h3>2. Emergency services and trusted contacts</h3><small>{dialableEmergencyContacts.length} call-ready</small></div>
-              <p>Save the correct police, ambulance, fire or local emergency service numbers for your region. Verify each number yourself.</p>
+              <div className="safety-section-head"><h3>2. Optional emergency-service numbers</h3><small>{dialableEmergencyContacts.length} call-ready</small></div>
+              <p>Optional but recommended: save verified police, ambulance and fire numbers for your region. This does not block SOS setup.</p>
               {emergencyContacts.map(contact=>(
                 <div className="safety-emergency-number" key={contact.id}>
                   <strong>{contact.display_name}</strong>
@@ -536,7 +534,7 @@ export function SafetyPage(){
                   <div className="safety-setup-buttons"><button className="primary-button compact" type="submit" disabled={emergencySaving}>{emergencySaving?'Saving…':'Save number'}</button><button type="button" className="secondary-button compact" onClick={()=>setEmergencyDraftOpen(false)}>Cancel</button></div>
                 </form>
               ):<button type="button" className="secondary-button compact" onClick={()=>setEmergencyDraftOpen(true)}><Plus size={14}/>Add emergency number</button>}
-              <Link to="/app/contacts?tab=directory" className="safety-directory-link">Manage all emergency contacts in Family Contacts →</Link>
+              <Link to="/app/contacts?tab=emergency" className="safety-directory-link">Manage emergency-service numbers in Family Contacts →</Link>
             </div>
             <div className="safety-setup-group">
               <h3>3. Test each recipient phone</h3>
@@ -546,7 +544,7 @@ export function SafetyPage(){
           </div>
         )}
         {!setupReady&&!loading&&(
-          <p className="safety-setup-warning">Finish the preparation above before relying on Famioo for routine family safety. An urgent SOS remains available even if setup is incomplete.</p>
+          <p className="safety-setup-warning">Save one household phone number to dismiss this setup. SOS alerts can still be sent without one; notification delivery depends on each recipient's device.</p>
         )}
       </section>}
 
@@ -559,7 +557,7 @@ export function SafetyPage(){
           <a key={contact.id} href={`tel:${contact.phone||contact.secondary_phone}`} className="safety-action-button call">
             <Phone size={14}/>{contact.display_name}
           </a>
-        )):<span className="safety-setup-call-note">No service number saved — use your phone’s emergency dialer now if needed.</span>}
+        )):<span className="safety-setup-call-note">No service number saved — use your phone’s emergency dialer if needed. <Link to="/app/contacts?tab=emergency">Add a verified service number</Link>.</span>}
       </section>
 
       {error&&<div className="notice error">{error}</div>}
