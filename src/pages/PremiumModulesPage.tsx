@@ -15,6 +15,7 @@ const benefits: Partial<Record<ModuleCode, string[]>> = {
   pets: ['Maintain profiles for household pets', 'Keep health, vaccinations and care details organized', 'Track recurring pet responsibilities'],
   inbox_scan: ['Capture letters and important paper notices', 'Organize scans and extracted details for review', 'Use connected actions only when the required modules are active'],
   home_remote: ['Organize household screens and supported media controls', 'Keep rooms and devices together', 'Manage household control permissions'],
+  voice_integration: ['Ask about shared family calendar events and upcoming tasks', 'Add family tasks and shopping items through approved voice commands', 'Choose the permitted Alexa commands and manage access securely'],
   shopping: ['Share shopping lists with household members', 'Keep receipts and compare recorded prices', 'Connect recipes or costs when both modules are active'],
   costs: ['Manage regular and one-time household expenses', 'Review budgets, payment timing and spending summaries', 'Compare expenses and linked receipts without double-counting'],
   school: ['Collect school and Kita entries and key dates', 'Keep forms, files and contact details organized', 'Link to Calendar or Tasks when available'],
