@@ -1,0 +1,30 @@
+/* The compact SOS control appears when the main SOS button is off-screen.
+   Keep it above mobile navigation and to the left of Chat/SOS shortcuts. */
+.safety-persistent-sos { display: none; }
+@media (max-width: 900px) {
+  .safety-sos-card + .safety-emergency-shortcuts { margin-top: 14px; }
+  .safety-persistent-sos {
+    position: fixed;
+    z-index: 75;
+    left: max(12px, calc(50% - 235px));
+    bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+    width: min(340px, calc(100vw - 118px));
+    min-height: 54px;
+    border: 2px solid rgba(255, 255, 255, .85);
+    border-radius: 15px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    color: white;
+    background: linear-gradient(135deg, #a82f4f, #d84660 56%, #e85f70);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .02em;
+    box-shadow: 0 12px 26px rgba(136, 36, 58, .26);
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .safety-persistent-sos:disabled { opacity: .65; cursor: default; }
+}

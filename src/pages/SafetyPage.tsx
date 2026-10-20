@@ -23,6 +23,7 @@ import {
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
+import '../safety-sos-visibility.css'
 
 type SafetyAlert={
   id:string
@@ -103,6 +104,7 @@ export function SafetyPage(){
   const [sending,setSending]=useState(false)
   const [actingAlertId,setActingAlertId]=useState('')
   const [isMobile,setIsMobile]=useState(()=>window.matchMedia('(max-width: 900px)').matches)
+  const [mainSosVisible,setMainSosVisible]=useState(true)
   const [emergencyContacts,setEmergencyContacts]=useState<EmergencyContact[]>([])
   const [phoneEditor,setPhoneEditor]=useState('')
   const [phoneDraft,setPhoneDraft]=useState('')
@@ -114,6 +116,7 @@ export function SafetyPage(){
   const [emergencySaving,setEmergencySaving]=useState(false)
   const [setupOpen,setSetupOpen]=useState(true)
 
+  const mainSosButtonRef=useRef<HTMLButtonElement|null>(null)
   const sendingRef=useRef(false)
   const callApiRef=useRef<CallApi|null>(null)
 
@@ -216,6 +219,24 @@ export function SafetyPage(){
       window.removeEventListener('focus',onFocus)
     }
   },[load])
+
+
+  // The compact mobile SOS action appears only when the large action has
+  // scrolled out of view, and is hidden if an SOS is already active.
+  useEffect(()=>{
+    if(!isMobile||myActiveAlert){
+      setMainSosVisible(true)
+      return
+    }
+    const target=mainSosButtonRef.current
+    if(!target||typeof IntersectionObserver==='undefined')return
+
+    const observer=new IntersectionObserver(([entry])=>{
+      setMainSosVisible(entry.isIntersecting)
+    },{threshold:0.2})
+    observer.observe(target)
+    return ()=>observer.disconnect()
+  },[isMobile,Boolean(myActiveAlert)])
 
   function alertName(alert:SafetyAlert){
     if(alert.triggered_by_profile_id){
@@ -548,18 +569,6 @@ export function SafetyPage(){
         )}
       </section>}
 
-      <section className="safety-emergency-shortcuts" aria-label="Call emergency services">
-        <div>
-          <strong><PhoneCall size={16}/> Need emergency services?</strong>
-          <small>Call directly using your phone. Famioo cannot automatically contact police or an ambulance.</small>
-        </div>
-        {dialableEmergencyContacts.length>0?dialableEmergencyContacts.map(contact=>(
-          <a key={contact.id} href={`tel:${contact.phone||contact.secondary_phone}`} className="safety-action-button call">
-            <Phone size={14}/>{contact.display_name}
-          </a>
-        )):<span className="safety-setup-call-note">No service number saved — use your phone’s emergency dialer if needed. <Link to="/app/contacts?tab=emergency">Add a verified service number</Link>.</span>}
-      </section>
-
       {error&&<div className="notice error">{error}</div>}
       {message&&<div className="notice">{message}</div>}
 
@@ -601,6 +610,7 @@ export function SafetyPage(){
           <>
             <button
               type="button"
+              ref={mainSosButtonRef}
               className="safety-hold-button safety-tap-button"
               disabled={sending}
               onClick={()=>void sendSos()}
@@ -637,6 +647,31 @@ export function SafetyPage(){
 
         {locationStatus&&<div className="safety-location-status"><MapPin size={14}/>{locationStatus}</div>}
       </section>
+
+      <section className="safety-emergency-shortcuts" aria-label="Call emergency services">
+        <div>
+          <strong><PhoneCall size={16}/> Need emergency services?</strong>
+          <small>Call directly using your phone. Famioo cannot automatically contact police or an ambulance.</small>
+        </div>
+        {dialableEmergencyContacts.length>0?dialableEmergencyContacts.map(contact=>(
+          <a key={contact.id} href={`tel:${contact.phone||contact.secondary_phone}`} className="safety-action-button call">
+            <Phone size={14}/>{contact.display_name}
+          </a>
+        )):<span className="safety-setup-call-note">No service number saved — use your phone’s emergency dialer if needed. <Link to="/app/contacts?tab=emergency">Add a verified service number</Link>.</span>}
+      </section>
+
+      {isMobile&&!myActiveAlert&&!mainSosVisible&&(
+        <button
+          type="button"
+          className="safety-persistent-sos"
+          disabled={sending}
+          onClick={()=>void sendSos()}
+          aria-label="Send family SOS now"
+        >
+          <ShieldAlert size={20} aria-hidden="true"/>
+          <span>{sending?'SENDING SOS…':'SEND FAMILY SOS NOW'}</span>
+        </button>
+      )}
 
       {myActiveAlert&&(
         <section className="safety-contact-panel">
