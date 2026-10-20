@@ -13,8 +13,8 @@ These repository instructions are the **source of truth for every coding assista
 ## Release and validation
 
 - Aim for **two manual release windows daily** (morning/evening, Europe/Berlin), not an unattended scheduled push or automatic merge.
-- At each window, open and review a `staging` → `main` PR, confirm the latest `staging` CI build has passed and the PR checks pass, then merge once.
-- Keep normal application tests/builds intact. `.github/workflows/ci.yml` now runs build CI on code pushes to `staging` and on pull requests targeting `staging` or `main`; Markdown/docs-only changes are ignored. Run `npm run build` locally during development when practical. Local builds do not consume GitHub Actions minutes.
+- At each window, run the local build on `staging`, open and review a `staging` → `main` PR, confirm the PR checks pass, then merge once after explicit owner approval.
+- **Budget rule effective 2026-10-20:** private-repository staging builds are PAID after the included Actions quota. `.github/workflows/ci.yml` must NOT trigger on `staging` pushes or PRs targeting `staging`. Build locally with `npm run build` on each useful batch; preserve GitHub CI on PRs targeting `main` and `main` pushes, or explicit manual dispatch. Do not re-add staging automatic triggers.
 - Avoid a continuously open staging → main PR when many staging pushes are planned; each update may start billable CI.
 - Urgent fixes can be released outside the windows with validation.
 - Do not change the application architecture, Netlify deployment configuration, or production data to save GitHub Actions minutes.
