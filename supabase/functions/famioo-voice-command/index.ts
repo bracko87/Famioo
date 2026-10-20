@@ -104,6 +104,7 @@ Deno.serve(async req=>{
 
   let householdId=""
   let settings:any=null
+  let callerUserId=""
 
   if(bearer.startsWith("fami_voice_")){
     const hash=await sha256(bearer)
@@ -120,6 +121,7 @@ Deno.serve(async req=>{
     })
     const userResult=await userClient.auth.getUser(bearer)
     if(userResult.error||!userResult.data.user)return json({error:"Authentication required."},401)
+    callerUserId=userResult.data.user.id
     householdId=typeof body.household_id==="string"?body.household_id:""
     if(!householdId)return json({error:"Household is required."},400)
     const member=await userClient.from("household_members").select("role,status")
@@ -144,6 +146,17 @@ Deno.serve(async req=>{
     .in("role",["owner","admin"])
     .maybeSingle()
   if(authorized.error||!authorized.data)return json({error:"Voice integration authorization is no longer valid."},403)
+
+  // The voice endpoint uses service-role reads, which bypass household RLS.
+  // Reapply the individual Free plan restriction to BOTH the linked account
+  // and the logged-in simulator caller (if different), independent of any
+  // stale core-module flag or an otherwise paid household entitlement.
+  const accountIds=[...new Set([String(settings.linked_by_user_id),callerUserId].filter(Boolean))]
+  const freeAccountCheck=await admin.from("user_plan_overrides")
+    .select("user_id").in("user_id",accountIds).eq("plan","free").limit(1)
+  if(freeAccountCheck.error||freeAccountCheck.data?.length){
+    return json({error:"Alexa / Voice is a paid module and is not available on the Free plan."},403)
+  }
 
   const allowed=Array.isArray(settings.allowed_actions)?settings.allowed_actions.map(String):[]
   if(!allowed.includes(intent))return json({error:"This voice action is disabled in Famioo settings."},403)
