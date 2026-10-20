@@ -24538,3 +24538,8 @@ body:has(.modal-backdrop > .modal-card) { overflow:hidden!important; }
 .contacts-household-phone-form>input{width:100%;min-width:0;min-height:38px;padding:7px 10px;border-radius:10px;border:1px solid #dcd2e3;background:#fff;color:#574c60;font-size:16px}
 .contacts-household-phone-form>div{display:flex;flex-wrap:wrap;gap:6px}
 .contacts-phone-error{font-size:12px;color:#a33b4f}
+
+.contacts-sos-preparation{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap;padding:12px 14px;margin:0 0 12px;border:1px solid #e4dbe9;border-radius:12px;background:#faf8fb}
+.contacts-sos-preparation>div{flex:1 1 240px;min-width:0}
+.contacts-sos-preparation strong{font-size:13px;color:#5c4e63}
+.contacts-sos-preparation p{font-size:12px;line-height:1.55;margin:5px 0 0;color:#87778b}

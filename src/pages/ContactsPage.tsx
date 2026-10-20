@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
@@ -458,6 +459,14 @@ export function ContactsPage(){
         <button type="button" className={emergencyOnly?'contacts-filter emergency active':'contacts-filter emergency'} onClick={()=>setEmergencyOnly((current)=>!current)}>
           <AlertTriangle size={14}/>Emergency
         </button>
+      </section>
+
+      <section className="contacts-sos-preparation" aria-label="Family SOS contact and notification preparation">
+        <div>
+          <strong>Family SOS readiness</strong>
+          <p>Keep at least one household phone number and one emergency contact saved. For a safer setup, add numbers for everyone and test notifications on every person's phone.</p>
+        </div>
+        <Link className="secondary-button compact" to="/app/settings?tab=notifications-security">Enable and test notifications</Link>
       </section>
 
       <section className="contacts-household-section">
