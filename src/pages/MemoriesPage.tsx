@@ -461,7 +461,7 @@ export function MemoriesPage(){
       <header className="memory-album-hero">
         <span className="memory-album-symbol">{albumEmoji(selected.album_type)}</span>
         <div><h2>{selected.title}</h2>{selectedPhotos.length>0&&selected.description&&<p>{selected.description}</p>}</div>
-        {selectedPhotos.length>0&&canWrite&&<div className="memory-hero-actions">
+        {(selectedPhotos.length>0||Boolean(selected.archived_at))&&canWrite&&<div className="memory-hero-actions">
           <button className="secondary-button compact" onClick={()=>openAlbumEditor(selected)}>Edit album</button>
           {selected.archived_at
             ?<button className="secondary-button compact" onClick={()=>void archiveAlbum(selected,true)}><RotateCcw size={13}/>Restore</button>
@@ -470,12 +470,12 @@ export function MemoriesPage(){
       </header>
 
       {selectedPhotos.length===0
-        ?(!selected.archived_at&&canWrite&&<div className="memory-empty-album-upload">
+        ?(!selected.archived_at&&canWrite?<div className="memory-empty-album-upload">
           <label className="primary-button memory-batch-button">
             <Upload size={20}/>{uploadProgress||'Upload photos'}
             <input type="file" accept="image/*" multiple onChange={chooseUpload} disabled={busy}/>
           </label>
-        </div>)
+        </div>:<div className="memories-empty compact"><span>No photos in this album yet.</span></div>)
         :<>
           {!selected.archived_at&&canWrite&&<div className="memory-gallery-tools">
             <label className="primary-button compact memory-batch-button">
