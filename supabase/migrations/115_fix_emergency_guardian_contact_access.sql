@@ -18,6 +18,22 @@ $$;
 revoke all on function private.emergency_contact_in_household(uuid,uuid) from public,anon;
 grant execute on function private.emergency_contact_in_household(uuid,uuid) to authenticated;
 
+-- Qualify the outer row explicitly. Without the qualification,
+-- fp.household_id = household_id can resolve to fp.household_id = fp.household_id.
+-- Keep the profile read policy scoped to the guardian/profile record's household.
+drop policy if exists family_emergency_profiles_read on public.family_emergency_profiles;
+create policy family_emergency_profiles_read
+on public.family_emergency_profiles for select to authenticated
+using(
+  private.has_module_access(household_id,'emergency_info','read')
+  and exists(
+    select 1 from public.family_profiles fp
+    where fp.id=family_emergency_profiles.profile_id
+      and fp.household_id=family_emergency_profiles.household_id
+      and fp.active
+  )
+);
+
 drop policy if exists family_emergency_profiles_write on public.family_emergency_profiles;
 create policy family_emergency_profiles_write
 on public.family_emergency_profiles for all to authenticated
@@ -25,14 +41,14 @@ using(
   private.has_module_access(household_id,'emergency_info','full')
   and exists(
     select 1 from public.family_profiles fp
-    where fp.id=profile_id and fp.household_id=household_id and fp.active
+    where fp.id=family_emergency_profiles.profile_id and fp.household_id=family_emergency_profiles.household_id and fp.active
   )
 )
 with check(
   private.has_module_access(household_id,'emergency_info','full')
   and exists(
     select 1 from public.family_profiles fp
-    where fp.id=profile_id and fp.household_id=household_id and fp.active
+    where fp.id=family_emergency_profiles.profile_id and fp.household_id=family_emergency_profiles.household_id and fp.active
   )
   and(
     primary_doctor_contact_id is null
@@ -47,7 +63,7 @@ using(
   private.has_module_access(household_id,'emergency_info','read')
   and exists(
     select 1 from public.family_profiles fp
-    where fp.id=profile_id and fp.household_id=household_id and fp.active
+    where fp.id=family_emergency_guardians.profile_id and fp.household_id=family_emergency_guardians.household_id and fp.active
   )
   and private.emergency_contact_in_household(household_id,contact_id)
 );
@@ -60,7 +76,7 @@ with check(
   private.has_module_access(household_id,'emergency_info','full')
   and exists(
     select 1 from public.family_profiles fp
-    where fp.id=profile_id and fp.household_id=household_id and fp.active
+    where fp.id=family_emergency_guardians.profile_id and fp.household_id=family_emergency_guardians.household_id and fp.active
   )
   and private.emergency_contact_in_household(household_id,contact_id)
 );
