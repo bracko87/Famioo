@@ -24344,3 +24344,189 @@ body:has(.modal-backdrop > .modal-card) { overflow:hidden!important; }
     justify-content:center;
   }
 }
+
+/* iOS form-field focus: controls smaller than 16px cause Safari to zoom the
+   page. Keep all ordinary mobile dialogs (including family albums) and both
+   Messenger versions at normal viewport scale without blocking pinch zoom.
+   Exclude checkbox/radio/file/range controls so their UI is unchanged. */
+@media (max-width:900px) {
+  .modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop)
+    :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea),
+  .messenger-page
+    :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea),
+  .mobile-messenger-drawer
+    :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea) {
+    font-size:16px!important;
+    -webkit-text-size-adjust:100%;
+  }
+
+  /* The album stays centered within the unobscured screen while the keyboard
+     is visible; its fields can scroll inside the form if space is limited. */
+  .modal-backdrop.memory-editor-backdrop[data-keyboard-open="true"]:has(> .modal-card) {
+    top:var(--famioo-visible-top,0px)!important;
+    bottom:auto!important;
+    height:var(--famioo-visible-height,100dvh)!important;
+    padding:8px 14px!important;
+    overflow:hidden!important;
+  }
+  .modal-backdrop.memory-editor-backdrop[data-keyboard-open="true"]:has(> .modal-card) > .modal-card {
+    max-height:calc(var(--famioo-visible-height,100dvh) - 16px)!important;
+  }
+}
+
+
+/* Family Memories: overview first, compact gallery only after selecting album. */
+.memory-album-dashboard{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
+  gap:13px;
+  align-items:stretch;
+}
+.memory-dashboard-album{
+  min-width:0;
+  padding:0;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  text-align:left;
+  border:1px solid #e6deea;
+  border-radius:16px;
+  background:#fff;
+  color:#5b4e61;
+  cursor:pointer;
+  box-shadow:0 7px 18px rgba(57,40,63,.045);
+}
+.memory-dashboard-album:focus-visible,.memory-photo-actions button:focus-visible{
+  outline:3px solid #9367a8;
+  outline-offset:2px;
+}
+.memory-dashboard-cover{
+  width:100%;
+  aspect-ratio:4/3;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  background:linear-gradient(140deg,#ede5f0,#faf6fb);
+}
+.memory-dashboard-cover img{width:100%;height:100%;object-fit:cover}
+.memory-dashboard-cover b{font-size:36px}
+.memory-dashboard-info{
+  padding:11px 12px 13px;
+  display:grid;
+  gap:5px;
+  min-width:0;
+}
+.memory-dashboard-info small{font-size:11px;color:#957f9a}
+.memory-dashboard-info strong{font-size:14px;line-height:1.25;overflow-wrap:anywhere}
+.memory-dashboard-info em{font-size:11px;font-style:normal;color:#9979a0}
+.memory-album-navigation{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.memory-album-navigation>span{font-size:12px;color:#937e99;text-align:right}
+.memory-empty-album-upload{
+  min-height:175px;
+  display:grid;
+  place-items:center;
+  border:1px dashed #d8c8e0;
+  border-radius:16px;
+  background:#fbf8fc;
+}
+.memory-batch-button{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  cursor:pointer;
+  max-width:100%;
+}
+.memory-batch-button:has(input:disabled){opacity:.6;cursor:wait}
+.memory-batch-button input{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  opacity:0;
+  cursor:pointer;
+}
+.memory-gallery-tools{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.memory-gallery-tools>span{font-size:12px;color:#928198}
+.memories-page .memory-photo-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(135px,1fr));
+  gap:9px;
+}
+.memories-page .memory-photo-card{min-width:0;overflow:hidden}
+.memories-page .memory-photo-card>a,.memories-page .memory-photo-placeholder{
+  height:auto;
+  aspect-ratio:1;
+  overflow:hidden;
+  display:grid;
+  place-items:center;
+}
+.memories-page .memory-photo-card>a img{width:100%;height:100%;object-fit:cover}
+.memories-page .memory-photo-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:4px;
+  padding:5px 6px;
+}
+.memories-page .memory-photo-actions>span{
+  flex:1 1 100%;
+  min-width:0;
+  font-size:11px;
+  font-weight:650;
+  color:#605466;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+.memories-page .memory-photo-actions>button{
+  flex:0 0 30px;
+  width:30px;
+  height:30px;
+  display:grid;
+  place-items:center;
+  padding:0;
+  border:0;
+  border-radius:9px;
+  color:#765b84;
+  background:#f2ebf6;
+  cursor:pointer;
+}
+.memories-page .memory-photo-actions>button:disabled{opacity:.45;cursor:wait}
+.memory-share-dialog{width:min(440px,calc(100vw - 28px));display:grid;gap:10px}
+.memory-share-dialog>header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.memory-share-dialog h2{margin:0;font-size:18px;color:#584b60}
+.memory-share-dialog>p{margin:0;font-size:13px;line-height:1.5;color:#88788c}
+.memory-share-dialog>label{display:grid;gap:6px;font-size:13px;color:#6e5e75}
+.memory-share-dialog textarea{
+  width:100%;min-height:86px;padding:11px;resize:vertical;
+  font-size:16px;border:1px solid #d9cddd;border-radius:11px;
+  background:#fff;color:#55495a;
+}
+.memory-share-dialog>footer{
+  display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;
+}
+@media(max-width:700px){
+  .memory-album-dashboard{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .memory-dashboard-cover{aspect-ratio:1}
+  .memory-dashboard-info{padding:9px;gap:4px}
+  .memory-dashboard-info strong{font-size:13px}
+  .memories-page .memory-photo-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .memories-page .memory-photo-actions>button{flex-basis:26px;width:26px;height:27px}
+  .memory-share-dialog>footer>*{flex:1 1 auto;justify-content:center}
+  .memory-album-navigation>span{font-size:11px}
+}
+
+
+/* Override the original photo-card detail grid (higher-specificity selector). */
+.memories-page .memory-photo-card>div.memory-photo-actions{
+  display:flex;
+  grid-template-columns:none;
+}
+/* Buttons remain visible and keyboard accessible on small photo thumbnails. */
+.memories-page .memory-photo-card:focus-within{
+  outline:2px solid rgba(142,85,164,.32);
+  outline-offset:1px;
+}

@@ -77,11 +77,15 @@ live database permission test are claimed.
   shared bearer token must never ship in an Alexa device/client. The
   deployment's Supabase Edge JWT verification mode needs review before
   accepting external requests.
-- **Subscription model**: migration 099 marks voice integration as
-  `is_core=true`, and `accountPlan.ts` also includes it among Free
-  modules. If Alexa is a paid option, update frontend **and server-side**
-  entitlements in a separate approved billing release. Do not turn it paid
-  while payment/entitlements are undecided.
+- **Paid-module classification (implemented in staging):** migration 114
+  switches `voice_integration.is_core` off and adds it to optional billing
+  products. The frontend no longer lists Alexa among Free features, and both
+  setup RPCs require paid entitlement even for household owners/admins.
+  The Edge Function also denies linked or simulator users whose individual
+  account is explicitly on the Free plan. Neither a purchase workflow nor
+  Amazon account linking exists yet; the Premium catalogue is informational.
+  Module 114 does not create charges or grant access. First-module pricing
+  uses the existing €0.99 quote convention; follow-up pricing is unfinalized.
 - Household privacy: anyone close to a shared Echo might speak the
   command. Private events, sensitive/child data, SOS, purchases and
   privileged actions stay outside the initial Skill. Consider per-voice
@@ -116,9 +120,38 @@ fail (unavailable RPC). Apply earlier prerequisites (099 and 112) first.
     policy no earlier than 30 days after creation; no automatic purge is
     included in this migration.
 
+## Paid Alexa release validation (migration 114)
+
+Migration 114 depends on the earlier individual Free override (108) and
+token-write hardening (112). It **must** be applied with the rest of the
+controlled Famioo Supabase deployment; merely merging frontend code does not
+change live module entitlements. The updated `famioo-voice-command` Edge
+Function must also be deployed or cached service-token requests might still
+use older permissions.
+
+- [ ] `select code,is_core from public.modules where code='voice_integration'`
+  returns `is_core=false`; optional billing product exists and is active.
+- [ ] Free account sees Alexa only in optional paid catalogue / locked module
+  settings, not among Free modules or unlocked navigation.
+- [ ] Direct `/app/voice` entry is denied to Free users.
+- [ ] Free household owner directly calling both setup and rotate-token RPCs
+  is denied (including an owner in an otherwise paid household who has an
+  individual Free override).
+- [ ] Service-role Edge requests by a voice token linked to Free account,
+  plus requests sent using a Free user's ordinary JWT, are denied.
+- [ ] Paid household with valid nonexpired `household_modules` entitlement,
+  no individual Free override and active owner/admin membership may still
+  configure Alexa as before; role restrictions remain active.
+- [ ] Expired / disabled paid module access denies new commands, token rotation,
+  reading settings/action logs and direct setup RPC requests.
+- [ ] Existing household purchases, unrelated Free modules and records remain
+  untouched; **no checkout/purchase link is advertised as functional**.
+- [ ] Verify first-module pricing is an indicative existing product rule,
+  not a finalized module-specific follow-up price.
+
 ## Release verification checklist
 
-- [ ] Deploy database migrations 099 (if not applied), 112 and 113 in order to
+- [ ] Deploy database migrations 099 (if not applied), 108, 112, 113 and 114 in order to
   the **Famioo** Supabase project; confirm RLS and grants on settings.
 - [ ] Deploy updated `famioo-voice-command` Edge Function into a controlled
   development/test environment (do not expose the shared token publicly).

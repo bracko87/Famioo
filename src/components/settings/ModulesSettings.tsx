@@ -58,7 +58,7 @@ export function ModulesSettings() {
         <div className="pricing-model-grid">
           <article>
             <strong>Free core</strong>
-            <p>Our planned free package includes Calendar, Calendar Connections, Tasks, Checklists, Family Safety, Family Contacts & Emergency (including Pickups), Family Messenger, Memories (100 MB), Files (1 GB shared storage), and separately activated Alexa / Voice. Access changes will be rolled out with the purchase system.</p>
+            <p>Our planned free package includes Calendar, Calendar Connections, Tasks, Checklists, Family Safety, Family Contacts & Emergency (including Pickups), Family Messenger, Memories (100 MB) and Files (1 GB shared storage). Alexa / Voice is an optional paid module. Purchasing and checkout are not yet available.</p>
           </article>
           <article>
             <strong>Optional modules</strong>

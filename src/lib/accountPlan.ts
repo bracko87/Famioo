@@ -14,7 +14,7 @@ const FREE_TEST_ACCOUNT_EMAIL = 'aleksandarlevnajic@gmail.com'
 export const FREE_MODULE_CODES: ReadonlySet<ModuleCode> = new Set<ModuleCode>([
   'calendar', 'calendar_connections', 'tasks', 'checklists',
   'safety', 'contacts', 'emergency_info', 'pickup_authorization',
-  'messenger', 'memories', 'files', 'voice_integration',
+  'messenger', 'memories', 'files',
 ])
 
 export const MERGED_MODULE_CODES: ReadonlySet<ModuleCode> = new Set<ModuleCode>([
@@ -60,7 +60,7 @@ const PAID_PAGE_PATHS = [
   '/app/home-remote', '/app/shopping', '/app/costs',
   '/app/school', '/app/home-care', '/app/life-admin',
   '/app/projects', '/app/meals', '/app/vaccinations',
-  '/app/tickets', '/app/assistant',
+  '/app/tickets', '/app/assistant', '/app/voice',
 ] as const
 
 export function isPaidPage(pathname: string): boolean {
