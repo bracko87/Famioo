@@ -183,7 +183,7 @@ export function UsersSettings() {
     setDisplayName('')
     setPassword('')
     setRole('user')
-    setMessage(mode === 'invite' ? 'Invitation email sent.' : 'User created successfully.')
+    setMessage(mode === 'invite' ? 'Invitation request accepted by Supabase and household membership created. Email delivery and invitation acceptance have not been verified. Check the recipient inbox and Supabase Auth email settings.' : 'User created successfully.')
 
     await loadUsers()
     await refresh()
@@ -321,7 +321,7 @@ export function UsersSettings() {
 
   const identityHint = useMemo(() => {
     if (profileType === 'child') return 'Children are participant profiles only and do not receive sign-in access.'
-    if (mode === 'invite') return 'Invitation requires an email address.'
+    if (mode === 'invite') return 'Invitations require a working Supabase Auth email provider. A newly added household member does not prove that the email reached the recipient.'
     return identityType === 'email'
       ? 'This adult will sign in with email and password.'
       : 'This adult will sign in with phone number and password.'
@@ -335,6 +335,7 @@ export function UsersSettings() {
             <span className="eyebrow">USERS</span>
             <h2>Household people</h2>
             <p>Adults can have app access. Child profiles are participants only and do not receive login credentials.</p>
+            <p>Membership status below shows access granted in Famioo — it does not confirm that an invitation email was delivered, accepted, or used to sign in.</p>
           </div>
           <span className="user-count">{users.length}</span>
         </div>
@@ -459,7 +460,7 @@ export function UsersSettings() {
 
                 <span>
                   <em className={member.role === 'profile' ? 'status-badge profile' : 'status-badge active'}>
-                    {member.role === 'profile' ? 'Participant only' : member.status}
+                    {member.role === 'profile' ? 'Participant only' : member.status === 'active' ? 'Access granted' : member.status}
                   </em>
                 </span>
 
