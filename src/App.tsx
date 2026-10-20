@@ -175,7 +175,7 @@ function LoadingScreen() {
 
         <div className="launch-brand">
           <BrandMark className="launch-brand-logo" />
-          <strong className="launch-brand-name">Famio</strong>
+          <strong className="launch-brand-name">Famioo</strong>
           <i className="launch-loader" aria-hidden="true" />
         </div>
       </div>

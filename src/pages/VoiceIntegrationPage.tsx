@@ -15,6 +15,11 @@ import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
 
 type VoiceAction='calendar_query'|'shopping_add'|'task_add'|'reminders_query'
+type VoiceCommandRequest={
+  intent:VoiceAction
+  slots:Record<string,unknown>
+  request_id?:string
+}
 type SettingsRow={
   household_id:string
   provider:'alexa'
@@ -49,10 +54,11 @@ export function VoiceIntegrationPage(){
   const [settings,setSettings]=useState<SettingsRow|null>(null)
   const [logs,setLogs]=useState<LogRow[]>([])
   const [enabled,setEnabled]=useState(false)
-  const [allowed,setAllowed]=useState<VoiceAction[]>(['calendar_query','shopping_add','task_add','reminders_query'])
+  const [allowed,setAllowed]=useState<VoiceAction[]>([])
   const [token,setToken]=useState('')
   const [saving,setSaving]=useState(false)
   const [testing,setTesting]=useState(false)
+  const [lastWrite,setLastWrite]=useState<VoiceCommandRequest|null>(null)
   const [intent,setIntent]=useState<VoiceAction>('calendar_query')
   const [date,setDate]=useState(todayKey())
   const [itemText,setItemText]=useState('')
@@ -77,11 +83,14 @@ export function VoiceIntegrationPage(){
     const row=settingsResult.data as SettingsRow|null
     setSettings(row)
     setEnabled(Boolean(row?.enabled))
-    setAllowed(row?.allowed_actions?.length?row.allowed_actions:['calendar_query','shopping_add','task_add','reminders_query'])
+    setAllowed(row?.allowed_actions??[])
     if(!logResult.error)setLogs((logResult.data??[]) as LogRow[])
   }
 
   useEffect(()=>{void load()},[household.id,canConfigure])
+  // A test command belongs to one household. Never reuse its request ID
+  // after switching household context.
+  useEffect(()=>{setLastWrite(null);setResult('')},[household.id])
 
   function toggleAction(action:VoiceAction,value:boolean){
     setAllowed(current=>value
@@ -128,10 +137,19 @@ export function VoiceIntegrationPage(){
     return {title:taskTitle.trim(),due_date:date||null}
   },[date,intent,itemText,quantity,taskTitle])
 
-  async function testVoice(){
+  async function testVoice(replayLast=false){
+    if(replayLast&&!lastWrite)return
+    const isWrite=intent==='shopping_add'||intent==='task_add'
+    // A new utterance gets a NEW ID. A network retry must keep the original ID
+    // and identical slot values; the backend returns the saved result.
+    const request:VoiceCommandRequest=replayLast&&lastWrite
+      ?lastWrite
+      :{intent,slots,...(isWrite?{request_id:crypto.randomUUID()}:{})}
+    if(!replayLast&&isWrite)setLastWrite(request)
+
     setTesting(true);setError('');setResult('')
     const response=await supabase.functions.invoke('famioo-voice-command',{
-      body:{household_id:household.id,intent,slots},
+      body:{household_id:household.id,...request},
     })
     setTesting(false)
     if(response.error||response.data?.error){
@@ -139,7 +157,10 @@ export function VoiceIntegrationPage(){
       await load()
       return
     }
-    setResult(String(response.data?.speech||'Voice action completed.'))
+    const speech=String(response.data?.speech||'Voice action completed.')
+    setResult(response.data?.replayed===true
+      ?speech+' — Retried request: no second task or shopping item was created.'
+      :speech)
     await load()
   }
 
@@ -156,7 +177,7 @@ export function VoiceIntegrationPage(){
 
     <div className="voice-platform-note">
       <AudioLines size={17}/>
-      <span><strong>Famioo-side integration is ready.</strong> The command endpoint and secure token are implemented. Publishing the Amazon Alexa Skill and configuring Amazon account linking still require an Alexa Developer account and Amazon-side credentials.</span>
+      <span><strong>Private integration testing only.</strong> Famioo has a command endpoint and household permissions, but the Alexa Skill and account linking are not connected yet. Keep voice permissions disabled unless you are actively testing the integration; never share an integration token publicly.</span>
     </div>
 
     {error&&<div className="notice error">{error}</div>}
@@ -181,7 +202,7 @@ export function VoiceIntegrationPage(){
     <section className="voice-token-card">
       <header><div><span className="eyebrow">AMAZON SKILL LINK</span><h2>Integration token</h2></div><button className="secondary-button compact" disabled={saving} onClick={()=>void rotateToken()}><RotateCcw size={13}/>{settings?.token_prefix?'Rotate token':'Generate token'}</button></header>
       {token?<div className="voice-token-value"><code>{token}</code><button onClick={()=>void copyToken()} title="Copy token"><Clipboard size={15}/></button></div>:settings?.token_prefix?<div className="voice-token-existing"><KeyRound size={16}/><span><strong>{settings.token_prefix}••••••••</strong><small>Full token hidden. Rotate it if you need a new value.</small></span></div>:<p>No integration token has been generated yet.</p>}
-      <p>The Amazon Skill backend should send this token as <code>Authorization: Bearer &lt;token&gt;</code> when calling the Famioo voice endpoint. The plaintext token is shown only when generated.</p>
+      <p>Developer testing only: this secret grants the selected household voice permissions. Store it on the server, never in an Alexa client, web page or public repository. The future Alexa Skill will use proper account linking instead of asking users to manage tokens.</p>
     </section>
 
     <section className="voice-test-card">
@@ -192,7 +213,10 @@ export function VoiceIntegrationPage(){
         {intent==='shopping_add'&&<><label><span>Item</span><input value={itemText} onChange={event=>setItemText(event.target.value)} placeholder="Milk"/></label><label><span>Quantity</span><input value={quantity} onChange={event=>setQuantity(event.target.value)} placeholder="2"/></label></>}
         {intent==='task_add'&&<label className="voice-test-wide"><span>Task</span><input value={taskTitle} onChange={event=>setTaskTitle(event.target.value)} placeholder="Take bins outside"/></label>}
       </div>
-      <button className="secondary-button compact" disabled={testing||!enabled||!allowed.includes(intent)||(intent==='shopping_add'&&!itemText.trim())||(intent==='task_add'&&!taskTitle.trim())} onClick={()=>void testVoice()}><AudioLines size={13}/>{testing?'Testing…':'Run voice test'}</button>
+      <div className="voice-test-actions">
+        <button className="secondary-button compact" disabled={testing||!enabled||!allowed.includes(intent)||(intent==='shopping_add'&&!itemText.trim())||(intent==='task_add'&&!taskTitle.trim())} onClick={()=>void testVoice()}><AudioLines size={13}/>{testing?'Testing…':'Run voice test'}</button>
+        {lastWrite&&<button type="button" className="secondary-button compact" disabled={testing||!enabled||!allowed.includes(lastWrite.intent)} onClick={()=>void testVoice(true)} title="Send the exact previous write request again, including its request ID."><RotateCcw size={13}/>Retry previous write (no duplicate)</button>}
+      </div>
       {result&&<div className="voice-test-result"><Sparkles size={15}/><span>{result}</span></div>}
     </section>
 
