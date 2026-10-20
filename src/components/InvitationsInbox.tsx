@@ -90,8 +90,10 @@ export function InvitationsInbox({
   }
 
   if (loading) return embedded ? null : <main className="invite-welcome"><p>Checking invitations…</p></main>
-  if (!invitations.length && !error) return <>{fallback}</>
-  if (embedded && !invitations.length) return null
+  if (!invitations.length) {
+    if (embedded) return null
+    return <>{error && <div className="invite-welcome notice error" role="alert">{error}</div>}{fallback}</>
+  }
 
   return (
     <section className={embedded ? 'invite-inbox invite-inbox-embedded' : 'invite-inbox invite-welcome'} aria-label="Pending household invitations">
