@@ -1,6 +1,5 @@
 import {
   Archive,
-  CalendarDays,
   ArrowLeft,
   MessageCircle,
   Share2,
@@ -12,6 +11,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { useMobileKeyboardViewport } from '../hooks/useMobileKeyboardViewport'
 import { supabase } from '../lib/supabase'
@@ -95,6 +95,8 @@ function albumEmoji(type:AlbumType){
 
 export function MemoriesPage(){
   const {household,modules,user}=useHousehold()
+  const navigate=useNavigate()
+  const canChat=modules.some(module=>module.code==='messenger'&&module.enabled&&module.can_write)
   const individualFree=isFreePlanAccount(user)
   const access=modules.find(module=>module.code==='memories')
   const canWrite=Boolean(access?.enabled&&access?.can_write)
@@ -112,6 +114,11 @@ export function MemoriesPage(){
   const [busy,setBusy]=useState(false)
   const [uploadProgress,setUploadProgress]=useState('')
   const [sharingPhotoId,setSharingPhotoId]=useState('')
+  const [chatSharePhoto,setChatSharePhoto]=useState<MemoryPhoto|null>(null)
+  const [chatNote,setChatNote]=useState('')
+  const [chatError,setChatError]=useState('')
+  const [shareFile,setShareFile]=useState<File|null>(null)
+  const [shareTitle,setShareTitle]=useState('')
   const [error,setError]=useState('')
   const [message,setMessage]=useState('')
 
@@ -310,6 +317,108 @@ export function MemoriesPage(){
     await load(false)
   }
 
+  async function downloadMemoryImage(photo:MemoryPhoto):Promise<File>{
+    const file=fileById.get(photo.file_id)
+    if(!file)throw new Error('This photo is no longer available.')
+    // This uses the currently authenticated household's storage permissions.
+    // Never put an expiring private signed URL into an external sharing app.
+    const response=await supabase.storage.from('famioo-files').download(file.storage_path)
+    if(response.error||!response.data)throw new Error(response.error?.message||'Cannot load this photo.')
+    const mime=file.mime_type?.startsWith('image/')?file.mime_type:(response.data.type||'image/jpeg')
+    return new File([response.data],file.file_name||'Famioo-photo.jpg',{type:mime})
+  }
+
+  function openChatShare(photo:MemoryPhoto){
+    if(!canChat)return
+    setChatSharePhoto(photo)
+    setChatNote('')
+    setChatError('')
+  }
+
+  async function sendPhotoToFamilyChat(){
+    const photo=chatSharePhoto
+    if(!photo||sharingPhotoId||!canChat)return
+    setSharingPhotoId(photo.id)
+    setChatError('')
+    let uploadedPath=''
+    try{
+      const file=await downloadMemoryImage(photo)
+      if(file.size>15*1024*1024)throw new Error('This image is too large for Family Messenger (15 MB).')
+      const threads=await supabase.rpc('messenger_threads_v1',{p_household_id:household.id})
+      if(threads.error)throw new Error(threads.error.message)
+      const family=(((threads.data??[]) as {id:string;thread_type:string}[])).find(thread=>thread.thread_type==='household')
+      if(!family)throw new Error('Family chat is unavailable.')
+      const extension=file.name.toLowerCase().match(/\.(jpg|jpeg|png|webp|heic|heif)$/)?.[1]??'jpg'
+      uploadedPath=household.id+'/'+family.id+'/'+user.id+'/'+crypto.randomUUID()+'.'+extension
+      const upload=await supabase.storage.from('messenger-media').upload(uploadedPath,file,{
+        contentType:file.type,upsert:false,cacheControl:'3600',
+      })
+      if(upload.error)throw new Error(upload.error.message)
+      const album=albums.find(item=>item.id===photo.album_id)
+      const note=chatNote.trim()
+      const text=note||('Photo from '+(album?.title||'our family album'))
+      const result=await supabase.rpc('send_messenger_message_v1',{
+        p_thread_id:family.id,p_body:text.slice(0,4000),p_message_type:'photo',
+        p_media_path:uploadedPath,p_media_name:file.name,p_media_mime:file.type,p_media_duration_s:null,
+      })
+      if(result.error)throw new Error(result.error.message)
+      setChatSharePhoto(null)
+      setMessage('Photo sent to Family Messenger.')
+      // Open the existing Family Messenger drawer on mobile, or its full
+      // page on desktop, so family members can comment on the actual photo.
+      if(window.matchMedia('(max-width: 700px)').matches){
+        window.dispatchEvent(new CustomEvent('famioo:open-messenger',{detail:{threadId:family.id}}))
+      }else{
+        navigate('/app/messenger')
+      }
+    }catch(error){
+      // A failed message must not leave a private orphan upload.
+      if(uploadedPath)await supabase.storage.from('messenger-media').remove([uploadedPath])
+      setChatError(error instanceof Error?error.message:'Could not share the photo in Family Messenger.')
+    }finally{setSharingPhotoId('')}
+  }
+
+  async function sharePhoto(photo:MemoryPhoto){
+    if(sharingPhotoId)return
+    setSharingPhotoId(photo.id)
+    setError('')
+    try{
+      const file=await downloadMemoryImage(photo)
+      setShareFile(file)
+      setShareTitle(albums.find(album=>album.id===photo.album_id)?.title||'Famioo photo')
+    }catch(error){
+      setError(error instanceof Error?error.message:'Unable to prepare photo for sharing.')
+    }finally{setSharingPhotoId('')}
+  }
+
+  async function sharePreparedPhoto(){
+    const file=shareFile
+    if(!file)return
+    if(!navigator.share||!navigator.canShare?.({files:[file]}))return
+    try{
+      await navigator.share({files:[file],title:shareTitle,text:'Family photo from Famioo'})
+      setShareFile(null)
+    }catch(error){
+      // Canceling the OS share sheet is not an app error.
+      if(!(error instanceof DOMException&&error.name==='AbortError')){
+        setError('This destination may not support image sharing. You can save the photo instead.')
+      }
+    }
+  }
+
+  function savePreparedPhoto(){
+    if(!shareFile)return
+    const url=URL.createObjectURL(shareFile)
+    const anchor=document.createElement('a')
+    anchor.href=url
+    anchor.download=shareFile.name
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    window.setTimeout(()=>URL.revokeObjectURL(url),1500)
+    setShareFile(null)
+  }
+
   async function removePhoto(photo:MemoryPhoto){
     const file=fileById.get(photo.file_id)
     if(!window.confirm('Remove '+(file?.title||'this photo')+' from the album? The original remains in Famioo Files.'))return
@@ -396,7 +505,7 @@ export function MemoriesPage(){
                 {url?<a href={url} target="_blank" rel="noreferrer" aria-label={'View '+(photo.caption||file?.title||'photo')}><img src={url} alt={photo.caption||file?.title||'Family memory'} loading="lazy" decoding="async"/></a>:<div className="memory-photo-placeholder"><Images size={24}/></div>}
                 <div className="memory-photo-actions">
                   <span title={photo.caption||file?.title||'Family photo'}>{photo.caption||file?.title||'Photo'}</span>
-                  <button type="button" title="Discuss in family chat" aria-label="Send photo to family chat" disabled={Boolean(sharingPhotoId)} onClick={()=>void sendPhotoToFamilyChat(photo)}><MessageCircle size={15}/></button>
+                  {canChat&&<button type="button" title="Discuss in family chat" aria-label="Send photo to family chat" disabled={Boolean(sharingPhotoId)} onClick={()=>openChatShare(photo)}><MessageCircle size={15}/></button>}
                   <button type="button" title="Share photo" aria-label="Share photo with another app" disabled={Boolean(sharingPhotoId)} onClick={()=>void sharePhoto(photo)}><Share2 size={15}/></button>
                   {canWrite&&!selected.archived_at&&<button type="button" title="Remove from album" aria-label="Remove photo from album" disabled={Boolean(sharingPhotoId)} onClick={()=>void removePhoto(photo)}><Trash2 size={15}/></button>}
                 </div>
@@ -405,6 +514,28 @@ export function MemoriesPage(){
           </section>
         </>}
     </section>}
+
+    {chatSharePhoto&&<div className="modal-backdrop memory-share-backdrop" role="dialog" aria-modal="true" aria-label="Share photo to Family Messenger">
+      <section className="modal-card memory-share-dialog">
+        <header><h2>Discuss this photo in Family chat</h2><button className="icon-button" type="button" disabled={Boolean(sharingPhotoId)} onClick={()=>setChatSharePhoto(null)} aria-label="Close"><X size={18}/></button></header>
+        <p>This will send a copy of the photo to your household chat. Family members can reply there.</p>
+        <label><span>Message (optional)</span><textarea rows={3} value={chatNote} onChange={event=>setChatNote(event.target.value)} maxLength={4000} placeholder="What should everyone know about this photo?"/></label>
+        {chatError&&<p className="notice error" role="alert">{chatError}</p>}
+        <footer><button className="secondary-button" type="button" disabled={Boolean(sharingPhotoId)} onClick={()=>setChatSharePhoto(null)}>Cancel</button>
+          <button className="primary-button" type="button" disabled={Boolean(sharingPhotoId)} onClick={()=>void sendPhotoToFamilyChat()}><MessageCircle size={15}/>{sharingPhotoId?'Sending…':'Send to Family chat'}</button></footer>
+      </section>
+    </div>}
+    {shareFile&&<div className="modal-backdrop memory-share-backdrop" role="dialog" aria-modal="true" aria-label="Share family photo">
+      <section className="modal-card memory-share-dialog">
+        <header><h2>Share photo</h2><button className="icon-button" type="button" onClick={()=>setShareFile(null)} aria-label="Close"><X size={18}/></button></header>
+        <p>Send the photo file through your device's share menu, or save it to your device. Famioo does not publish a public link to your private album.</p>
+        <footer>
+          <button className="secondary-button" type="button" onClick={savePreparedPhoto}><Upload size={15}/>Save photo</button>
+          {typeof navigator.share==='function'&&navigator.canShare?.({files:[shareFile]})&&
+            <button className="primary-button" type="button" onClick={()=>void sharePreparedPhoto()}><Share2 size={15}/>Share to another app</button>}
+        </footer>
+      </section>
+    </div>}
 
     {editorOpen&&<div ref={editorViewportRef} className="modal-backdrop memory-editor-backdrop" role="dialog" aria-modal="true"><section className="modal-card memory-editor">
       <header><div><span className="eyebrow">{draft.id?'EDIT ALBUM':'NEW ALBUM'}</span><h2>{draft.id?'Update memory':'Create family album'}</h2></div><button className="icon-button" onClick={()=>setEditorOpen(false)}><X size={18}/></button></header>
