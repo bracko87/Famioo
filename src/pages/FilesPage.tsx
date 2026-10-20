@@ -22,9 +22,11 @@ import { PrivacyNotice } from '../components/PrivacyNotice'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
 import { isFreePlanAccount } from '../lib/accountPlan'
+import '../files-pagination.css'
 
 type FileCategory='document'|'photo'|'receipt'|'school'|'home'|'other'
 type FilesTab='all'|'photos'|'documents'|'links'|'archive'
+const FILES_PAGE_SIZE=10
 
 type HouseholdFile={
   id:string
@@ -50,6 +52,10 @@ type HouseholdLink={
   archived_at:string|null
   created_at:string
 }
+
+type FilesListEntry=
+  | {kind:'file';item:HouseholdFile}
+  | {kind:'link';item:HouseholdLink}
 
 type StorageEntitlement={
   used_bytes:number
@@ -99,6 +105,7 @@ export function FilesPage(){
   const canWrite=Boolean(access?.can_write)
 
   const [tab,setTab]=useState<FilesTab>('all')
+  const [page,setPage]=useState(1)
   const [files,setFiles]=useState<HouseholdFile[]>([])
   const [links,setLinks]=useState<HouseholdLink[]>([])
   const [urls,setUrls]=useState<Record<string,string>>({})
@@ -183,6 +190,32 @@ export function FilesPage(){
     if(tab==='documents') return activeFiles.filter((file)=>fileKind(file)!=='photo')
     return activeFiles
   },[tab,activeFiles,archivedFiles])
+
+  const listEntries=useMemo<FilesListEntry[]>(()=>{
+    if(tab==='links')return activeLinks.map(item=>({kind:'link',item}))
+    if(tab==='archive'){
+      return [
+        ...archivedFiles.map(item=>({kind:'file' as const,item})),
+        ...archivedLinks.map(item=>({kind:'link' as const,item})),
+      ].sort((a,b)=>new Date(b.item.created_at).getTime()-new Date(a.item.created_at).getTime())
+    }
+    return visibleFiles.map(item=>({kind:'file',item}))
+  },[tab,activeLinks,archivedFiles,archivedLinks,visibleFiles])
+
+  const totalPages=Math.max(1,Math.ceil(listEntries.length/FILES_PAGE_SIZE))
+  const currentPage=Math.min(page,totalPages)
+  const pageEntries=listEntries.slice((currentPage-1)*FILES_PAGE_SIZE,currentPage*FILES_PAGE_SIZE)
+  const pageStart=(currentPage-1)*FILES_PAGE_SIZE+1
+  const pageEnd=Math.min(currentPage*FILES_PAGE_SIZE,listEntries.length)
+
+  useEffect(()=>{
+    setPage(previous=>Math.min(previous,totalPages))
+  },[totalPages])
+
+  function openTab(nextTab:FilesTab){
+    setTab(nextTab)
+    setPage(1)
+  }
 
   const usagePercent=individualFree
     ? personalStorage ? Math.min(100,100*personalStorage.files_used_bytes/Math.max(1,personalStorage.files_quota_bytes)) : 0
@@ -336,6 +369,7 @@ export function FilesPage(){
     setComposerOpen(false)
     resetComposer()
     setMessage('File uploaded.')
+    setPage(1)
     await load()
   }
 
@@ -538,39 +572,32 @@ export function FilesPage(){
       )}
 
       <nav className="projects-tabs files-tabs" aria-label="Files sections">
-        <button type="button" className={tab==='all'?'active':''} onClick={()=>setTab('all')}>All <span>{activeFiles.length}</span></button>
-        <button type="button" className={tab==='photos'?'active':''} onClick={()=>setTab('photos')}>Photos <span>{activeFiles.filter((file)=>fileKind(file)==='photo').length}</span></button>
-        <button type="button" className={tab==='documents'?'active':''} onClick={()=>setTab('documents')}>Documents <span>{activeFiles.filter((file)=>fileKind(file)!=='photo').length}</span></button>
-        <button type="button" className={tab==='links'?'active':''} onClick={()=>setTab('links')}>Links <span>{activeLinks.length}</span></button>
-        <button type="button" className={tab==='archive'?'active':''} onClick={()=>setTab('archive')}>Archive <span>{archivedFiles.length+archivedLinks.length}</span></button>
+        <button type="button" className={tab==='all'?'active':''} onClick={()=>openTab('all')}>All <span>{activeFiles.length}</span></button>
+        <button type="button" className={tab==='photos'?'active':''} onClick={()=>openTab('photos')}>Photos <span>{activeFiles.filter((file)=>fileKind(file)==='photo').length}</span></button>
+        <button type="button" className={tab==='documents'?'active':''} onClick={()=>openTab('documents')}>Documents <span>{activeFiles.filter((file)=>fileKind(file)!=='photo').length}</span></button>
+        <button type="button" className={tab==='links'?'active':''} onClick={()=>openTab('links')}>Links <span>{activeLinks.length}</span></button>
+        <button type="button" className={tab==='archive'?'active':''} onClick={()=>openTab('archive')}>Archive <span>{archivedFiles.length+archivedLinks.length}</span></button>
       </nav>
 
-      {tab==='links' ? (
-        activeLinks.length ? (
-          <section className="files-list files-links-list">
-            {activeLinks.map(renderLink)}
+      {listEntries.length ? (
+        <>
+          <section className="files-list">
+            {pageEntries.map(entry=>entry.kind==='file'?renderFile(entry.item):renderLink(entry.item))}
           </section>
-        ) : (
-          <div className="list-card empty-state files-empty">
-            <Link2 size={28}/>
-            <span className="empty-state-title">No saved links yet.</span>
-            <span>Links saved from the QR scanner will appear here without using Files storage quota.</span>
-          </div>
-        )
-      ) : visibleFiles.length ? (
-        <section className="files-list">
-          {visibleFiles.map(renderFile)}
-          {tab==='archive'&&archivedLinks.map(renderLink)}
-        </section>
-      ) : tab==='archive'&&archivedLinks.length ? (
-        <section className="files-list files-links-list">
-          {archivedLinks.map(renderLink)}
-        </section>
+          <nav className="files-pagination" aria-label="Files pagination">
+            <span className="files-page-count">Showing {pageStart}–{pageEnd} of {listEntries.length} items</span>
+            {totalPages>1&&<div className="files-pagination-controls">
+              <button type="button" className="secondary-button compact" disabled={currentPage===1} onClick={()=>setPage(current=>Math.max(1,current-1))}>Previous</button>
+              <span className="files-pagination-current" aria-live="polite">Page {currentPage} of {totalPages}</span>
+              <button type="button" className="secondary-button compact" disabled={currentPage===totalPages} onClick={()=>setPage(current=>Math.min(totalPages,current+1))}>Next</button>
+            </div>}
+          </nav>
+        </>
       ) : (
         <div className="list-card empty-state files-empty">
-          <FileIcon size={28}/>
-          <span className="empty-state-title">{tab==='archive'?'Nothing archived.':'No files here yet.'}</span>
-          <span>{tab==='archive'?'Archived files and links stay here until restored or permanently deleted.':'Upload a document, take a photo, or save a website from the QR scanner.'}</span>
+          {tab==='links'?<Link2 size={28}/>:<FileIcon size={28}/>}
+          <span className="empty-state-title">{tab==='archive'?'Nothing archived.':tab==='links'?'No saved links yet.':'No files here yet.'}</span>
+          <span>{tab==='archive'?'Archived files and links stay here until restored or permanently deleted.':tab==='links'?'Links saved from the QR scanner will appear here without using Files storage quota.':'Upload a document, take a photo, or save a website from the QR scanner.'}</span>
         </div>
       )}
 

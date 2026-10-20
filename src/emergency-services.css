@@ -1,0 +1,29 @@
+.emergency-services-page .services-heading { align-items: center; gap: 12px; flex-wrap: wrap; }
+.emergency-services-page .services-heading p { max-width: 36rem; }
+.services-disclaimer { display: flex; align-items: flex-start; gap: 10px; padding: 13px 16px; border: 1px solid #e5ddeb; border-radius: 14px; background: #faf7fc; color: #4e3b59; font-size: .9rem; line-height: 1.45; }
+.services-disclaimer svg { flex-shrink: 0; color: #9846ab; margin-top: 1px; }
+.services-directory { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 285px), 1fr)); gap: 14px; margin-top: 18px; }
+.services-card { min-width: 0; border: 1px solid #e4dce9; border-radius: 18px; padding: 17px; background: #fff; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 5px 20px rgba(69, 34, 75, .045); }
+.services-card-top { display: flex; align-items: center; gap: 11px; }
+.services-card-symbol { width: 46px; height: 46px; border-radius: 14px; background: #f8e9f5; color: #a33092; display: grid; place-items: center; flex-shrink: 0; }
+.services-card-title { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.services-card-title strong { font-size: 1.08rem; overflow-wrap: anywhere; }
+.services-card-title small { color: #75687e; overflow-wrap: anywhere; }
+.services-card-notes { margin: 0; font-size: .88rem; color: #60536c; overflow-wrap: anywhere; }
+.services-phone-list { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+.services-call-button { display: flex; align-items: center; justify-content: center; gap: 9px; border-radius: 12px; min-height: 44px; padding: 10px; background: linear-gradient(100deg, #7d37c4, #c94e9f); color: white; font-weight: 700; text-decoration: none; overflow-wrap: anywhere; }
+.services-call-button.alternate { background: #f6f0fa; color: #70328c; border: 1px solid #e3d5ea; }
+.services-edit-actions { display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid #f0ecf2; padding-top: 11px; }
+.services-edit-actions button { border: 0; background: transparent; color: #6e5c7a; display: inline-flex; gap: 5px; align-items: center; cursor: pointer; font: inherit; font-size: .83rem; }
+.services-edit-actions button:disabled { opacity: .5; cursor: wait; }
+.services-empty { display: flex; flex-direction: column; align-items: center; gap: 11px; border: 1px dashed #d9cddd; padding: 28px 17px; border-radius: 17px; margin-top: 18px; background: #fbf8fc; text-align: center; }
+.services-empty svg { color: #9e5ba8; }
+.services-empty h2, .services-empty p { margin: 0; }
+.services-empty p { max-width: 25rem; color: #71677a; }
+.services-editor { width: min(95vw, 560px); max-height: 90dvh; overflow-y: auto; }
+.services-editor form { display: flex; flex-direction: column; gap: 14px; }
+.services-editor form label { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.services-editor form input, .services-editor form textarea { width: 100%; box-sizing: border-box; }
+.services-form-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.services-form-hint { margin: 0; font-size: .8rem; color: #776a82; }
+@media (max-width: 650px) { .services-form-row { grid-template-columns: 1fr; } .emergency-services-page .services-heading { align-items: stretch; } .emergency-services-page .services-heading > .primary-button { width: 100%; justify-content: center; } .services-editor { width: min(96vw, 560px); } }

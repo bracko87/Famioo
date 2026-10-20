@@ -1,29 +1,23 @@
-import { BadgeCheck, ContactRound, HeartPulse } from 'lucide-react'
+import { ContactRound, PhoneCall } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { ContactsPage } from './ContactsPage'
 import { EmergencyPage } from './EmergencyPage'
-import { PickupAuthorizationPage } from './PickupAuthorizationPage'
 
-type ContactsTab = 'directory' | 'emergency' | 'pickups'
+type ContactsTab = 'directory' | 'emergency'
 
 const tabs: Array<{ id: ContactsTab; label: string; icon: typeof ContactRound }> = [
   { id: 'directory', label: 'Contacts', icon: ContactRound },
-  { id: 'emergency', label: 'Medical & Safety', icon: HeartPulse },
-  { id: 'pickups', label: 'Pickups', icon: BadgeCheck },
+  { id: 'emergency', label: 'Emergency Numbers', icon: PhoneCall },
 ]
 
-/**
- * One free Family Contacts & Emergency module, retaining the existing data
- * and editing workflows under accessible sub-tabs. Historical deep links are
- * redirected to the appropriate tab in App.tsx.
- */
+/** Family contacts and emergency service numbers only. Historical pickup
+ * links fall back to the Contacts tab; existing pickup data is preserved. */
 export function FamilyContactsHubPage() {
   const [params, setParams] = useSearchParams()
-  const requested = params.get('tab')
-  const tab: ContactsTab = tabs.some(item => item.id === requested) ? requested as ContactsTab : 'directory'
+  const tab: ContactsTab = params.get('tab') === 'emergency' ? 'emergency' : 'directory'
 
   return (
-    <div className="family-module-hub" aria-label="Family Contacts & Emergency">
+    <div className="family-module-hub" aria-label="Family Contacts and emergency numbers">
       <nav className="family-module-tabs" aria-label="Family Contacts sections">
         {tabs.map(item => {
           const Icon = item.icon
@@ -41,9 +35,7 @@ export function FamilyContactsHubPage() {
           )
         })}
       </nav>
-      {tab === 'directory' && <ContactsPage />}
-      {tab === 'emergency' && <EmergencyPage />}
-      {tab === 'pickups' && <PickupAuthorizationPage />}
+      {tab === 'directory' ? <ContactsPage /> : <EmergencyPage />}
     </div>
   )
 }

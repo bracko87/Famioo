@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { ProfileAvatar } from '../components/ui/ProfileAvatar'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
@@ -141,7 +142,7 @@ function initials(value:string){
 }
 
 export function ContactsPage(){
-  const {household}=useHousehold()
+  const {household,user}=useHousehold()
 
   const [contacts,setContacts]=useState<DirectoryContact[]>([])
   const [householdUsers,setHouseholdUsers]=useState<HouseholdUser[]>([])
@@ -156,6 +157,10 @@ export function ContactsPage(){
   const [draft,setDraft]=useState<ContactDraft>(emptyDraft)
   const [saving,setSaving]=useState(false)
   const [deletingId,setDeletingId]=useState('')
+  const [phoneEditor,setPhoneEditor]=useState('')
+  const [phoneDraft,setPhoneDraft]=useState('')
+  const [phoneSaving,setPhoneSaving]=useState(false)
+  const [phoneError,setPhoneError]=useState('')
 
   const load=useCallback(async (foreground=false)=>{
     if(foreground) setLoading(true)
@@ -353,6 +358,40 @@ export function ContactsPage(){
     )
   }
 
+
+  function canEditHouseholdPhone(member:HouseholdUser){
+    return household.role==='owner'||household.role==='admin'||member.user_id===user.id
+  }
+
+  function openHouseholdPhone(member:HouseholdUser){
+    if(!canEditHouseholdPhone(member))return
+    setPhoneEditor(member.profile_id)
+    setPhoneDraft(member.phone??'')
+    setPhoneError('')
+  }
+
+  async function saveHouseholdPhone(event:FormEvent,member:HouseholdUser,clear=false){
+    event.preventDefault()
+    if(!canEditHouseholdPhone(member)||phoneSaving)return
+    const number=clear?'':phoneDraft.trim()
+    if(number&&(number.length<6||number.length>32||!/^[+]?[0-9 ()/.-]+$/.test(number))){
+      setPhoneError('Use a valid number (6–32 characters, optional + country code).')
+      return
+    }
+    if(clear&&!window.confirm('Remove the saved phone number for '+member.display_name+'? Their household membership and login will remain.'))return
+    setPhoneSaving(true)
+    setPhoneError('')
+    const result=await supabase.rpc('set_household_profile_phone_v1',{
+      p_household_id:household.id,p_profile_id:member.profile_id,p_phone:number,
+    })
+    setPhoneSaving(false)
+    if(result.error){setPhoneError(result.error.message);return}
+    setPhoneEditor('')
+    setPhoneDraft('')
+    await load(false)
+    setMessage(clear?'Phone number removed; household member kept.':'Household phone number saved.')
+  }
+
   function householdActions(member:HouseholdUser){
     return (
       <div className="contacts-actions">
@@ -422,6 +461,14 @@ export function ContactsPage(){
         </button>
       </section>
 
+      <section className="contacts-sos-preparation" aria-label="Family SOS contact and notification preparation">
+        <div>
+          <strong>Family SOS readiness</strong>
+          <p>One saved household phone number completes SOS setup. Emergency-service numbers, additional family numbers and notification tests are recommended but optional.</p>
+        </div>
+        <Link className="secondary-button compact" to="/app/settings?tab=notifications-security">Enable and test notifications</Link>
+      </section>
+
       <section className="contacts-household-section">
         <div className="contacts-section-head">
           <div>
@@ -441,6 +488,24 @@ export function ContactsPage(){
                 <span>{member.phone||member.email||'No phone/email saved'}</span>
               </div>
               {householdActions(member)}
+              {canEditHouseholdPhone(member)&&<div className="contacts-household-phone-editor">
+                {phoneEditor===member.profile_id?(
+                  <form className="contacts-household-phone-form" onSubmit={event=>void saveHouseholdPhone(event,member)}>
+                    <input type="tel" autoComplete="tel" aria-label={'Phone number for '+member.display_name}
+                      maxLength={32} value={phoneDraft} placeholder="+49…" onChange={event=>{setPhoneDraft(event.target.value);setPhoneError('')}}/>
+                    <div>
+                      <button type="submit" className="secondary-button compact" disabled={phoneSaving}>{phoneSaving?'Saving…':'Save'}</button>
+                      {member.phone&&<button type="button" className="secondary-button compact" disabled={phoneSaving}
+                        onClick={event=>void saveHouseholdPhone(event,member,true)}>Remove number</button>}
+                      <button type="button" className="secondary-button compact" disabled={phoneSaving}
+                        onClick={()=>{setPhoneEditor('');setPhoneError('')}}>Cancel</button>
+                    </div>
+                    {phoneError&&<span role="alert" className="contacts-phone-error">{phoneError}</span>}
+                  </form>
+                ):<button type="button" className="contacts-phone-edit-button" onClick={()=>openHouseholdPhone(member)}>
+                  <Edit3 size={13}/>{member.phone?'Edit / remove number':'Add phone number'}
+                </button>}
+              </div>}
             </article>
           )):<div className="contacts-empty compact">No household people match this search.</div>}
         </div>
