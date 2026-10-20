@@ -50,6 +50,7 @@ import { FooterWeather } from './FooterWeather'
 import { Select } from './ui/Select'
 import { MobileAssistantQuick } from './MobileAssistantQuick'
 import { MobileMessengerQuick } from './MobileMessengerQuick'
+import { InvitationsInbox } from './InvitationsInbox'
 import { LocationSharingAgent } from './LocationSharingAgent'
 import { SafetyAlertBanner } from './SafetyAlertBanner'
 
@@ -212,7 +213,7 @@ type HeaderNotification = {
 export function AppShell() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { household, households, modules, profiles, user, switchHousehold } = useHousehold()
+  const { household, households, modules, profiles, user, switchHousehold, refresh } = useHousehold()
   const [mobileMenu, setMobileMenu] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
@@ -675,7 +676,7 @@ export function AppShell() {
         </div>
       </header>
 
-      <main className="app-content">{(() => {
+      <main className="app-content"><InvitationsInbox embedded onAccepted={refresh}/>{(() => {
         const requiredModule = requiredModuleForPath(location.pathname)
         return !requiredModule || modules.some((module) => module.code === requiredModule && module.enabled)
           ? <Outlet />
