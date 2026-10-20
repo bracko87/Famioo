@@ -24344,3 +24344,32 @@ body:has(.modal-backdrop > .modal-card) { overflow:hidden!important; }
     justify-content:center;
   }
 }
+
+/* iOS form-field focus: controls smaller than 16px cause Safari to zoom the
+   page. Keep all ordinary mobile dialogs (including family albums) and both
+   Messenger versions at normal viewport scale without blocking pinch zoom.
+   Exclude checkbox/radio/file/range controls so their UI is unchanged. */
+@media (max-width:900px) {
+  .modal-backdrop:has(> .modal-card):not(.document-scanner-backdrop)
+    :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea),
+  .messenger-page
+    :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea),
+  .mobile-messenger-drawer
+    :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select, textarea) {
+    font-size:16px!important;
+    -webkit-text-size-adjust:100%;
+  }
+
+  /* The album stays centered within the unobscured screen while the keyboard
+     is visible; its fields can scroll inside the form if space is limited. */
+  .modal-backdrop.memory-editor-backdrop[data-keyboard-open="true"]:has(> .modal-card) {
+    top:var(--famioo-visible-top,0px)!important;
+    bottom:auto!important;
+    height:var(--famioo-visible-height,100dvh)!important;
+    padding:8px 14px!important;
+    overflow:hidden!important;
+  }
+  .modal-backdrop.memory-editor-backdrop[data-keyboard-open="true"]:has(> .modal-card) > .modal-card {
+    max-height:calc(var(--famioo-visible-height,100dvh) - 16px)!important;
+  }
+}

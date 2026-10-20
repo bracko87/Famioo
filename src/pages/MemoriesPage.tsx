@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useHousehold } from '../context/HouseholdContext'
+import { useMobileKeyboardViewport } from '../hooks/useMobileKeyboardViewport'
 import { supabase } from '../lib/supabase'
 import { isFreePlanAccount } from '../lib/accountPlan'
 import { optimizeMemoryPhoto } from '../lib/photoOptimization'
@@ -107,6 +108,7 @@ export function MemoriesPage(){
   const [selectedId,setSelectedId]=useState('')
   const [showArchived,setShowArchived]=useState(false)
   const [editorOpen,setEditorOpen]=useState(false)
+  const editorViewportRef=useMobileKeyboardViewport<HTMLDivElement>(editorOpen)
   const [draft,setDraft]=useState<AlbumDraft>(emptyAlbum)
   const [caption,setCaption]=useState('')
   const [takenDate,setTakenDate]=useState('')
@@ -365,7 +367,7 @@ export function MemoriesPage(){
       </section>}
     </>}
 
-    {editorOpen&&<div className="modal-backdrop memory-editor-backdrop" role="dialog" aria-modal="true"><section className="modal-card memory-editor">
+    {editorOpen&&<div ref={editorViewportRef} className="modal-backdrop memory-editor-backdrop" role="dialog" aria-modal="true"><section className="modal-card memory-editor">
       <header><div><span className="eyebrow">{draft.id?'EDIT ALBUM':'NEW ALBUM'}</span><h2>{draft.id?'Update memory':'Create family album'}</h2></div><button className="icon-button" onClick={()=>setEditorOpen(false)}><X size={18}/></button></header>
       <form onSubmit={saveAlbum}>
         <label><span>Album title *</span><input required maxLength={160} value={draft.title} onChange={event=>setDraft(current=>({...current,title:event.target.value}))} placeholder="e.g. Emma's 8th birthday"/></label>

@@ -243,7 +243,10 @@ export function MessengerPage({embedded=false,initialThreadId=''}:{embedded?:boo
 
     if(scroll){
       window.setTimeout(()=>{
-        messagesEndRef.current?.scrollIntoView({block:'end'})
+        // Scroll just the chat message list: scrollIntoView can pan the entire
+        // iOS visual viewport when the keyboard is open inside a fixed drawer.
+        const list=messagesEndRef.current?.parentElement
+        if(list?.classList.contains('messenger-message-list'))list.scrollTop=list.scrollHeight
       },30)
     }
   },[signMedia])

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
 import { MessengerPage } from '../pages/MessengerPage'
+import { useMobileKeyboardViewport } from '../hooks/useMobileKeyboardViewport'
 import './MobileMessengerQuick.css'
 
 type ThreadSummary={
@@ -18,6 +19,7 @@ export function MobileMessengerQuick(){
   const [open,setOpen]=useState(false)
   const [initialThreadId,setInitialThreadId]=useState('')
   const [threads,setThreads]=useState<ThreadSummary[]>([])
+  const drawerRef=useMobileKeyboardViewport<HTMLElement>(open)
 
   const unread=useMemo(
     ()=>threads.reduce((sum,row)=>sum+Number(row.unread_count??0),0),
@@ -87,7 +89,7 @@ export function MobileMessengerQuick(){
 
     {open&&<>
       <button type="button" className="mobile-messenger-backdrop" aria-label="Close Family Messenger" onClick={()=>setOpen(false)}/>
-      <aside className="mobile-messenger-drawer" aria-label="Family Messenger">
+      <aside ref={drawerRef} className="mobile-messenger-drawer" aria-label="Family Messenger">
         <header className="mobile-messenger-head">
           <span>
             <i><MessageCircle size={18}/></i>

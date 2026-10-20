@@ -103,3 +103,18 @@
     bottom: calc(172px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* While Safari's virtual keyboard is open, keep the quick-chat drawer inside
+   the visual viewport instead of allowing the page behind it to be panned. */
+@media (max-width:700px) {
+  .mobile-messenger-drawer[data-keyboard-open="true"] {
+    top:calc(var(--famioo-visible-top,0px) + 6px);
+    bottom:auto;
+    height:calc(var(--famioo-visible-height,100dvh) - 12px);
+    max-height:calc(var(--famioo-visible-height,100dvh) - 12px);
+    overscroll-behavior:contain;
+  }
+  .mobile-messenger-drawer[data-keyboard-open="true"] .messenger-composer {
+    padding-bottom:9px;
+  }
+}
