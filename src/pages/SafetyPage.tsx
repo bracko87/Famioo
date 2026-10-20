@@ -147,10 +147,11 @@ export function SafetyPage(){
 
   const missingPhoneContacts=adultContacts.filter((member)=>!member.phone)
   const otherRecipients=adultContacts.filter((member)=>member.user_id!==user.id)
+  const savedPhoneCount=adultContacts.length-missingPhoneContacts.length
   const dialableEmergencyContacts=emergencyContacts.filter((contact)=>Boolean(contact.phone||contact.secondary_phone))
-  const setupReady=otherRecipients.length>0
-    && missingPhoneContacts.length===0
-    && dialableEmergencyContacts.length>0
+  // One saved household number + one callable emergency contact is sufficient
+  // to dismiss onboarding; more family phones are strongly recommended.
+  const setupReady=savedPhoneCount>=1&&dialableEmergencyContacts.length>=1
 
   const load=useCallback(async (foreground=false)=>{
     if(foreground) setLoading(true)
@@ -475,7 +476,7 @@ export function SafetyPage(){
         </span>
       </div>
 
-      <section className="safety-setup-panel" aria-label="Family Safety setup">
+      {!loading&&!setupReady&&<section className="safety-setup-panel" aria-label="Family Safety setup">
         <header className="safety-setup-head">
           <div>
             <span className="eyebrow">BEFORE REGULAR USE</span>
@@ -492,7 +493,8 @@ export function SafetyPage(){
         {setupOpen&&(
           <div className="safety-setup-content">
             <div className="safety-setup-group">
-              <div className="safety-section-head"><h3>1. Household phone numbers</h3><small>{adultContacts.length-missingPhoneContacts.length}/{adultContacts.length} saved</small></div>
+              <div className="safety-section-head"><h3>1. Household phone numbers</h3><small>{savedPhoneCount}/{adultContacts.length} saved</small></div>
+              <p>One saved phone number is enough. For better family safety, we strongly recommend adding numbers for everyone.</p>
               {adultContacts.length===0&&<p>Household members are loading or have not been linked to a login yet.</p>}
               {adultContacts.map((member)=>(
                 <div className="safety-setup-member" key={member.profile_id}>
@@ -511,7 +513,9 @@ export function SafetyPage(){
                   )}
                 </div>
               ))}
-              <small>Only household members with a Famioo login can receive in-app alerts. Phone numbers enable carrier calls/SMS; they do not enable push by themselves.</small>
+              <small>Only members with a Famioo login can receive in-app alerts. Saved numbers allow normal calls/SMS, but do not activate push notifications.</small>
+              <p>Later, edit or remove any saved number in <Link to="/app/contacts">Family Contacts</Link>. Removing a number does not remove the household member.</p>
+              {otherRecipients.length===0&&<p>No other active household login is available to receive your SOS. Invite a trusted household member.</p>}
             </div>
             <div className="safety-setup-group">
               <div className="safety-section-head"><h3>2. Emergency services and trusted contacts</h3><small>{dialableEmergencyContacts.length} call-ready</small></div>
@@ -543,7 +547,7 @@ export function SafetyPage(){
         {!setupReady&&!loading&&(
           <p className="safety-setup-warning">Finish the preparation above before relying on Famioo for routine family safety. An urgent SOS remains available even if setup is incomplete.</p>
         )}
-      </section>
+      </section>}
 
       <section className="safety-emergency-shortcuts" aria-label="Call emergency services">
         <div>
