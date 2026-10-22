@@ -249,7 +249,7 @@ function AuthenticatedApp({ user }: { user: User }) {
   }
 
   if (!households.length) {
-    return <InvitationsInbox onAccepted={() => loadContext()} fallback={<OnboardingPage user={user} onCreated={() => loadContext()} />} />
+    return <InvitationsInbox onAccepted={(acceptedHouseholdId) => loadContext(acceptedHouseholdId)} fallback={<OnboardingPage user={user} onCreated={() => loadContext()} />} />
   }
 
   const household = households.find((item) => item.id === householdId) ?? households[0]
