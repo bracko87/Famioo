@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 }
 
-type Action = "invite" | "create" | "create_profile" | "received" | "sent" | "revoke"
+type Action = "invite" | "create" | "create_profile" | "received" | "sent" | "revoke" | "resend"
 type IdentityType = "email" | "phone"
 type ProfileType = "adult" | "child"
 
@@ -87,6 +87,21 @@ Deno.serve(async (req: Request) => {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
+  // Email requests should not reuse the household owner's login session.
+  const emailClient = createClient(supabaseUrl, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  const appOrigin = (Deno.env.get("FAMIOO_APP_URL")?.trim() || "https://famioo.netlify.app").replace(/\/$/, "")
+  if (!/^https:\/\//i.test(appOrigin)) return json({ error: "FAMIOO_APP_URL must use HTTPS." }, 500)
+  const inviteRedirect = appOrigin + "/app"
+
+  async function requestExistingUserLink(recipientEmail: string) {
+    return emailClient.auth.signInWithOtp({
+      email: recipientEmail,
+      options: { shouldCreateUser: false, emailRedirectTo: inviteRedirect },
+    })
+  }
+
   const {
     data: { user: caller },
     error: callerError,
@@ -106,7 +121,7 @@ Deno.serve(async (req: Request) => {
   const email = body.email?.trim().toLowerCase() || undefined
   const phone = body.phone?.trim() || undefined
   const profileType: ProfileType = body.profile_type === "child" ? "child" : "adult"
-  const action: Action = body.action === "received" || body.action === "sent" || body.action === "revoke"
+  const action: Action = body.action === "received" || body.action === "sent" || body.action === "revoke" || body.action === "resend"
     ? body.action
     : profileType === "child" ? "create_profile" : body.action
   const identityType: IdentityType = action === "invite"
@@ -120,7 +135,7 @@ Deno.serve(async (req: Request) => {
     || phone
     || "Member"
 
-  if (!["invite", "create", "create_profile", "received", "sent", "revoke"].includes(action)) {
+  if (!["invite", "create", "create_profile", "received", "sent", "revoke", "resend"].includes(action)) {
     return json({ error: "Invalid action." }, 400)
   }
 
@@ -206,6 +221,36 @@ Deno.serve(async (req: Request) => {
     })
   }
 
+  if (action === "resend") {
+    const id = invitationId(body)
+    if (!id) return json({ error: "Invalid invitation identifier." }, 400)
+    const { data: invitation, error: invitationError } = await adminClient
+      .from("household_invitations")
+      .select("id,email,invited_auth_user_id")
+      .eq("id", id)
+      .eq("household_id", householdId)
+      .eq("status", "pending")
+      .maybeSingle()
+    if (invitationError || !invitation?.invited_auth_user_id) {
+      return json({ error: "This pending invitation no longer exists." }, 404)
+    }
+    const result = await requestExistingUserLink(invitation.email)
+    if (result.error) {
+      return json({ error: "Could not request another invitation email: " + result.error.message }, 400)
+    }
+    const { error: expiryError } = await adminClient
+      .from("household_invitations")
+      .update({ expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() })
+      .eq("id", id).eq("household_id", householdId).eq("status", "pending")
+    if (expiryError) return json({ error: "Email requested, but the invitation expiry could not be extended." }, 500)
+    return json({
+      ok: true,
+      action: "resend",
+      delivery: "requested",
+      message: "A fresh sign-in link was requested by Supabase. Email delivery is not yet confirmed.",
+    })
+  }
+
   if (action === "revoke") {
     const id = invitationId(body)
     if (!id) return json({ error: "Invalid invitation identifier." }, 400)
@@ -285,13 +330,9 @@ Deno.serve(async (req: Request) => {
         // A redirectTo value must be configured in Supabase's allowed URLs.
         // Otherwise, Supabase uses its Auth Site URL; never derive this from
         // the untrusted HTTP Origin request header.
-        const site = Deno.env.get("FAMIOO_APP_URL")?.trim()
-        const redirectTo = site && /^https:\/\//i.test(site)
-          ? site.replace(/\/$/, "") + "/app"
-          : undefined
         const invited = await adminClient.auth.admin.inviteUserByEmail(email!, {
           data: { display_name: displayName },
-          ...(redirectTo ? { redirectTo } : {}),
+          redirectTo: inviteRedirect,
         })
         if (invited.error || !invited.data.user) {
           return json({
@@ -325,7 +366,7 @@ Deno.serve(async (req: Request) => {
       ).join("")
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
-      const { error: invitationError } = await adminClient
+      const { data: pendingInvite, error: invitationError } = await adminClient
         .from("household_invitations")
         .insert({
           household_id: householdId,
@@ -339,17 +380,28 @@ Deno.serve(async (req: Request) => {
           expires_at: expiresAt,
           status: "pending",
         })
-      if (invitationError) throw invitationError
+        .select("id")
+        .single()
+      if (invitationError || !pendingInvite) throw invitationError ?? new Error("Could not save the invitation.")
+
+      if (registeredUser) {
+        const requested = await requestExistingUserLink(email!)
+        if (requested.error) {
+          const rollback = await adminClient.from("household_invitations")
+            .delete().eq("id", pendingInvite.id).eq("household_id", householdId)
+          if (rollback.error) console.error("Failed to clean up invitation request", rollback.error)
+          return json({ error: "Invitation email request failed: " + requested.error.message }, 400)
+        }
+        emailRequested = true
+      }
 
       // No membership or family profile is created at invitation time.
       return json({
         ok: true,
         action: "invite",
         status: "pending",
-        delivery: emailRequested ? "requested" : "existing_account",
-        message: emailRequested
-          ? "Supabase accepted the email invitation request; delivery is not confirmed."
-          : "Existing Famioo user invited in-app. No invitation email was sent; ask them to sign in and accept.",
+        delivery: emailRequested ? "requested" : "unknown",
+        message: "Supabase accepted the invitation email request. Delivery is not confirmed; the recipient must sign in and accept.",
       })
     }
 
