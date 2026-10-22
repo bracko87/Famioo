@@ -38,9 +38,10 @@ export function UsersSettings() {
   const [loadingInvitations, setLoadingInvitations] = useState(false)
   const [invitationError, setInvitationError] = useState('')
   const [cancellingId, setCancellingId] = useState('')
+  const [resendingId, setResendingId] = useState('')
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({})
   const [profileType, setProfileType] = useState<ProfileType>('adult')
-  const [mode, setMode] = useState<AddMode>('create')
+  const [mode, setMode] = useState<AddMode>('invite')
   const [identityType, setIdentityType] = useState<IdentityType>('email')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -102,6 +103,22 @@ export function UsersSettings() {
     }
     setInvitationError('')
     setPendingInvitations((result.data?.invitations ?? []) as PendingInvitation[])
+  }
+
+  async function resendInvitation(invitation: PendingInvitation) {
+    if (!isOwner) return
+    setResendingId(invitation.id)
+    setMessage('')
+    const result = await supabase.functions.invoke('manage-household-user', {
+      body: { action: 'resend', household_id: household.id, invitation_id: invitation.id },
+    })
+    setResendingId('')
+    if (result.error || result.data?.error) {
+      setMessage(result.data?.error ?? result.error?.message ?? 'Could not request another invitation email.')
+      return
+    }
+    setMessage(result.data?.message ?? 'Another invitation email was requested. Delivery is not confirmed.')
+    await loadSentInvitations()
   }
 
   async function cancelInvitation(invitation: PendingInvitation) {
@@ -367,7 +384,7 @@ export function UsersSettings() {
 
   const identityHint = useMemo(() => {
     if (profileType === 'child') return 'Children are participant profiles only and do not receive sign-in access.'
-    if (mode === 'invite') return 'New accounts receive an Auth invitation email (custom SMTP required). Existing Famioo users receive an in-app invitation on their next sign-in. No household access is granted until acceptance.'
+    if (mode === 'invite') return 'An email invitation is requested for new and existing Famioo accounts (custom Supabase Auth SMTP required). The link opens Famioo, where recipients sign in and accept. On iPhone, Safari → Share → Add to Home Screen installs the current web app.'
     return identityType === 'email'
       ? 'This adult will sign in with email and password.'
       : 'This adult will sign in with phone number and password.'
@@ -554,7 +571,12 @@ export function UsersSettings() {
                     <span className="status-badge profile">Pending</span>
                     <span className="user-actions-cell">
                       <button type="button" className="secondary-button compact"
-                        disabled={cancellingId === invitation.id}
+                        disabled={resendingId === invitation.id || cancellingId === invitation.id}
+                        onClick={() => void resendInvitation(invitation)}>
+                        {resendingId === invitation.id ? 'Sending…' : 'Resend email'}
+                      </button>
+                      <button type="button" className="secondary-button compact"
+                        disabled={cancellingId === invitation.id || resendingId === invitation.id}
                         onClick={() => void cancelInvitation(invitation)}>
                         {cancellingId === invitation.id ? 'Cancelling…' : 'Cancel'}
                       </button>
