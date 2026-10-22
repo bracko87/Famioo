@@ -1,6 +1,6 @@
 import type { User } from '@supabase/supabase-js'
 import { supabase } from './supabase'
-import { limitModulesForFreeAccount } from './accountPlan'
+import { FREE_MODULE_CODES } from './accountPlan'
 import type {
   FamilyProfile,
   Household,
@@ -29,12 +29,22 @@ export async function loadHouseholds(user: User): Promise<Household[]> {
 
   if (households.error) throw households.error
 
+  const planResult = await supabase
+    .from('household_plan_overrides')
+    .select('household_id,plan')
+    .in('household_id', ids)
+  if (planResult.error) throw planResult.error
+  const freeHouseholdIds = new Set((planResult.data ?? [])
+    .filter(row => row.plan === 'free')
+    .map(row => row.household_id))
+
   const roleById = new Map(memberships.data.map((row) => [row.household_id, row.role]))
 
   return (households.data ?? [])
     .map((row) => ({
       ...row,
       role: roleById.get(row.id) as HouseholdRole,
+      plan: freeHouseholdIds.has(row.id) ? 'free' as const : 'standard' as const,
     }))
     .sort((a, b) => a.name.localeCompare(b.name)) as Household[]
 }
@@ -51,7 +61,7 @@ export async function loadProfiles(householdId: string): Promise<FamilyProfile[]
   return (result.data ?? []) as FamilyProfile[]
 }
 
-export async function loadModules(householdId: string): Promise<ModuleAccess[]> {
+export async function loadModules(householdId: string, householdPlan: Household['plan']): Promise<ModuleAccess[]> {
   const { data: authData } = await supabase.auth.getUser()
   const userId = authData.user?.id
 
@@ -101,7 +111,12 @@ export async function loadModules(householdId: string): Promise<ModuleAccess[]> 
   )
 
   const mapped: ModuleAccess[] = (modulesResult.data ?? []).map((row) => {
-    const entitled = row.is_core || Boolean(entitlement.get(row.code))
+    // The entire household shares the same Free/Premium tier, regardless
+    // of account email or inherited legacy is_core metadata.
+    const isFreeModule = FREE_MODULE_CODES.has(row.code as ModuleCode)
+    const entitled = householdPlan === 'free'
+      ? isFreeModule
+      : row.is_core || Boolean(entitlement.get(row.code))
     const accessLevel: ModulePermission = currentRole === 'owner'
       ? 'full'
       : permission.get(row.code) ?? (currentRole === 'admin' ? 'full' : 'read')
@@ -111,12 +126,12 @@ export async function loadModules(householdId: string): Promise<ModuleAccess[]> 
       name: row.name,
       description: row.description,
       icon_key: row.icon_key,
-      is_core: row.is_core,
+      is_core: householdPlan === 'free' ? isFreeModule : row.is_core,
       entitled,
       enabled: entitled && accessLevel !== 'restricted',
       access_level: accessLevel,
       can_write: entitled && accessLevel === 'full',
     }
   })
-  return authData.user ? limitModulesForFreeAccount(mapped, authData.user) : mapped
+  return mapped
 }
