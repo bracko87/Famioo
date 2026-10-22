@@ -22,7 +22,7 @@ export function InvitationsInbox({
   fallback = null,
   embedded = false,
 }: {
-  onAccepted: () => Promise<void>
+  onAccepted: (householdId: string) => Promise<void>
   fallback?: ReactNode
   embedded?: boolean
 }) {
@@ -86,7 +86,7 @@ export function InvitationsInbox({
     setConfirm('')
     setInvitations(items => items.filter(item => item.id !== invitation.id))
     setBusyId('')
-    await onAccepted()
+    await onAccepted(String(result.data))
   }
 
   if (loading) return embedded ? null : <main className="invite-welcome"><p>Checking invitations…</p></main>
