@@ -676,7 +676,7 @@ export function AppShell() {
         </div>
       </header>
 
-      <main className="app-content"><InvitationsInbox embedded onAccepted={refresh}/>{(() => {
+      <main className="app-content"><InvitationsInbox embedded onAccepted={switchHousehold}/>{(() => {
         const requiredModule = requiredModuleForPath(location.pathname)
         return !requiredModule || modules.some((module) => module.code === requiredModule && module.enabled)
           ? <Outlet />
