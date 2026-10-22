@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { Select } from '../ui/Select'
 
 export function GeneralSettings() {
-  const { household, refresh } = useHousehold()
+  const { household, refresh, user } = useHousehold()
   const [name, setName] = useState(household.name)
   const [timezone, setTimezone] = useState(household.timezone)
   const [language, setLanguage] = useState(household.default_language)
@@ -13,6 +13,11 @@ export function GeneralSettings() {
   const [timeFormat, setTimeFormat] = useState(household.time_format)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordBusy, setPasswordBusy] = useState(false)
+  const [passwordMessage, setPasswordMessage] = useState('')
+  const [passwordError, setPasswordError] = useState('')
 
   const canEdit = household.role === 'owner' || household.role === 'admin'
 
@@ -56,8 +61,44 @@ export function GeneralSettings() {
     await refresh()
   }
 
+  async function changePassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (passwordBusy) return
+    setPasswordMessage('')
+    setPasswordError('')
+
+    if (newPassword.length < 8) {
+      setPasswordError('Choose a password with at least 8 characters.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('The passwords do not match.')
+      return
+    }
+
+    setPasswordBusy(true)
+    try {
+      // Update only the currently authenticated user. Household owners cannot
+      // reset another member's password from the Users page.
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      if (error) {
+        setPasswordError(error.message)
+        return
+      }
+
+      setNewPassword('')
+      setConfirmPassword('')
+      setPasswordMessage('Password changed successfully. Use your new password the next time you sign in.')
+    } catch {
+      setPasswordError('Could not change the password. Please try again after signing in again.')
+    } finally {
+      setPasswordBusy(false)
+    }
+  }
+
   return (
-    <form className="settings-card general-settings-card" onSubmit={save}>
+    <div style={{ display: 'grid', gap: '20px' }}>
+      <form className="settings-card general-settings-card" onSubmit={save}>
       <div className="settings-section-head">
         <div>
           <span className="eyebrow">GENERAL</span>
@@ -141,6 +182,57 @@ export function GeneralSettings() {
       </div>
 
       {message && <div className="form-message">{message}</div>}
-    </form>
+      </form>
+
+      <form className="settings-card general-settings-card" onSubmit={(event) => void changePassword(event)}>
+        <div className="settings-section-head">
+          <div>
+            <span className="eyebrow">ACCOUNT SECURITY</span>
+            <h2>Change password</h2>
+            <p>Set a password for your own Famioo account. You can do this after signing in with an invitation link, without knowing an old password.</p>
+            <small>Signed in as {user.email ?? user.phone ?? 'your account'}</small>
+          </div>
+        </div>
+
+        <div className="general-settings-grid">
+          <label>
+            New password
+            <input
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              required
+              value={newPassword}
+              disabled={passwordBusy}
+              onChange={(event) => { setNewPassword(event.target.value); setPasswordError(''); setPasswordMessage('') }}
+            />
+          </label>
+          <label>
+            Confirm new password
+            <input
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              required
+              value={confirmPassword}
+              disabled={passwordBusy}
+              onChange={(event) => { setConfirmPassword(event.target.value); setPasswordError(''); setPasswordMessage('') }}
+            />
+          </label>
+        </div>
+
+        <div className="settings-form-footer">
+          <div>
+            <strong>Your account password</strong>
+            <small>Use at least 8 characters; 12 or more is recommended. If Supabase requires additional verification, follow its instructions.</small>
+          </div>
+          <button type="submit" className="primary-button compact" disabled={passwordBusy}>
+            {passwordBusy ? 'Updating…' : 'Change password'}
+          </button>
+        </div>
+        {passwordError && <div role="alert" className="form-message error">{passwordError}</div>}
+        {passwordMessage && <div role="status" className="form-message">{passwordMessage}</div>}
+      </form>
+    </div>
   )
 }
