@@ -39,6 +39,7 @@ export function UsersSettings() {
   const [invitationError, setInvitationError] = useState('')
   const [cancellingId, setCancellingId] = useState('')
   const [resendingId, setResendingId] = useState('')
+  const [passwordResettingId, setPasswordResettingId] = useState('')
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string>>({})
   const [profileType, setProfileType] = useState<ProfileType>('adult')
   const [mode, setMode] = useState<AddMode>('invite')
@@ -250,6 +251,21 @@ export function UsersSettings() {
     await loadUsers()
     if (mode === 'invite') await loadSentInvitations()
     await refresh()
+  }
+
+  async function sendPasswordReset(member: HouseholdUser) {
+    if (!isOwner || !member.user_id || !member.email || member.profile_type !== 'adult') return
+    if (!window.confirm('Send a secure password-reset link to ' + member.email + '? They will choose their own password.')) return
+
+    setPasswordResettingId(member.profile_id)
+    setMessage('')
+    const { error } = await supabase.auth.resetPasswordForEmail(member.email, {
+      redirectTo: window.location.origin + '/app',
+    })
+    setPasswordResettingId('')
+    setMessage(error
+      ? 'Could not request password-reset email: ' + error.message
+      : 'Password-reset email requested for ' + member.display_name + '. Delivery is not confirmed. They can open the link and choose their own password.')
   }
 
   async function saveSafetyPhone(member:HouseholdUser) {
@@ -529,6 +545,15 @@ export function UsersSettings() {
 
                 <span className="user-actions-cell">
                   {isOwner && member.role !== 'owner' ? (
+                    <>
+                    {member.user_id && member.email && member.profile_type === 'adult' && (
+                      <button type="button" className="secondary-button compact"
+                        disabled={passwordResettingId === member.profile_id || removingProfileId === member.profile_id}
+                        onClick={() => void sendPasswordReset(member)}
+                        title={'Email a password-reset link to ' + member.email}>
+                        {passwordResettingId === member.profile_id ? 'Sending…' : 'Password link'}
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="remove-member-button"
@@ -540,6 +565,7 @@ export function UsersSettings() {
                       <Trash2 size={13} />
                       <span>{removingProfileId === member.profile_id ? 'Removing…' : 'Remove'}</span>
                     </button>
+                    </>
                   ) : (
                     <span className="user-actions-placeholder">—</span>
                   )}
