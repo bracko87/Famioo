@@ -93,7 +93,7 @@ function albumEmoji(type:AlbumType){
 }
 
 export function MemoriesPage(){
-  const {household,modules}=useHousehold()
+  const {household,modules,user}=useHousehold()
   const navigate=useNavigate()
   const canChat=modules.some(module=>module.code==='messenger'&&module.enabled&&module.can_write)
   const householdFree=household.plan==='free'
