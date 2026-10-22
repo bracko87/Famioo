@@ -82,3 +82,14 @@ Suggested *Magic Link* template (used for existing-user invitations, owner resen
 - Verify redirect exactness and no localhost fallback. Test cancel, expiry, wrong email identity, already-member, and malformed invitation ID cases.
 - Ensure no other household data, existing accounts, stored contacts or SOS recipients are changed.
 - Obtain separate owner approval for the live backend migrations and function rollout, then independent release approval for Netlify.
+
+
+## Password setup and recovery for already-active household members
+
+An active member can have a Supabase Auth password set without having seen Famioo's invitation acceptance password screen. Existing accounts may have been created directly by a household owner. Never silently overwrite those passwords, and never store owner-supplied temporary passwords in application code, a public Git history, or logs.
+
+The login screen now offers **Forgot password?**. This calls `supabase.auth.resetPasswordForEmail` for the member's own email address, using the already configured `<origin>/app` redirect. After Supabase authenticates the email recovery link and emits `PASSWORD_RECOVERY`, the app shows a dedicated **Choose your new password** form with confirmation and a 12-character minimum; `supabase.auth.updateUser` changes only that signed-in recipient's password. Then they sign in again. Their membership and role are unaffected.
+
+In **Settings → Users**, the household owner also has a **Password link** button beside each active adult's email account. This *requests* the same recovery email after confirmation; it never sets a password on behalf of the user. Supabase SMTP must be configured, and a successful request does not prove delivery. Do not send live reset emails without the owner's intentional button click.
+
+Validate with one existing adult account that the recovery email arrives, the link authenticates the correct account and opens the password form, the new password works, and the prior household membership and role are preserved. Check expired link, mismatched passwords, wrong email, and the existing login/passkey flow. Netlify release approval remains separate from committing this source.
