@@ -1,9 +1,9 @@
 import { useHousehold } from '../../context/HouseholdContext'
-import { FREE_MODULE_CODES, isFreePlanAccount } from '../../lib/accountPlan'
+import { FREE_MODULE_CODES } from '../../lib/accountPlan'
 
 export function ModulesSettings() {
-  const { modules,user } = useHousehold()
-  const individualFree = isFreePlanAccount(user)
+  const { modules, household } = useHousehold()
+  const householdFree = household.plan === 'free'
   const mergedHidden = new Set(['emergency_info', 'pickup_authorization', 'checkin', 'calendar_context', 'rewards'])
   const listedModules = modules.filter(module => !mergedHidden.has(module.code))
   const freeModules = listedModules.filter(module => FREE_MODULE_CODES.has(module.code))
@@ -32,7 +32,7 @@ export function ModulesSettings() {
           <span className="eyebrow">MODULES</span>
           <h2>Availability</h2>
           <p>Core and optional Famioo modules are managed separately from General settings.</p>
-          {individualFree && <p className="free-storage-note"><strong>Individual Free Plan active.</strong> These limits apply to your login only. The household and its other members keep their existing entitlements.</p>}
+          {householdFree && <p className="free-storage-note"><strong>Household Free Plan active.</strong> All members, including new invitees, share the same core module access. Optional paid modules are locked without removing their saved data.</p>}
         </div>
       </div>
 
