@@ -2,6 +2,7 @@ export type HouseholdRole = 'owner' | 'admin' | 'user'
 export type ModulePermission = 'full' | 'read' | 'restricted'
 
 export type Household = {
+  plan: 'free' | 'standard'
   id: string
   name: string
   timezone: string
