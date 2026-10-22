@@ -3,11 +3,11 @@
 ## Correct lifecycle
 
 1. **Owner requests an invitation.** The Edge Function validates the owner and the recipient email.
-2. **Existing registered email**: create an in-app pending invitation for the existing Auth user without duplicating the user or sending an Auth email. Ask them to sign in.
+2. **Existing registered email**: create a pending invitation for the existing Auth user without duplicating them; request a Supabase Magic Link email to the already-registered address. Both email and in-app invitations should guide them to sign in and accept.
 3. **New email**: request an invitation through Supabase Auth (via custom SMTP) and create a pending household invitation record. Supabase accepting the request **does not confirm email delivery**.
-4. **Recipient signs in** via the email invite link (or their existing Famioo credentials). Newly invited Auth users set their password on the acceptance screen.
+4. **Recipient opens Famioo** via the Auth invitation or Magic Link email. They can install the current web app on their Home Screen using their mobile browser; installation is optional for acceptance. They sign in (or request a fresh sign-in link). Newly invited Auth users set their password on the acceptance screen.
 5. **Recipient explicitly accepts.** RPC `accept_household_invitation_v2` checks exact Auth user ID, verified email, pending status and expiry; it atomically grants membership and records acceptance.
-6. **Only then** does the person appear as an active member. Pending invitations have a separate section in Users Settings. Owners can revoke an outstanding invitation.
+6. **Only then** does the person appear as an active member. Open the newly joined household automatically. Pending invitations have a separate section in Users Settings. Owners can resend a fresh link or revoke an outstanding invitation.
 
 ## Deployment order — mandatory
 
@@ -35,3 +35,50 @@
 ## Existing duplicated Auth users
 
 An older invitation may have already created/activated a household member. This migration does not automatically remove, merge or change any such records. Two similar display names with different email addresses are **different** Auth accounts. Before removing any, verify which email account the intended recipient can access, compare last sign-in and confirmation fields, and confirm linked household membership.
+
+
+## Invitation email and current web-app installation
+
+The trusted Famioo web-app URL is **https://famioo.netlify.app/app**. This is a progressive web app (PWA), not an App Store binary:
+- iPhone/iPad: open in **Safari → Share → Add to Home Screen**.
+- Android: open in **Chrome → Install app** or **Add to Home screen** when available.
+- Desktop: open the link in a browser; install if offered.
+- Recipients may sign in and accept their household invitation without first installing the PWA.
+- After an actual App Store / Play Store release, replace the secondary installation link with the respective official store destinations; retain Auth sign-in and household acceptance as separate secured steps.
+
+**Configure both Supabase Auth email templates** in the [Auth Email Templates dashboard](https://supabase.com/dashboard/project/pqnotyfcypxsspyhtcqn/auth/templates). The Edge Function requests these emails; it cannot override the project-wide template HTML. Customize both the `Invite user` and `Magic Link` templates, or existing Famioo users will only receive the default sign-in email.
+
+Suggested *Invite user* template:
+
+```html
+<h2>You're invited to join a household on Famioo</h2>
+<p>Open the secure invitation below to finish signing in and choose your password. Accept the household invitation inside Famioo to join.</p>
+<p><a href="{{ .ConfirmationURL }}">Open your Famioo invitation</a></p>
+<p>Use Famioo on your phone: <a href="https://famioo.netlify.app/app">Open or install the Famioo web app</a>.</p>
+<p>iPhone: Safari → Share → Add to Home Screen. Android: Chrome → Install app / Add to Home screen.</p>
+<p>If the sign-in link expires, open the app and select "Email me a sign-in link (invited members)".</p>
+```
+
+Suggested *Magic Link* template (used for existing-user invitations, owner resends and requested sign-ins):
+
+```html
+<h2>Your Famioo sign-in link</h2>
+<p>A secure sign-in link was requested. If someone invited you to a household, sign in and select Accept invitation inside Famioo.</p>
+<p><a href="{{ .ConfirmationURL }}">Sign in to Famioo</a></p>
+<p>Use Famioo on your phone: <a href="https://famioo.netlify.app/app">Open or install the Famioo web app</a>.</p>
+<p>iPhone: Safari → Share → Add to Home Screen. Android: Chrome → Install app / Add to Home screen.</p>
+```
+
+**Email delivery prerequisites:** Use verified custom SMTP; confirm the Email provider is enabled. Set the Auth Site URL to `https://famioo.netlify.app` and allow `https://famioo.netlify.app/app` as a redirect URL. Set `FAMIOO_APP_URL=https://famioo.netlify.app` for the Edge Function or use the pinned public origin fallback. Check the actual *Invite user* and *Magic Link* messages in the recipient's inbox and spam folder. Supabase Auth links expire independently of the seven-day household offer, often much sooner. The owner can resend a sign-in link while the invitation remains pending; the user can request a link on the sign-in page.
+
+**Do not interpret a successful Auth API response as proof of delivery.** The returned `delivery: requested` means only that Supabase accepted the request. Never activate a member merely because an email was requested or opened.
+
+## Pre-release verification of the October 22 improvements
+
+- New recipient: email arrives, CTA targets Famioo, first login opens pending household invitation, password selection works, explicit acceptance activates exactly one membership and navigates into the new household.
+- Existing Famioo user: no duplicate Auth account; separate Magic Link email arrives, the recipient logs in, pending offer is visible even if they already belong to a different household, and acceptance switches to the newly joined household.
+- Expired Auth link: recipient can request a new sign-in link or owner can use Resend email without canceling the pending invitation; rate limits and SMTP failures produce actionable errors.
+- iPhone Safari: install guidance is available from the email and Famioo Mobile app settings; the app works before and after Add to Home Screen. Test session handling when the email opens in a different browser context from the installed PWA.
+- Verify redirect exactness and no localhost fallback. Test cancel, expiry, wrong email identity, already-member, and malformed invitation ID cases.
+- Ensure no other household data, existing accounts, stored contacts or SOS recipients are changed.
+- Obtain separate owner approval for the live backend migrations and function rollout, then independent release approval for Netlify.
