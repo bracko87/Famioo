@@ -216,7 +216,7 @@ function AuthenticatedApp({ user }: { user: User }) {
 
       const [nextProfiles, nextModules] = await Promise.all([
         loadProfiles(chosen.id),
-        loadModules(chosen.id),
+        loadModules(chosen.id, chosen.plan),
       ])
 
       setProfiles(nextProfiles)
