@@ -15,7 +15,6 @@ import { useNavigate } from 'react-router-dom'
 import { useHousehold } from '../context/HouseholdContext'
 import { useMobileKeyboardViewport } from '../hooks/useMobileKeyboardViewport'
 import { supabase } from '../lib/supabase'
-import { isFreePlanAccount } from '../lib/accountPlan'
 import { optimizeMemoryPhoto } from '../lib/photoOptimization'
 
 type AlbumType='birthday'|'trip'|'holiday'|'school'|'family'|'other'
@@ -94,10 +93,10 @@ function albumEmoji(type:AlbumType){
 }
 
 export function MemoriesPage(){
-  const {household,modules,user}=useHousehold()
+  const {household,modules}=useHousehold()
   const navigate=useNavigate()
   const canChat=modules.some(module=>module.code==='messenger'&&module.enabled&&module.can_write)
-  const individualFree=isFreePlanAccount(user)
+  const householdFree=household.plan==='free'
   const access=modules.find(module=>module.code==='memories')
   const canWrite=Boolean(access?.enabled&&access?.can_write)
   const [albums,setAlbums]=useState<Album[]>([])
@@ -183,10 +182,10 @@ export function MemoriesPage(){
         .select('id,title,all_day,start_date,start_at,event_timezone')
         .eq('household_id',household.id).is('deleted_at',null).eq('status','active')
         .order('created_at',{ascending:false}).limit(250),
-      individualFree ? supabase.rpc('free_account_storage_usage_v1') : Promise.resolve({data:null,error:null}),
+      householdFree ? supabase.rpc('free_household_memories_usage_v1',{p_household_id:household.id}) : Promise.resolve({data:null,error:null}),
     ])
     const failure=albumResult.error||photoResult.error||fileResult.error||eventResult.error
-    if(individualFree && !quotaResult.error && quotaResult.data){
+    if(householdFree && !quotaResult.error && quotaResult.data){
       const quotaRow=Array.isArray(quotaResult.data)?quotaResult.data[0]:quotaResult.data
       if(quotaRow)setMemoriesUsage({used:Number(quotaRow.memories_used_bytes),quota:Number(quotaRow.memories_quota_bytes)})
     }
@@ -243,7 +242,7 @@ export function MemoriesPage(){
     if(file.size>50*1024*1024)return {addedBytes:0,error:'Image exceeds the 50 MB limit'}
     let optimized:File
     try{optimized=await optimizeMemoryPhoto(file)}catch{return {addedBytes:0,error:'Could not prepare image'}}
-    if(individualFree&&memoriesUsage&&usedBytes+optimized.size>memoriesUsage.quota){
+    if(householdFree&&memoriesUsage&&usedBytes+optimized.size>memoriesUsage.quota){
       return {addedBytes:0,error:'Free Memories storage limit reached'}
     }
     const reserve=await supabase.rpc('reserve_household_file_v1',{
@@ -428,7 +427,7 @@ export function MemoriesPage(){
 
   return <div className="page memories-page">
     <div className="page-heading-row memories-heading">
-      <div><span className="eyebrow">FAMILY PHOTO ALBUMS / MEMORIES</span><h1>Family memories</h1><p>Shared albums for birthdays, trips, holidays, school moments and everyday family life.</p>{individualFree&&<p className="free-storage-note">{memoriesUsage?'Free plan: '+(memoriesUsage.used/(1024*1024)).toFixed(1)+' of 100 MB used':'Free plan: 100 MB photo allowance'} · 10 GB upgrade available separately for €3/month.</p>}</div>
+      <div><span className="eyebrow">FAMILY PHOTO ALBUMS / MEMORIES</span><h1>Family memories</h1><p>Shared albums for birthdays, trips, holidays, school moments and everyday family life.</p>{householdFree&&<p className="free-storage-note">{memoriesUsage?'Household Free plan: '+(memoriesUsage.used/(1024*1024)).toFixed(1)+' of 100 MB used':'Household Free plan: 100 MB shared Memories photo allowance'} · Existing photos remain safe.</p>}</div>
       {canWrite&&!selected&&<button className="primary-button compact" onClick={()=>openAlbumEditor()}><Plus size={14}/>New album</button>}
     </div>
 
