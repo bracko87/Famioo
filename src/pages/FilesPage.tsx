@@ -21,7 +21,6 @@ import { Select } from '../components/ui/Select'
 import { PrivacyNotice } from '../components/PrivacyNotice'
 import { useHousehold } from '../context/HouseholdContext'
 import { supabase } from '../lib/supabase'
-import { isFreePlanAccount } from '../lib/accountPlan'
 import '../files-pagination.css'
 
 type FileCategory='document'|'photo'|'receipt'|'school'|'home'|'other'
@@ -99,8 +98,7 @@ function titleFromFile(name:string){
 }
 
 export function FilesPage(){
-  const { household,modules,user }=useHousehold()
-  const individualFree = isFreePlanAccount(user)
+  const { household,modules }=useHousehold()
   const access=modules.find((module)=>module.code==='files')
   const canWrite=Boolean(access?.can_write)
 
@@ -110,7 +108,6 @@ export function FilesPage(){
   const [links,setLinks]=useState<HouseholdLink[]>([])
   const [urls,setUrls]=useState<Record<string,string>>({})
   const [storage,setStorage]=useState<StorageEntitlement|null>(null)
-  const [personalStorage,setPersonalStorage]=useState<{files_used_bytes:number;files_quota_bytes:number}|null>(null)
   const [error,setError]=useState('')
   const [message,setMessage]=useState('')
   const [busy,setBusy]=useState(false)
@@ -129,7 +126,7 @@ export function FilesPage(){
   async function load(){
     setError('')
 
-    const [fileResult,linkResult,storageResult,personalResult]=await Promise.all([
+    const [fileResult,linkResult,storageResult]=await Promise.all([
       supabase
         .from('household_files')
         .select('id,title,file_name,storage_path,mime_type,file_size,category,notes,source_module,source_record_id,archived_at,created_at')
@@ -142,7 +139,6 @@ export function FilesPage(){
         .eq('household_id',household.id)
         .order('created_at',{ascending:false}),
       supabase.rpc('files_storage_entitlement_v1',{ p_household_id:household.id }),
-      individualFree ? supabase.rpc('free_account_storage_usage_v1') : Promise.resolve({data:null,error:null}),
     ])
 
     if(fileResult.error){
@@ -162,11 +158,6 @@ export function FilesPage(){
       setError((current)=>current||linkResult.error.message)
     }else{
       setLinks((linkResult.data??[]) as HouseholdLink[])
-    }
-
-    if (individualFree && !personalResult.error && personalResult.data) {
-      const row=Array.isArray(personalResult.data) ? personalResult.data[0] : personalResult.data
-      if(row) setPersonalStorage({files_used_bytes:Number(row.files_used_bytes),files_quota_bytes:Number(row.files_quota_bytes)})
     }
 
     if(storageResult.error){
@@ -217,9 +208,9 @@ export function FilesPage(){
     setPage(1)
   }
 
-  const usagePercent=individualFree
-    ? personalStorage ? Math.min(100,100*personalStorage.files_used_bytes/Math.max(1,personalStorage.files_quota_bytes)) : 0
-    : storage ? Math.min(100,Math.max(0,(Number(storage.used_bytes)/Math.max(1,Number(storage.quota_bytes)))*100)) : 0
+  const usagePercent=storage
+    ? Math.min(100,Math.max(0,(Number(storage.used_bytes)/Math.max(1,Number(storage.quota_bytes)))*100))
+    : 0
 
   function resetComposer(){
     setEditingId(null)
@@ -547,21 +538,21 @@ export function FilesPage(){
         <section className="files-storage-card list-card">
           <div className="files-storage-copy">
             <span className="eyebrow">STORAGE</span>
-            <h2>{individualFree ? personalStorage ? formatBytes(personalStorage.files_used_bytes)+' of 1 GB' : '1 GB personal Free allowance' : formatBytes(Number(storage.used_bytes))+' of '+formatBytes(Number(storage.quota_bytes))}</h2>
+            <h2>{formatBytes(Number(storage.used_bytes))+' of '+formatBytes(Number(storage.quota_bytes))}</h2>
             <p>
-              {individualFree ? 'Your personal Free upload allowance applies across households. Shared Levnajici household storage and other members are unchanged.' : storage.storage_tier==='free_1gb' && '1 GB is included free with Famioo Files.'}
-              {!individualFree && storage.storage_tier==='paid_10gb' && '10 GB is included because your qualifying paid modules are above €3/month.'}
-              {!individualFree && storage.storage_tier==='addon_10gb' && '10 GB Files storage add-on is active.'}
-              {!individualFree && storage.storage_tier==='downgrade_grace' && 'Your paid-module total dropped below €3/month. Existing files stay safe during the downgrade grace period.'}
+              {household.plan === 'free' ? 'The shared Free household includes 1 GB for Files. All household members use the same allowance.' : storage.storage_tier==='free_1gb' && '1 GB is included free with Famioo Files.'}
+              {storage.storage_tier==='paid_10gb' && '10 GB is included because your qualifying paid modules are above €3/month.'}
+              {storage.storage_tier==='addon_10gb' && '10 GB Files storage add-on is active.'}
+              {storage.storage_tier==='downgrade_grace' && 'Your paid-module total dropped below €3/month. Existing files stay safe during the downgrade grace period.'}
             </p>
           </div>
 
-          {(!individualFree || personalStorage) && <div className="files-storage-usage">
+          {true && <div className="files-storage-usage">
             <span><i style={{ width:usagePercent+'%' }}/></span>
             <small>{usagePercent.toFixed(1)}% used</small>
           </div>}
 
-          {!individualFree && storage.needs_storage_offer && (
+          {storage.needs_storage_offer && (
             <div className="files-storage-offer">
               <strong>Keep 10 GB for €{Number(storage.storage_addon_price_eur).toFixed(2)}/month</strong>
               <small>Otherwise Files returns to the free 1 GB limit. Famioo never auto-deletes existing files.</small>
