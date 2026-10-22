@@ -7,7 +7,7 @@ import { loadHouseholds, loadModules, loadProfiles } from './lib/data'
 import type { FamilyProfile, Household, ModuleAccess } from './lib/types'
 import { HouseholdContext } from './context/HouseholdContext'
 import { AppShell } from './components/AppShell'
-import { AuthPage } from './pages/AuthPage'
+import { AuthPage, PasswordResetPage } from './pages/AuthPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { InvitationsInbox } from './components/InvitationsInbox'
 import { HomePage } from './pages/HomePage'
@@ -319,6 +319,7 @@ function AuthenticatedApp({ user }: { user: User }) {
 export function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [ready, setReady] = useState(false)
+  const [passwordRecovery, setPasswordRecovery] = useState(false)
   const [introReady, setIntroReady] = useState(false)
 
   useEffect(() => {
@@ -338,7 +339,8 @@ export function App() {
       setReady(true)
     })
 
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true)
       setSession(nextSession)
       setReady(true)
     })
@@ -356,6 +358,10 @@ export function App() {
         <Route path="*" element={<AuthPage />} />
       </Routes>
     )
+  }
+
+  if (passwordRecovery) {
+    return <PasswordResetPage onComplete={() => setPasswordRecovery(false)} />
   }
 
   return <AuthenticatedApp user={user} />
