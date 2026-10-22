@@ -24,6 +24,27 @@ export function AuthPage() {
     }
   }
 
+  async function requestEmailLink() {
+    const email = identity.trim().toLowerCase()
+    if (!email.includes('@')) {
+      setMessage('Enter the email address that received your household invitation.')
+      return
+    }
+    setBusy(true)
+    setMessage('')
+    const result = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: window.location.origin + '/app',
+      },
+    })
+    setBusy(false)
+    setMessage(result.error
+      ? result.error.message
+      : 'Check your inbox for a Famioo sign-in link. After signing in, accept your household invitation.')
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault()
     setBusy(true)
@@ -95,6 +116,13 @@ export function AuthPage() {
 
           {message && <div className="form-message">{message}</div>}
           <button className="primary-button" disabled={busy}>{busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}</button>
+
+          {mode === 'signin' && (
+            <button className="secondary-button" type="button" disabled={busy}
+              onClick={() => void requestEmailLink()}>
+              Email me a sign-in link (invited members)
+            </button>
+          )}
 
           {mode === 'signin' && (
             <button
