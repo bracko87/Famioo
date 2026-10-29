@@ -1342,6 +1342,28 @@ export function ShoppingPage() {
         </button>
       </div>
 
+      <div className="shopping-privacy-bottom"><PrivacyNotice compact /></div>
+
+      {selectedList && (
+        <div className="modal-backdrop shopping-list-dialog-backdrop" role="presentation"
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target) setSelectedListId(null)
+          }}>
+          <section className="modal-card shopping-list-dialog" role="dialog" aria-modal="true"
+            aria-labelledby="shopping-list-dialog-title">
+            <div className="shopping-list-dialog-toolbar">
+              <span className="eyebrow">SHOPPING LIST</span>
+              <button type="button" className="icon-button" ref={listModalCloseRef}
+                aria-label="Close shopping list" onClick={() => setSelectedListId(null)}>
+                <X size={18}/>
+              </button>
+            </div>
+            {renderShoppingCard(selectedList)}
+            {error && <div className="notice error" role="alert">{error}</div>}
+          </section>
+        </div>
+      )}
+
       {receiptUploadOpen&&(
         <div className="modal-backdrop shopping-receipt-capture-backdrop" role="presentation">
           <section className="modal-card shopping-receipt-capture-modal">
