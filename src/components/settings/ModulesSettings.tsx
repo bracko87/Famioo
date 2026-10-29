@@ -32,7 +32,7 @@ export function ModulesSettings() {
           <span className="eyebrow">MODULES</span>
           <h2>Availability</h2>
           <p>Core and optional Famioo modules are managed separately from General settings.</p>
-          {householdFree && <p className="free-storage-note"><strong>Household Free Plan active.</strong> All members, including new invitees, share the same core module access. Optional paid modules are locked without removing their saved data.</p>}
+          {householdFree && <p className="free-storage-note"><strong>Household Free Plan active.</strong> All members, including new invitees, share the same core module access. Individually approved household test modules may appear as Available; other paid modules remain locked without removing saved data.</p>}
         </div>
       </div>
 
