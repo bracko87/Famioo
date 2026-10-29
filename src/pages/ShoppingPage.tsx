@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, ArrowLeftRight, BarChart3, CalendarDays, CheckCircle2, ClipboardCheck, GripVertical, Plus, ReceiptText, ShoppingBag, Sparkles, Store, Trash2, Upload, X } from 'lucide-react'
+import { Archive, ArchiveRestore, ArrowLeftRight, BarChart3, CalendarDays, CheckCircle2, ClipboardCheck, ChevronRight, Plus, ReceiptText, ShoppingBag, Sparkles, Store, Trash2, Upload, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { GoogleMapsLink } from '../components/ui/GoogleMapsLink'
 import { Select } from '../components/ui/Select'
@@ -8,6 +8,7 @@ import { useHousehold } from '../context/HouseholdContext'
 import { categoryColor } from '../lib/categoryColors'
 import { moduleConnectionState } from '../lib/moduleAccess'
 import { supabase } from '../lib/supabase'
+import './ShoppingListView.css'
 import type { CalendarOccurrence, EventCategory } from '../lib/types'
 
 type ShoppingList = {
@@ -148,7 +149,8 @@ export function ShoppingPage() {
   const [itemDrafts, setItemDrafts] = useState<Record<string, string>>({})
   const [quantityDrafts, setQuantityDrafts] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
-  const [draggedListId, setDraggedListId] = useState<string | null>(null)
+  const [selectedListId, setSelectedListId] = useState<string | null>(null)
+  const listModalCloseRef = useRef<HTMLButtonElement>(null)
   const [compareOpen,setCompareOpen] = useState(false)
   const [comparePeriod,setComparePeriod] = useState<'month'|'30days'|'all'|'custom'>('month')
   const [compareFrom,setCompareFrom] = useState('')
@@ -911,13 +913,7 @@ export function ShoppingPage() {
       return
     }
 
-    setDraggedListId(null)
     await load()
-  }
-
-  function dropIntoSlot(slot: 1 | 2) {
-    if (!draggedListId) return
-    void setExpandedSlot(draggedListId, slot)
   }
 
   function renderShoppingCard(list: ShoppingList) {
@@ -929,7 +925,7 @@ export function ShoppingPage() {
       <article className="list-card shopping-card" key={list.id}>
         <header>
           <div>
-            <h2>{list.title}</h2>
+            <h2 id="shopping-list-dialog-title">{list.title}</h2>
             <div className="shopping-list-meta">
               {category && (
                 <span>
@@ -952,7 +948,7 @@ export function ShoppingPage() {
                   <button type="button" className="secondary-button compact" disabled={list.expanded_slot === 1} onClick={() => void setExpandedSlot(list.id, 1)}>Top 1</button>
                   <button type="button" className="secondary-button compact" disabled={list.expanded_slot === 2} onClick={() => void setExpandedSlot(list.id, 2)}>Top 2</button>
                 </span>
-                <button className="secondary-button compact" type="button" onClick={() => beginArchive(list)}>
+                <button className="secondary-button compact" type="button" onClick={() => { setSelectedListId(null); beginArchive(list) }}>
                   <Archive size={14} />
                   Finish shopping
                 </button>
@@ -962,6 +958,7 @@ export function ShoppingPage() {
         </header>
 
         <div className="shopping-items">
+          {listItems.length === 0 && <p className="shopping-list-empty-items">No articles yet. Add your first item below.</p>}
           {listItems.map((item) => (
             <div className={item.checked ? 'shopping-item checked' : 'shopping-item'} key={item.id}>
               <button
@@ -969,6 +966,8 @@ export function ShoppingPage() {
                 className="shopping-item-toggle"
                 onClick={() => void toggleItem(item)}
                 disabled={!canWrite}
+                aria-label={(item.checked ? "Uncheck " : "Check off ") + item.item_text}
+                aria-pressed={item.checked}
               >
                 <span className="shopping-check">{item.checked ? '✓' : ''}</span>
                 <span className="shopping-item-name">{item.item_text}</span>
@@ -995,6 +994,7 @@ export function ShoppingPage() {
               value={itemDrafts[list.id] ?? ''}
               onChange={(event) => setItemDrafts((current) => ({ ...current, [list.id]: event.target.value }))}
               placeholder="Add item…"
+              aria-label="Item name"
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
                   event.preventDefault()
@@ -1007,8 +1007,9 @@ export function ShoppingPage() {
               value={quantityDrafts[list.id] ?? ''}
               onChange={(event) => setQuantityDrafts((current) => ({ ...current, [list.id]: event.target.value }))}
               placeholder="Qty"
+              aria-label="Item quantity"
             />
-            <button className="secondary-button compact" onClick={() => void addItem(list.id)}>Add item</button>
+            <button type="button" className="secondary-button compact" onClick={() => void addItem(list.id)}>Add item</button>
           </div>
         )}
       </article>
@@ -1088,8 +1089,6 @@ export function ShoppingPage() {
           </>}
         </div>
       </div>
-
-      <PrivacyNotice compact />
 
       <button
         type="button"
