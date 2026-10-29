@@ -95,6 +95,27 @@ export async function loadModules(householdId: string, householdPlan: Household[
   if (permissionResult.error) throw permissionResult.error
   if (membershipResult.error) throw membershipResult.error
 
+  // Household-only test grants are distinct from the standard Free catalogue
+  // and from paid household_modules/billing rows. Missing table means the
+  // backend migration has not shipped yet: fail closed, without breaking login.
+  const trialUnlocks = new Set<ModuleCode>()
+  if (householdPlan === 'free') {
+    const testResult = await supabase
+      .from('household_test_module_unlocks')
+      .select('module_code')
+      .eq('household_id', householdId)
+
+    if (testResult.error) {
+      if (testResult.error.code !== '42P01' && testResult.error.code !== 'PGRST205') {
+        throw testResult.error
+      }
+    } else {
+      for (const grant of testResult.data ?? []) {
+        if (grant.module_code === 'shopping') trialUnlocks.add('shopping')
+      }
+    }
+  }
+
   const currentRole = (membershipResult.data?.role ?? 'user') as HouseholdRole
 
   const entitlement = new Map(
@@ -114,12 +135,14 @@ export async function loadModules(householdId: string, householdPlan: Household[
     // The entire household shares the same Free/Premium tier, regardless
     // of account email or inherited legacy is_core metadata.
     const isFreeModule = FREE_MODULE_CODES.has(row.code as ModuleCode)
+    const trialEnabled = trialUnlocks.has(row.code as ModuleCode)
     const entitled = householdPlan === 'free'
-      ? isFreeModule
+      ? isFreeModule || trialEnabled
       : row.is_core || Boolean(entitlement.get(row.code))
     const accessLevel: ModulePermission = currentRole === 'owner'
       ? 'full'
-      : permission.get(row.code) ?? (currentRole === 'admin' ? 'full' : 'read')
+      : permission.get(row.code) ??
+        (currentRole === 'admin' || (householdPlan === 'free' && trialEnabled) ? 'full' : 'read')
 
     return {
       code: row.code as ModuleCode,
