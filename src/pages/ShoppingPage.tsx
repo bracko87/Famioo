@@ -1044,42 +1044,27 @@ export function ShoppingPage() {
     )
   }
 
-  function renderCollapsedShoppingList(list: ShoppingList) {
+  function renderShoppingListRow(list: ShoppingList) {
     const listItems = items.filter((item) => item.shopping_list_id === list.id)
     const completed = listItems.filter((item) => item.checked).length
     const category = list.category_id ? categoryById.get(list.category_id) : undefined
-
     return (
-      <article
-        className="list-card compact-list-card"
-        key={list.id}
-        draggable={canWrite}
-        onDragStart={() => setDraggedListId(list.id)}
-        onDragEnd={() => setDraggedListId(null)}
-      >
-        <span className="compact-list-drag" aria-hidden="true"><GripVertical size={16} /></span>
-        <div className="compact-list-main">
-          <h3>{list.title}</h3>
-          <div>
-            {category && <span><i className="meta-dot" style={{ backgroundColor: categoryColor(category.color_key) }} />{category.name}</span>}
-            {list.scheduled_date && <span>{list.scheduled_date}</span>}
-            {list.location_text && <GoogleMapsLink location={list.location_text} />}
-          </div>
-        </div>
-        <span className="compact-list-progress">{completed}/{listItems.length}</span>
-        {canWrite && (
-          <div className="compact-list-actions">
-            <div className="mobile-slot-actions" aria-label="Pin shopping list">
-              <button type="button" className="secondary-button compact" onClick={() => void setExpandedSlot(list.id, 1)}>Top 1</button>
-              <button type="button" className="secondary-button compact" onClick={() => void setExpandedSlot(list.id, 2)}>Top 2</button>
-            </div>
-            <button className="secondary-button compact" type="button" onClick={() => beginArchive(list)}>
-              <Archive size={14} />
-              Finish
-            </button>
-          </div>
-        )}
-      </article>
+      <button key={list.id} type="button" className="shopping-day-list-row"
+        onClick={() => { setError(''); setSelectedListId(list.id) }}
+        aria-label={'Open ' + list.title + ' shopping list, ' + completed + ' of ' + listItems.length + ' items checked'}>
+        <span className="shopping-day-list-icon"><ShoppingBag size={17}/></span>
+        <span className="shopping-day-list-main">
+          <strong>{list.title}</strong>
+          <small>
+            {category ? category.name + ' · ' : ''}
+            {list.expanded_slot ? 'Pinned ' + list.expanded_slot + ' · ' : ''}
+            {listItems.length} item{listItems.length === 1 ? '' : 's'}
+            {list.location_text ? ' · ' + list.location_text : ''}
+          </small>
+        </span>
+        <span className="shopping-day-list-count">{completed}/{listItems.length}</span>
+        <ChevronRight size={17} aria-hidden="true"/>
+      </button>
     )
   }
 
@@ -1263,67 +1248,31 @@ export function ShoppingPage() {
       {access?.enabled && !canWrite && <div className="module-access-note">Read-only access</div>}
       {error && !composerOpen && !archiveTarget && <div className="notice error">{error}</div>}
 
-      {activeLists.length === 0 ? (
-        <section className="shopping-grid">
-          <div className="list-card empty-state">
-            <ShoppingBag size={24} />
+      <section className="shopping-date-lists" aria-label="Shopping lists grouped by date">
+        <div className="shopping-date-list-intro">
+          <div>
+            <span className="eyebrow">YOUR SHOPPING LISTS</span>
+            <h2>Shopping lists by date</h2>
+          </div>
+          <span>{activeLists.length} active list{activeLists.length === 1 ? '' : 's'}</span>
+        </div>
+        {activeLists.length === 0 ? (
+          <div className="list-card empty-state shopping-date-empty">
+            <ShoppingBag size={24}/>
             <span className="empty-state-title">No active shopping lists.</span>
             <span>{canWrite ? 'Create the first shared shopping list.' : 'There are no shopping lists to show.'}</span>
           </div>
-        </section>
-      ) : (
-        <>
-          <section className="list-expanded-grid" aria-label="Expanded shopping lists">
-            {expandedLists.map((list, index) => {
-              const slot = (index + 1) as 1 | 2
-              return (
-                <div
-                  className={'list-expanded-slot ' + (draggedListId ? 'drag-ready' : '')}
-                  key={slot}
-                  onDragOver={(event) => {
-                    if (!canWrite) return
-                    event.preventDefault()
-                  }}
-                  onDrop={(event) => {
-                    event.preventDefault()
-                    dropIntoSlot(slot)
-                  }}
-                >
-                  {list ? (
-                    <div
-                      draggable={canWrite}
-                      onDragStart={() => setDraggedListId(list.id)}
-                      onDragEnd={() => setDraggedListId(null)}
-                    >
-                      {renderShoppingCard(list)}
-                    </div>
-                  ) : (
-                    <div className="list-drop-placeholder">
-                      <GripVertical size={18} />
-                      <span>Drop a shopping list here on desktop. On mobile, use Top 1 / Top 2.</span>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </section>
-
-          {collapsedLists.length > 0 && (
-            <section className="collapsed-list-section">
-              <div className="collapsed-list-heading">
-                <div>
-                  <span className="eyebrow">MORE SHOPPING LISTS</span>
-                  <h2>Other active shopping lists</h2>
-                </div>
-                <small>Desktop: drag a list above. Mobile: use Top 1 / Top 2.</small>
-              </div>
-              <div className="collapsed-list-stack">
-                {collapsedLists.map((list) => renderCollapsedShoppingList(list))}
-              </div>
-            </section>
-          )}
-        </>
-      )}
+        ) : listDays.map(({ day, lists: dayLists }) => (
+          <div className="shopping-day-group" key={day}>
+            <div className="shopping-day-group-heading">
+              <CalendarDays size={16} aria-hidden="true"/>
+              <h3>{shoppingDayLabel(day)}</h3>
+              <span>{dayLists.length} list{dayLists.length === 1 ? '' : 's'}</span>
+            </div>
+            <div className="shopping-day-list-stack">{dayLists.map(renderShoppingListRow)}</div>
+          </div>
+        ))}
+      </section>
 
       {receipts.length > 0 && (
         <section className="shopping-receipt-insights list-card">
