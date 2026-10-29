@@ -111,6 +111,20 @@ function moneyValue(value: number, currency = 'EUR') {
   }).format(value)
 }
 
+function shoppingListDay(list: ShoppingList): string {
+  if (list.scheduled_date) return list.scheduled_date
+  const date = new Date(list.created_at)
+  if (Number.isNaN(date.getTime())) return list.created_at.slice(0, 10)
+  return [String(date.getFullYear()), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-')
+}
+
+function shoppingDayLabel(day: string): string {
+  const date = new Date(day + 'T12:00:00')
+  return Number.isNaN(date.getTime()) ? day : new Intl.DateTimeFormat(undefined, {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  }).format(date)
+}
+
 export function ShoppingPage() {
   const { household, modules } = useHousehold()
   const access = modules.find((module) => module.code === 'shopping')
@@ -275,20 +289,34 @@ export function ShoppingPage() {
     [lists],
   )
 
-  const expandedLists = useMemo(
-    () => [1, 2].map((slot) => activeLists.find((list) => list.expanded_slot === slot) ?? null),
-    [activeLists],
-  )
+  // Newest dates first, with optional previously pinned lists first per day.
+  const listDays = useMemo(() => {
+    const sorted = [...activeLists].sort((a, b) =>
+      shoppingListDay(b).localeCompare(shoppingListDay(a)) ||
+      (a.expanded_slot ?? 99) - (b.expanded_slot ?? 99) ||
+      b.created_at.localeCompare(a.created_at),
+    )
+    const grouped = new Map<string, ShoppingList[]>()
+    for (const list of sorted) {
+      const day = shoppingListDay(list)
+      const group = grouped.get(day) ?? []
+      group.push(list)
+      grouped.set(day, group)
+    }
+    return Array.from(grouped, ([day, dayLists]) => ({ day, lists: dayLists }))
+  }, [activeLists])
 
-  const collapsedLists = useMemo(
-    () => activeLists
-      .filter((list) => list.expanded_slot == null)
-      .sort((a, b) => {
-        const byDate = (a.scheduled_date ?? '9999-12-31').localeCompare(b.scheduled_date ?? '9999-12-31')
-        return byDate || b.created_at.localeCompare(a.created_at)
-      }),
-    [activeLists],
-  )
+  const selectedList = activeLists.find((list) => list.id === selectedListId) ?? null
+
+  useEffect(() => {
+    if (!selectedListId) return
+    listModalCloseRef.current?.focus()
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !archiveTarget) setSelectedListId(null)
+    }
+    window.addEventListener('keydown', onEscape)
+    return () => window.removeEventListener('keydown', onEscape)
+  }, [selectedListId, archiveTarget])
 
   const archivedLists = useMemo(
     () => lists
